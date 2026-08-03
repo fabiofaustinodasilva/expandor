@@ -1,0 +1,102 @@
+# =========================
+# Expandor / Laravel 12
+# =========================
+
+# --- Dependências ---
+/vendor
+/node_modules
+
+# --- Ambiente (não versionar secrets) ---
+/.env
+/.env.*
+!/.env.example
+
+# --- Logs e cache da aplicação ---
+/storage/logs/*
+!/storage/logs/.gitignore
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
+
+# --- Storage gerado / runtime ---
+/storage/*.key
+/storage/pail
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitignore
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+/storage/framework/testing/*
+!/storage/framework/testing/.gitignore
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+/storage/app/public/*
+!/storage/app/public/.gitignore
+/storage/app/private/*
+!/storage/app/private/.gitignore
+
+# --- Frontend build (Vite) ---
+/public/build
+/public/hot
+/public/storage
+
+# --- Auth / Composer locais ---
+/auth.json
+
+# --- Testes temporários / PHPUnit ---
+.phpunit.result.cache
+.phpunit.cache
+/.phpunit.cache
+/coverage
+/coverage.xml
+/.phpunit.coverage
+/tests/_output
+/tests/Browser/screenshots
+/tests/Browser/console
+/tests/Browser/source
+
+# --- IDE / editores ---
+/.vscode
+/.cursor
+/.idea
+/.fleet
+/.nova
+/.zed
+/.phpactor.json
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# --- Sistema operacional ---
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+
+# --- Homestead / Vagrant / Docker local ---
+Homestead.json
+Homestead.yaml
+/.vagrant
+docker-compose.override.yml
+
+# --- Logs genéricos ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Toolchain local do projeto (não versionar) ---
+.tools/
+_laravel_tmp/

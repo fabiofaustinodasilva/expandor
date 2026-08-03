@@ -1,0 +1,12 @@
+# Expandor — Laravel Scheduler (cron)
+# Instalar no crontab do www-data:
+#   sudo crontab -u www-data -e
+# Cole a linha abaixo (ajuste o caminho):
+
+* * * * * cd /var/www/expandor && php artisan schedule:run >> /dev/null 2>&1
+
+# Opcional — backup diário às 02:30:
+# 30 2 * * * cd /var/www/expandor && bash deploy/backup.sh >> storage/logs/backup-cron.log 2>&1
+
+# Opcional — healthcheck a cada hora:
+# 5 * * * * cd /var/www/expandor && bash deploy/healthcheck.sh >> storage/logs/healthcheck.log 2>&1

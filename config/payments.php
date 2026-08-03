@@ -1,0 +1,36 @@
+<?php
+
+return [
+    'default' => env('PAYMENT_PROVIDER', 'asaas'),
+
+    'currency' => env('PAYMENT_CURRENCY', 'BRL'),
+
+    'checkout' => [
+        'success_url' => env('PAYMENT_CHECKOUT_SUCCESS_URL', '/checkout/success'),
+        'cancel_url' => env('PAYMENT_CHECKOUT_CANCEL_URL', '/checkout/cancel'),
+        'session_ttl_minutes' => (int) env('PAYMENT_CHECKOUT_TTL_MINUTES', 60),
+    ],
+
+    'trial_days' => (int) env('PAYMENT_TRIAL_DAYS', 0),
+
+    'providers' => [
+        'asaas' => [
+            'base_url' => env('ASAAS_BASE_URL', 'https://sandbox.asaas.com/api/v3'),
+            'api_key' => env('ASAAS_API_KEY'),
+            'webhook_token' => env('ASAAS_WEBHOOK_TOKEN'),
+            'timeout' => (int) env('ASAAS_TIMEOUT', 30),
+        ],
+        'mercadopago' => [
+            'access_token' => env('MERCADO_PAGO_TOKEN'),
+            'webhook_token' => env('MERCADO_PAGO_WEBHOOK_TOKEN'),
+        ],
+        'stripe' => [
+            'key' => env('STRIPE_KEY'),
+            'secret' => env('STRIPE_SECRET'),
+            'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        ],
+        'fake' => [
+            'webhook_token' => env('FAKE_PAYMENT_WEBHOOK_TOKEN', 'fake-webhook-token'),
+        ],
+    ],
+];

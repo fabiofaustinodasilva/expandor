@@ -1,0 +1,11 @@
+{
+  "name": "Expandor Campo",
+  "short_name": "Expandor",
+  "description": "Operação de campo para a equipe Expandor",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#0F1117",
+  "theme_color": "#0F1117",
+  "lang": "pt-BR",
+  "icons": []
+}

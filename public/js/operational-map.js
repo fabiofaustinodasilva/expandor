@@ -1,0 +1,2609 @@
+(function () {
+    const page = document.getElementById('map-page');
+    if (!page || typeof L === 'undefined') {
+        return;
+    }
+
+    const markersUrl = page.dataset.markersUrl;
+    const visitStoreTemplate = page.dataset.visitStoreTemplate;
+    const opportunityUrl = page.dataset.opportunityUrl;
+    const messagesUrl = page.dataset.messagesUrl;
+    const followUpsUrl = page.dataset.followUpsUrl;
+    const propertyResidentsTemplate = page.dataset.propertyResidentsTemplate;
+    const canVisit = page.dataset.canVisit === '1';
+    const canWhatsapp = page.dataset.canWhatsapp === '1';
+    const canCrm = page.dataset.canCrm === '1';
+    const canHistory = page.dataset.canHistory === '1';
+    const legend = JSON.parse(page.dataset.legend || '[]');
+    const pointStoreUrl = page.dataset.pointStoreUrl;
+    const firstApproachUrl = page.dataset.firstApproachUrl || '';
+    const pointShowTemplate = page.dataset.pointShowTemplate;
+    const pointAdjustTemplate = page.dataset.pointAdjustTemplate;
+    const canCreatePoint = page.dataset.canCreatePoint === '1';
+    const canEditPoint = page.dataset.canEditPoint === '1';
+    const sellerName = page.dataset.sellerName || '';
+    const currentUserId = page.dataset.currentUserId ? Number(page.dataset.currentUserId) : null;
+    const isFieldSeller = page.dataset.isFieldSeller === '1';
+    const pointsVisibility = page.dataset.pointsVisibility || 'company';
+    const allowsUiFilters = page.dataset.allowsUiFilters === '1';
+    const noCampaignMessage = page.dataset.noCampaignMessage
+        || 'Você não possui uma campanha ativa. Solicite ao gestor a atribuição de uma campanha.';
+    let sellerCampaigns = [];
+    try {
+        sellerCampaigns = JSON.parse(page.dataset.sellerCampaigns || '[]');
+    } catch (e) {
+        sellerCampaigns = [];
+    }
+    const saleRegisteredToast = page.dataset.saleRegisteredToast || 'Venda registrada';
+    let saleRequiredFields = [];
+    let saleFieldLabels = {};
+    try { saleRequiredFields = JSON.parse(page.dataset.saleRequiredFields || '[]'); } catch (e) { saleRequiredFields = []; }
+    try { saleFieldLabels = JSON.parse(page.dataset.saleFieldLabels || '{}'); } catch (e) { saleFieldLabels = {}; }
+    const openNewPointOnLoad = page.dataset.openNewPoint === '1';
+
+    let pointDetails = null;
+    let lastGpsAccuracy = null;
+    const commercial = window.ExpandorCommercialLayer || null;
+
+    /** Data obrigatória + horário opcional → Y-m-d ou Y-m-dTH:i */
+    function combineFollowUpAt(dateId, timeId) {
+        const date = document.getElementById(dateId)?.value || '';
+        if (!date) return '';
+        const time = document.getElementById(timeId)?.value || '';
+        return time ? `${date}T${time}` : date;
+    }
+    const form = document.getElementById('map-filters-form');
+    const citySelect = document.getElementById('filter-city');
+    const sectorSelect = document.getElementById('filter-sector');
+    const campaignSelect = document.getElementById('filter-campaign');
+    const sellerSelect = document.getElementById('filter-seller');
+    const statusSelect = document.getElementById('filter-status');
+    const searchInput = document.getElementById('map-search');
+    const searchResultsEl = document.getElementById('map-search-results');
+    const countEl = document.getElementById('map-marker-count');
+    const viewportEl = document.getElementById('metric-viewport');
+    const statusEl = document.getElementById('map-status-message');
+    const breakdownEl = document.getElementById('metric-status-breakdown');
+    const toastEl = document.getElementById('op-toast');
+    const myTeamFilter = document.getElementById('filter-my-team');
+
+    const drawer = document.getElementById('marker-drawer');
+    const drawerBackdrop = document.getElementById('drawer-backdrop');
+    const metricsPanel = document.getElementById('metrics-panel');
+    const visitModal = document.getElementById('visit-modal');
+    const visitForm = document.getElementById('visit-form');
+    const visitError = document.getElementById('visit-error');
+    const pointModal = document.getElementById('point-modal');
+    const pointForm = document.getElementById('point-form');
+    const pointError = document.getElementById('point-error');
+    const emptySpotModal = document.getElementById('empty-spot-modal');
+    const adjustBanner = document.getElementById('adjust-banner');
+    const adjustConfirmModal = document.getElementById('adjust-confirm-modal');
+    const postCreateAdjustModal = document.getElementById('post-create-adjust-modal');
+
+    const allSectorOptions = Array.from(sectorSelect.options).slice(1);
+    let markersCache = [];
+    let layerByPropertyId = new Map();
+    let selectedMarker = null;
+    let lastFollowUpUrl = followUpsUrl;
+    let suppressMoveLoad = false;
+    let initialFitDone = false;
+    let loadSeq = 0;
+    let pendingEmptyLatLng = null;
+    let ignoreMapClickUntil = 0;
+    let adjustState = null;
+    let pendingPostCreatePropertyId = null;
+    let lastSummary = null;
+    let regionSelectMode = false;
+    let regionRect = null;
+    let regionStartLatLng = null;
+    let sellerGps = null;
+    let visitedInSession = new Set();
+    let teamViewActive = false;
+    const postVisitModal = document.getElementById('post-visit-modal');
+    const sellersMeta = JSON.parse(page.dataset.sellers || '[]');
+
+    const map = L.map('operational-map', {
+        zoomControl: false,
+        attributionControl: !isFieldSeller,
+        preferCanvas: true,
+    }).setView([-14.235, -51.9253], 4);
+
+    // Seller: sem botões +/- (zoom por gesto / scroll / duplo clique). Manager: zoom UI.
+    if (!isFieldSeller) {
+        L.control.zoom({ position: 'bottomleft' }).addTo(map);
+    } else {
+        // Cinto de segurança: remove qualquer controle Leaflet de chrome no Seller.
+        document.getElementById('commercial-filters')?.classList.add('hidden');
+        document.getElementById('commercial-filters')?.classList.remove('open');
+        document.getElementById('map-legend-panel')?.classList.add('hidden');
+        document.getElementById('map-legend-panel')?.classList.remove('open');
+        map.whenReady(() => {
+            map.attributionControl?.remove?.();
+            document.querySelectorAll(
+                '#operational-map .leaflet-control-zoom, #operational-map .leaflet-control-attribution'
+            ).forEach((el) => el.remove());
+        });
+    }
+
+    const mapProvider = (window.ExpandorMapProvider
+        ? window.ExpandorMapProvider.create(map, {
+            provider: 'leaflet_osm',
+            hideAttribution: isFieldSeller,
+        })
+        : null);
+    if (!mapProvider) {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: isFieldSeller ? '' : '&copy; OpenStreetMap',
+        }).addTo(map);
+    }
+
+    const clusterGroup = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        maxClusterRadius: 55,
+        spiderfyOnMaxZoom: true,
+        disableClusteringAtZoom: 18,
+        iconCreateFunction(cluster) {
+            const children = cluster.getAllChildMarkers();
+            const counts = { customer: 0, interested: 0, visited: 0, new: 0 };
+            children.forEach((layer) => {
+                const group = layer.options?.commercialGroup
+                    || commercial?.groupOf(layer.options?.markerData)
+                    || 'new';
+                counts[group] = (counts[group] || 0) + 1;
+            });
+            if (commercial?.clusterIcon) {
+                return commercial.clusterIcon(counts, children.length);
+            }
+            return L.divIcon({
+                className: 'commercial-cluster',
+                html: `<div class="commercial-cluster-bubble" style="--cluster-color:#ef4444"><strong>${children.length}</strong></div>`,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+            });
+        },
+    });
+    map.addLayer(clusterGroup);
+
+    function csrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    function xsrfToken() {
+        const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    }
+
+    function toast(message, type = 'success') {
+        if (!toastEl) return;
+        toastEl.textContent = message;
+        toastEl.classList.remove('success', 'error');
+        toastEl.classList.add(type === 'error' ? 'error' : 'success');
+        toastEl.classList.add('show');
+        clearTimeout(toast._t);
+        toast._t = setTimeout(() => toastEl.classList.remove('show'), 2800);
+    }
+
+    function debounce(fn, wait) {
+        let t;
+        return function (...args) {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(this, args), wait);
+        };
+    }
+
+    function dash(value) {
+        return value && String(value).trim() !== '' ? value : '—';
+    }
+
+    function filterSectorsByCity() {
+        const cityId = citySelect.value;
+        const current = sectorSelect.value;
+        sectorSelect.innerHTML = '<option value="">Setor</option>';
+        allSectorOptions.forEach((option) => {
+            if (!cityId || option.dataset.cityId === cityId) {
+                sectorSelect.appendChild(option.cloneNode(true));
+            }
+        });
+        if (current && Array.from(sectorSelect.options).some((o) => o.value === current)) {
+            sectorSelect.value = current;
+        } else {
+            sectorSelect.value = '';
+        }
+    }
+
+    function locationKindMeta(kind) {
+        if (kind === 'adjusted') {
+            return { color: '#3b82f6', label: '🔵 Ajustado manualmente', className: 'kind-adjusted' };
+        }
+        if (kind === 'low_accuracy') {
+            return { color: '#eab308', label: '🟡 Baixa precisão', className: 'kind-low_accuracy' };
+        }
+        return { color: '#22c55e', label: '🟢 GPS original', className: 'kind-gps' };
+    }
+
+    function accuracyClass(meters) {
+        if (meters == null || Number.isNaN(meters)) return null;
+        if (meters <= 10) return { label: 'Alta precisão', tone: 'text-emerald-400' };
+        if (meters <= 50) return { label: 'Boa precisão', tone: 'text-sky-400' };
+        return { label: 'Baixa precisão', tone: 'text-amber-400' };
+    }
+
+    function coloredIcon(color, locationKind = 'gps') {
+        const ring = locationKindMeta(locationKind).className;
+        return L.divIcon({
+            className: '',
+            html: `<div class="map-marker-wrap"><div class="map-marker-ring ${ring}"></div><div class="map-marker-dot" style="background:${color || '#9ca3af'}"></div></div>`,
+            iconSize: [18, 18],
+            iconAnchor: [9, 9],
+        });
+    }
+
+    function boundsParams() {
+        const b = map.getBounds();
+        return {
+            min_latitude: b.getSouth(),
+            max_latitude: b.getNorth(),
+            min_longitude: b.getWest(),
+            max_longitude: b.getEast(),
+        };
+    }
+
+    function buildQuery(includeBbox) {
+        const params = new URLSearchParams();
+        if (citySelect.value) params.set('city_id', citySelect.value);
+        if (sectorSelect.value) params.set('sector_id', sectorSelect.value);
+        if (statusSelect.value) params.set('property_status', statusSelect.value);
+        if (campaignSelect.value) params.set('campaign_id', campaignSelect.value);
+        const teamUserId = resolveTeamUserId();
+        if (teamUserId) params.set('user_id', String(teamUserId));
+        if (includeBbox && map.getZoom() >= 10) {
+            const bbox = boundsParams();
+            params.set('min_latitude', String(bbox.min_latitude));
+            params.set('max_latitude', String(bbox.max_latitude));
+            params.set('min_longitude', String(bbox.min_longitude));
+            params.set('max_longitude', String(bbox.max_longitude));
+        }
+        return params.toString();
+    }
+
+    function resolveTeamUserId() {
+        // Visibilidade de pontos é política da empresa (servidor). Vendedor não força user_id.
+        if (isFieldSeller) {
+            return null;
+        }
+        if (myTeamFilter?.checked) {
+            if (sellerSelect.value) return Number(sellerSelect.value);
+            return null;
+        }
+        if (sellerSelect.value) return Number(sellerSelect.value);
+        return null;
+    }
+
+    function enabledCommercialGroups() {
+        if (!allowsUiFilters && isFieldSeller) {
+            return ['customer', 'interested', 'visited', 'new'];
+        }
+        return Array.from(document.querySelectorAll('.commercial-filter:checked'))
+            .map((el) => el.dataset.group)
+            .filter(Boolean);
+    }
+
+    function matchesCommercialFilters(marker) {
+        const groups = enabledCommercialGroups();
+        if (groups.length === 0) return false;
+        const group = commercial?.groupOf(marker) || marker.commercial_group || 'new';
+        if (!groups.includes(group)) return false;
+
+        if (isFieldSeller) {
+            return true;
+        }
+
+        if (myTeamFilter?.checked) {
+            if (sellerSelect.value) {
+                return Number(marker.owner_user_id) === Number(sellerSelect.value);
+            }
+        } else if (sellerSelect.value) {
+            return Number(marker.owner_user_id) === Number(sellerSelect.value);
+        }
+        return true;
+    }
+
+    function matchesSearch(marker, query) {
+        if (!query) return true;
+        const q = query.trim().toLowerCase();
+        if (!q) return true;
+
+        const gpsMatch = q.match(/(-?\d+\.?\d*)\s*[,;\s]\s*(-?\d+\.?\d*)/);
+        if (gpsMatch) {
+            const lat = parseFloat(gpsMatch[1]);
+            const lng = parseFloat(gpsMatch[2]);
+            return Math.abs(marker.latitude - lat) < 0.001 && Math.abs(marker.longitude - lng) < 0.001;
+        }
+
+        const digits = q.replace(/\D+/g, '');
+        const hay = [
+            marker.resident_name,
+            marker.resident_phone,
+            marker.resident_whatsapp,
+            marker.resident_document,
+            marker.address,
+            marker.sold_product,
+            marker.status_label,
+            marker.status,
+            String(marker.latitude),
+            String(marker.longitude),
+        ].join(' ').toLowerCase();
+
+        if (hay.includes(q)) return true;
+        if (digits.length >= 3) {
+            const compact = [
+                marker.resident_phone,
+                marker.resident_whatsapp,
+                marker.resident_document,
+            ].join('').replace(/\D+/g, '');
+            if (compact.includes(digits)) return true;
+        }
+        return false;
+    }
+
+    function hideSearchResults() {
+        if (!searchResultsEl) return;
+        searchResultsEl.classList.add('hidden');
+        searchResultsEl.innerHTML = '';
+        searchInput?.setAttribute('aria-expanded', 'false');
+    }
+
+    function showSearchResults(hits) {
+        if (!searchResultsEl) return;
+        if (!hits.length) {
+            hideSearchResults();
+            return;
+        }
+        searchResultsEl.innerHTML = hits.slice(0, 12).map((hit, index) => {
+            const title = hit.resident_name || hit.address || `Ponto #${hit.property_id}`;
+            const meta = [hit.resident_phone || hit.resident_whatsapp, hit.address]
+                .filter(Boolean)
+                .join(' · ');
+            return `<button type="button" role="option" data-search-index="${index}">
+                <div class="font-semibold text-sm">${escapeHtml(title)}</div>
+                ${meta ? `<div class="search-hit-meta">${escapeHtml(meta)}</div>` : ''}
+            </button>`;
+        }).join('');
+        searchResultsEl.dataset.hits = JSON.stringify(hits.slice(0, 12));
+        searchResultsEl.classList.remove('hidden');
+        searchInput?.setAttribute('aria-expanded', 'true');
+    }
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function highlightSelectedMarker() {
+        layerByPropertyId.forEach(({ layer }, propertyId) => {
+            const selected = selectedMarker
+                && Number(propertyId) === Number(selectedMarker.property_id);
+            const iconEl = layer.getElement?.() || layer._icon;
+            if (iconEl) {
+                iconEl.classList.toggle('map-marker-selected', !!selected);
+            }
+            if (selected && layer.setZIndexOffset) {
+                layer.setZIndexOffset(1000);
+            } else if (layer.setZIndexOffset) {
+                layer.setZIndexOffset(0);
+            }
+        });
+    }
+
+    function focusSearchHit(hit) {
+        if (!hit) return;
+        suppressMoveLoad = true;
+        map.flyTo([hit.latitude, hit.longitude], Math.max(map.getZoom(), 17), { duration: 0.65 });
+        setTimeout(() => { suppressMoveLoad = false; }, 700);
+        openDrawer(hit);
+        highlightSelectedMarker();
+        hideSearchResults();
+    }
+
+    function updateMetrics(markers, summary) {
+        countEl.textContent = String(markers.length);
+        if (viewportEl) viewportEl.textContent = String(markers.length);
+
+        const counts = { customer: 0, interested: 0, visited: 0, new: 0 };
+        markers.forEach((m) => {
+            const group = commercial?.groupOf(m) || m.commercial_group || 'new';
+            counts[group] = (counts[group] || 0) + 1;
+        });
+
+        const fromApi = summary || lastSummary;
+        const display = {
+            total: markers.length,
+            customer: counts.customer,
+            interested: counts.interested,
+            visited: counts.visited,
+            new: counts.new,
+        };
+
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = String(value);
+        };
+        setText('region-points', display.total);
+        setText('region-customers', display.customer);
+        setText('region-interested', display.interested);
+        setText('region-visited', display.visited);
+        setText('region-new', display.new);
+
+        const opp = commercial?.opportunityFromCounts(display)
+            || { level: fromApi?.opportunity || 'unknown', label: fromApi?.opportunity_label || 'Sem dados na região' };
+        const oppEl = document.getElementById('region-opportunity');
+        if (oppEl) {
+            oppEl.textContent = opp.label;
+            oppEl.className = 'mt-3 rounded-lg px-3 py-2 text-xs font-medium '
+                + (opp.level === 'high'
+                    ? 'bg-emerald-500/15 text-emerald-300'
+                    : opp.level === 'low'
+                        ? 'bg-slate-800 text-slate-400'
+                        : opp.level === 'medium'
+                            ? 'bg-sky-500/15 text-sky-300'
+                            : 'bg-slate-800 text-slate-300');
+        }
+
+        if (breakdownEl) {
+            const legendCommercial = JSON.parse(page.dataset.commercialLegend || '[]');
+            breakdownEl.innerHTML = (legendCommercial.length ? legendCommercial : legend).map((item) => {
+                const key = item.group || item.status;
+                const total = counts[key] != null
+                    ? counts[key]
+                    : markers.filter((m) => m.status === item.status).length;
+                return `<div class="flex items-center justify-between gap-2">
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${item.color}"></span>${item.label}</span>
+                    <span class="text-slate-300">${total}</span>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    function setDrawerLocationKind(kind, label) {
+        const box = document.getElementById('drawer-location-kind');
+        const dot = document.getElementById('drawer-location-dot');
+        const text = document.getElementById('drawer-location-label');
+        if (!box || !dot || !text) return;
+        const meta = locationKindMeta(kind || 'gps');
+        box.classList.remove('hidden');
+        dot.style.background = meta.color;
+        text.textContent = label || meta.label;
+    }
+
+    function openDrawer(marker) {
+        selectedMarker = marker;
+        pointDetails = null;
+        const contactName = dash(marker.resident_name);
+        const address = dash(marker.address);
+        document.getElementById('drawer-name').textContent = contactName !== '—'
+            ? contactName
+            : (address !== '—' ? address : 'Residência');
+        const contactEl = document.getElementById('drawer-contact');
+        if (contactEl) contactEl.textContent = contactName;
+        document.getElementById('drawer-phone').textContent = dash(marker.resident_phone);
+        const waEl = document.getElementById('drawer-whatsapp');
+        if (waEl) waEl.textContent = dash(marker.resident_whatsapp || marker.resident_phone);
+        document.getElementById('drawer-address').textContent = address;
+        document.getElementById('drawer-updated').textContent = dash(marker.updated_at);
+        const resultEl = document.getElementById('drawer-last-visit-result');
+        if (resultEl) resultEl.textContent = '…';
+        const nextActionEl = document.getElementById('drawer-next-action');
+        if (nextActionEl) nextActionEl.textContent = '…';
+        const soldEl = document.getElementById('drawer-sold-product');
+        if (soldEl) soldEl.textContent = dash(marker.sold_product);
+        document.getElementById('drawer-status-label').textContent = dash(marker.status_label || marker.status);
+        const statusText = document.getElementById('drawer-status-text');
+        if (statusText) statusText.textContent = dash(marker.status_label || marker.status);
+        document.getElementById('drawer-status-dot').style.background = marker.color || '#9ca3af';
+        document.getElementById('drawer-gps').textContent = `${marker.latitude}, ${marker.longitude}`;
+        setDrawerLocationKind(marker.location_kind, marker.location_label);
+        updateDrawerDistance(marker);
+        ['drawer-responsible', 'drawer-campaign', 'drawer-created-by', 'drawer-created-at', 'drawer-last-visit', 'drawer-next-follow-up'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '…';
+        });
+        const histBox = document.getElementById('drawer-history');
+        if (histBox) histBox.innerHTML = '<div class="text-slate-500">Carregando histórico…</div>';
+
+        const visitBtn = document.getElementById('action-visit');
+        visitBtn.disabled = !canVisit;
+        visitBtn.classList.toggle('opacity-40', !canVisit);
+
+        const phoneDigits = String(marker.resident_phone || '').replace(/\D/g, '');
+        const callBtn = document.getElementById('action-call');
+        const wa = document.getElementById('action-whatsapp');
+        if (callBtn) {
+            if (phoneDigits) {
+                callBtn.href = `tel:+${phoneDigits.startsWith('55') ? phoneDigits : '55' + phoneDigits}`;
+                callBtn.classList.remove('pointer-events-none', 'opacity-40');
+            } else {
+                callBtn.href = '#';
+                callBtn.classList.add('pointer-events-none', 'opacity-40');
+            }
+        }
+        if (wa) {
+            if (canWhatsapp && phoneDigits) {
+                wa.href = `https://wa.me/55${phoneDigits.replace(/^55/, '')}`;
+                wa.classList.remove('pointer-events-none', 'opacity-40');
+            } else if (canWhatsapp) {
+                wa.href = messagesUrl || '#';
+                wa.classList.toggle('opacity-40', !messagesUrl);
+            } else {
+                wa.href = '#';
+                wa.classList.add('pointer-events-none', 'opacity-40');
+            }
+        }
+
+        const route = document.getElementById('action-route');
+        if (route) {
+            route.href = `https://www.google.com/maps/dir/?api=1&destination=${marker.latitude},${marker.longitude}`;
+        }
+
+        const editBtn = document.getElementById('action-edit');
+        const deleteBtn = document.getElementById('action-delete');
+        const adjustBtn = document.getElementById('action-adjust');
+        if (editBtn) {
+            editBtn.disabled = !canEditPoint;
+            editBtn.classList.toggle('opacity-40', !canEditPoint);
+        }
+        if (deleteBtn) {
+            deleteBtn.disabled = true;
+            deleteBtn.classList.add('opacity-40');
+        }
+        if (adjustBtn) {
+            adjustBtn.disabled = true;
+            adjustBtn.classList.add('opacity-40');
+        }
+
+        drawer.classList.add('open');
+        drawer.setAttribute('aria-hidden', 'false');
+        drawerBackdrop.classList.add('open');
+        if (window.lucide) window.lucide.createIcons();
+        highlightSelectedMarker();
+
+        if (marker.property_id && pointShowTemplate) {
+            loadPointDetails(marker.property_id);
+        }
+    }
+
+    async function loadPointDetails(propertyId) {
+        try {
+            const url = pointShowTemplate.replace('__PROPERTY__', propertyId);
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+            });
+            if (!response.ok) throw new Error('Não foi possível abrir esta residência.');
+            const payload = await response.json();
+            const data = payload.data || {};
+            pointDetails = data;
+            if (!selectedMarker || Number(selectedMarker.property_id) !== Number(propertyId)) return;
+
+            const contactName = dash(data.resident_name || selectedMarker.resident_name);
+            const address = dash(data.address || selectedMarker.address);
+            document.getElementById('drawer-name').textContent = contactName !== '—'
+                ? contactName
+                : (address !== '—' ? address : 'Residência');
+            const contactEl = document.getElementById('drawer-contact');
+            if (contactEl) contactEl.textContent = contactName;
+            document.getElementById('drawer-phone').textContent = dash(data.resident_phone || selectedMarker.resident_phone);
+            const waEl = document.getElementById('drawer-whatsapp');
+            if (waEl) {
+                waEl.textContent = dash(data.resident_whatsapp || data.resident_phone || selectedMarker.resident_whatsapp);
+            }
+            document.getElementById('drawer-address').textContent = address;
+            document.getElementById('drawer-status-label').textContent = dash(data.status_label);
+            const statusText = document.getElementById('drawer-status-text');
+            if (statusText) statusText.textContent = dash(data.status_label);
+            document.getElementById('drawer-updated').textContent = dash(data.last_visit_at || data.updated_at);
+            const resultEl = document.getElementById('drawer-last-visit-result');
+            if (resultEl) resultEl.textContent = dash(data.last_visit_result);
+            const nextActionEl = document.getElementById('drawer-next-action');
+            if (nextActionEl) {
+                nextActionEl.textContent = dash(data.next_action || (data.next_follow_up_at ? 'Retorno agendado' : null));
+            }
+            const soldEl = document.getElementById('drawer-sold-product');
+            if (soldEl) soldEl.textContent = dash(data.sold_product);
+            const nextFuEl = document.getElementById('drawer-next-follow-up');
+            if (nextFuEl) {
+                const label = data.next_follow_up_at || data.next_follow_up_relative;
+                const hint = data.next_follow_up_time_hint;
+                nextFuEl.textContent = dash(label);
+                if (hint) {
+                    nextFuEl.textContent = `${dash(label)} · ${hint}`;
+                }
+                if (data.next_follow_up_notes) {
+                    nextFuEl.title = data.next_follow_up_notes;
+                } else {
+                    nextFuEl.removeAttribute('title');
+                }
+            }
+            document.getElementById('drawer-responsible').textContent = dash(data.responsible);
+            document.getElementById('drawer-campaign').textContent = dash(data.campaign);
+            document.getElementById('drawer-created-by').textContent = dash(data.created_by);
+            document.getElementById('drawer-created-at').textContent = dash(data.created_at);
+            document.getElementById('drawer-last-visit').textContent = dash(data.last_visit_relative || data.last_visit_at);
+            document.getElementById('drawer-gps').textContent = `${data.latitude}, ${data.longitude}`;
+            setDrawerLocationKind(data.location_kind, data.location_label);
+
+            const phoneDigits = String(data.resident_whatsapp || data.resident_phone || '').replace(/\D/g, '');
+            const callBtn = document.getElementById('action-call');
+            const wa = document.getElementById('action-whatsapp');
+            if (callBtn && phoneDigits) {
+                callBtn.href = `tel:+${phoneDigits.startsWith('55') ? phoneDigits : '55' + phoneDigits}`;
+                callBtn.classList.remove('pointer-events-none', 'opacity-40');
+            }
+            if (wa && canWhatsapp && phoneDigits) {
+                wa.href = `https://wa.me/55${phoneDigits.replace(/^55/, '')}`;
+                wa.classList.remove('pointer-events-none', 'opacity-40');
+            }
+
+            const histEl = document.getElementById('drawer-history');
+            const rows = (data.history || []).slice(0, 8);
+            histEl.innerHTML = rows.length
+                ? rows.map((h) => `<div><span class="text-slate-300">${dash(h.at)}</span> · ${dash(h.user)} — ${dash(h.description || h.to)}</div>`).join('')
+                : '<div class="text-slate-500">Ainda sem histórico nesta casa.</div>';
+
+            const editBtn = document.getElementById('action-edit');
+            const deleteBtn = document.getElementById('action-delete');
+            const adjustBtn = document.getElementById('action-adjust');
+            if (editBtn) {
+                editBtn.disabled = !data.can_edit;
+                editBtn.classList.toggle('opacity-40', !data.can_edit);
+            }
+            if (deleteBtn) {
+                deleteBtn.disabled = !data.can_delete;
+                deleteBtn.classList.toggle('opacity-40', !data.can_delete);
+            }
+            if (adjustBtn) {
+                adjustBtn.disabled = !data.can_adjust;
+                adjustBtn.classList.toggle('opacity-40', !data.can_adjust);
+            }
+
+            selectedMarker = { ...selectedMarker, ...data, color: selectedMarker.color };
+        } catch (error) {
+            console.error(error);
+            const histEl = document.getElementById('drawer-history');
+            if (histEl) histEl.innerHTML = '<div class="text-rose-400">Não foi possível carregar o histórico.</div>';
+        }
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove('open');
+        drawer.setAttribute('aria-hidden', 'true');
+        drawerBackdrop.classList.remove('open');
+    }
+
+    const SALE_CUSTOMER_IDS = {
+        name: 'customer-name',
+        phone: 'customer-phone',
+        whatsapp: 'customer-whatsapp',
+        document: 'customer-document',
+        rg: 'customer-rg',
+        email: 'customer-email',
+        notes: 'sale-notes',
+    };
+
+    /** @type {Record<string, Array<{uid: string, productId: number, quantity: number}>>} */
+    const saleCarts = { visit: [], point: [], agenda: [] };
+
+    function moneyBr(value) {
+        const n = Number(value) || 0;
+        return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function productsCatalog(prefix) {
+        const root = document.getElementById(`${prefix}-sale-finalize`);
+        if (!root) return [];
+        try {
+            return JSON.parse(root.dataset.products || '[]');
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function findProduct(prefix, productId) {
+        return productsCatalog(prefix).find((p) => Number(p.id) === Number(productId)) || null;
+    }
+
+    function clearSaleFinalizeFields(prefix) {
+        Object.values(SALE_CUSTOMER_IDS).forEach((suffix) => {
+            const el = document.getElementById(`${prefix}-${suffix}`);
+            if (el) el.value = '';
+        });
+        saleCarts[prefix] = [];
+        renderSaleCart(prefix);
+    }
+
+    function cartLineTotal(prefix, line) {
+        const product = findProduct(prefix, line.productId);
+        if (!product) return 0;
+        return (Number(product.price) || 0) * (Number(line.quantity) || 1);
+    }
+
+    function cartGrandTotal(prefix) {
+        return (saleCarts[prefix] || []).reduce((sum, line) => sum + cartLineTotal(prefix, line), 0);
+    }
+
+    function renderSaleCart(prefix) {
+        const wrap = document.getElementById(`${prefix}-sale-cart-lines`);
+        const empty = document.getElementById(`${prefix}-sale-cart-empty`);
+        const totalEl = document.getElementById(`${prefix}-sale-cart-total`);
+        if (!wrap) return;
+        const lines = saleCarts[prefix] || [];
+        const catalog = productsCatalog(prefix);
+        wrap.innerHTML = '';
+        lines.forEach((line) => {
+            const product = findProduct(prefix, line.productId);
+            const row = document.createElement('div');
+            row.className = 'rounded-xl border border-slate-700 bg-slate-900/80 p-2 space-y-2';
+            row.dataset.uid = line.uid;
+
+            const select = document.createElement('select');
+            select.className = 'w-full h-11 rounded-lg bg-slate-950 border border-slate-700 px-2 text-sm';
+            select.innerHTML = '<option value="">Selecione o produto</option>';
+            catalog.forEach((p) => {
+                const opt = document.createElement('option');
+                opt.value = String(p.id);
+                const stockHint = p.stock_control ? ` (estoque: ${p.stock_quantity})` : '';
+                opt.textContent = `${p.name} — ${moneyBr(p.price)}${stockHint}`;
+                opt.disabled = !p.available && Number(p.id) !== Number(line.productId);
+                if (Number(p.id) === Number(line.productId)) opt.selected = true;
+                select.appendChild(opt);
+            });
+            select.addEventListener('change', () => {
+                const nextId = Number(select.value) || 0;
+                const next = findProduct(prefix, nextId);
+                if (nextId && next && next.stock_control && Number(next.stock_quantity) < Number(line.quantity || 1)) {
+                    toast(`Estoque insuficiente para ${next.name}.`, 'error');
+                    select.value = line.productId ? String(line.productId) : '';
+                    return;
+                }
+                line.productId = nextId;
+                renderSaleCart(prefix);
+            });
+
+            const meta = document.createElement('div');
+            meta.className = 'flex items-center justify-between gap-2';
+            const priceLabel = document.createElement('div');
+            priceLabel.className = 'text-xs text-slate-400';
+            priceLabel.textContent = product
+                ? `Preço: ${moneyBr(product.price)} · Linha: ${moneyBr(cartLineTotal(prefix, line))}`
+                : 'Selecione um produto';
+
+            const qtyWrap = document.createElement('div');
+            qtyWrap.className = 'flex items-center gap-1';
+            const qtyInput = document.createElement('input');
+            qtyInput.type = 'number';
+            qtyInput.min = '1';
+            qtyInput.max = '9999';
+            qtyInput.value = String(line.quantity || 1);
+            qtyInput.className = 'w-16 h-9 rounded-lg bg-slate-950 border border-slate-700 px-2 text-sm';
+            qtyInput.addEventListener('change', () => {
+                let qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+                const p = findProduct(prefix, line.productId);
+                if (p && p.stock_control && qty > Number(p.stock_quantity)) {
+                    toast(`Estoque insuficiente (${p.stock_quantity} disponível).`, 'error');
+                    qty = Math.max(1, Number(p.stock_quantity) || 1);
+                }
+                line.quantity = qty;
+                qtyInput.value = String(qty);
+                renderSaleCart(prefix);
+            });
+            qtyWrap.appendChild(qtyInput);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'h-9 px-2 rounded-lg border border-rose-700/50 text-rose-300 text-xs';
+            removeBtn.textContent = 'Excluir';
+            removeBtn.addEventListener('click', () => {
+                saleCarts[prefix] = (saleCarts[prefix] || []).filter((l) => l.uid !== line.uid);
+                renderSaleCart(prefix);
+            });
+
+            meta.appendChild(priceLabel);
+            meta.appendChild(qtyWrap);
+            meta.appendChild(removeBtn);
+            row.appendChild(select);
+            row.appendChild(meta);
+            wrap.appendChild(row);
+        });
+
+        if (empty) empty.classList.toggle('hidden', lines.length > 0);
+        if (totalEl) totalEl.textContent = moneyBr(cartGrandTotal(prefix));
+    }
+
+    function addSaleCartLine(prefix) {
+        const catalog = productsCatalog(prefix).filter((p) => p.available);
+        if (catalog.length === 0) {
+            toast('Nenhum produto disponível para venda.', 'error');
+            return;
+        }
+        if (!saleCarts[prefix]) saleCarts[prefix] = [];
+        saleCarts[prefix].push({
+            uid: `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            productId: 0,
+            quantity: 1,
+        });
+        renderSaleCart(prefix);
+    }
+
+    function collectSaleFinalizeFields(prefix) {
+        const out = {};
+        const val = (suffix) => (document.getElementById(`${prefix}-${suffix}`)?.value || '').trim();
+        out.customer_name = val('customer-name');
+        out.customer_phone = val('customer-phone');
+        out.customer_whatsapp = val('customer-whatsapp');
+        out.customer_document = val('customer-document');
+        out.customer_rg = val('customer-rg');
+        out.customer_email = val('customer-email');
+        out.sale_notes = val('sale-notes');
+        out.items = (saleCarts[prefix] || [])
+            .filter((l) => Number(l.productId) > 0)
+            .map((l) => ({
+                product_id: Number(l.productId),
+                quantity: Math.max(1, Number(l.quantity) || 1),
+            }));
+        return out;
+    }
+
+    function validateSaleFinalizeFields(prefix) {
+        for (const key of saleRequiredFields) {
+            if (key === 'product') {
+                const items = (saleCarts[prefix] || []).filter((l) => Number(l.productId) > 0);
+                if (items.length === 0) {
+                    return 'Adicione ao menos um produto à venda.';
+                }
+                const qtyByProduct = {};
+                for (const line of items) {
+                    const pid = Number(line.productId);
+                    qtyByProduct[pid] = (qtyByProduct[pid] || 0) + Math.max(1, Number(line.quantity) || 1);
+                }
+                for (const [pid, qty] of Object.entries(qtyByProduct)) {
+                    const p = findProduct(prefix, pid);
+                    if (!p) return 'Produto inválido no carrinho.';
+                    if (p.stock_control && Number(p.stock_quantity) < Number(qty)) {
+                        return `Estoque insuficiente para ${p.name}.`;
+                    }
+                }
+                continue;
+            }
+            const suffix = SALE_CUSTOMER_IDS[key];
+            if (!suffix) continue;
+            const el = document.getElementById(`${prefix}-${suffix}`);
+            const value = (el?.value || '').trim();
+            if (!value) {
+                const label = saleFieldLabels[key] || key;
+                return `Informe: ${label}.`;
+            }
+        }
+        // Always require at least one product when sale finalize is open (business rule)
+        const root = document.getElementById(`${prefix}-sale-finalize`);
+        if (root && root.dataset.requireProduct === '1') {
+            const items = (saleCarts[prefix] || []).filter((l) => Number(l.productId) > 0);
+            if (items.length === 0) return 'Adicione ao menos um produto à venda.';
+        }
+        return null;
+    }
+
+    function appendFormPayload(body, data, prefix = '') {
+        Object.entries(data).forEach(([k, v]) => {
+            const key = prefix ? `${prefix}[${k}]` : k;
+            if (Array.isArray(v)) {
+                v.forEach((item, i) => {
+                    if (item && typeof item === 'object') {
+                        appendFormPayload(body, item, `${key}[${i}]`);
+                    } else if (item != null && item !== '') {
+                        body.append(`${key}[${i}]`, item);
+                    }
+                });
+            } else if (v != null && v !== '') {
+                body.append(key, v);
+            }
+        });
+    }
+
+    function formatApiErrors(result, fallback) {
+        if (result?.errors && typeof result.errors === 'object') {
+            const lines = Object.values(result.errors).flat().filter(Boolean);
+            if (lines.length) return lines.join(' · ');
+        }
+        return result?.message || fallback || 'Não foi possível salvar.';
+    }
+
+    function syncVisitContractBlock(status) {
+        const block = document.getElementById('visit-sale-finalize');
+        const returnBlock = document.getElementById('visit-return-block');
+        const notesHint = document.getElementById('visit-notes-hint');
+        const submitBtn = document.getElementById('visit-submit');
+        const isContract = status === 'installation_requested';
+        const isReturn = status === 'return_later';
+        const isInterested = status === 'interested';
+        block?.classList.toggle('hidden', !isContract);
+        returnBlock?.classList.toggle('hidden', !isReturn);
+        if (notesHint) {
+            if (isContract) notesHint.textContent = '(opcional — observação da visita)';
+            else if (isInterested || isReturn) notesHint.textContent = '(recomendado)';
+            else notesHint.textContent = '(opcional)';
+        }
+        if (submitBtn) {
+            submitBtn.textContent = isContract ? 'Confirmar venda' : 'Salvar visita';
+        }
+        if (!isContract) {
+            clearSaleFinalizeFields('visit');
+        } else if ((saleCarts.visit || []).length === 0) {
+            renderSaleCart('visit');
+        }
+        if (!isReturn) {
+            const fuDate = document.getElementById('visit-follow-up-date');
+            const fuTime = document.getElementById('visit-follow-up-time');
+            if (fuDate) fuDate.value = '';
+            if (fuTime) fuTime.value = '';
+        }
+    }
+
+    function syncPointOutcomeUi(status) {
+        const contract = document.getElementById('point-sale-finalize');
+        const ret = document.getElementById('point-return-block');
+        const notesHint = document.getElementById('point-notes-hint');
+        const submitBtn = document.getElementById('point-submit');
+        contract?.classList.toggle('hidden', status !== 'installation_requested');
+        ret?.classList.toggle('hidden', status !== 'return_later');
+        if (notesHint) {
+            if (status === 'installation_requested') notesHint.textContent = '(opcional — observação da visita)';
+            else if (status === 'interested' || status === 'return_later') notesHint.textContent = '(recomendado)';
+            else notesHint.textContent = '(opcional)';
+        }
+        if (submitBtn && isFieldSeller) {
+            submitBtn.textContent = status === 'installation_requested' ? 'Confirmar venda' : 'Salvar atendimento';
+        }
+        if (status !== 'installation_requested') {
+            clearSaleFinalizeFields('point');
+        } else if ((saleCarts.point || []).length === 0) {
+            renderSaleCart('point');
+        }
+        if (status !== 'return_later') {
+            const fuDate = document.getElementById('point-follow-up-date');
+            const fuTime = document.getElementById('point-follow-up-time');
+            if (fuDate) fuDate.value = '';
+            if (fuTime) fuTime.value = '';
+        }
+        document.querySelectorAll('.point-outcome').forEach((btn) => {
+            btn.classList.toggle('is-selected', btn.dataset.status === status);
+            btn.classList.toggle('border-sky-400', btn.dataset.status === status);
+        });
+    }
+
+    function prepareSellerCampaignSelect() {
+        const select = document.getElementById('point-campaign-id');
+        const hint = document.getElementById('point-campaign-hint');
+        const block = document.getElementById('point-campaign-block');
+        if (!select || !isFieldSeller) return;
+
+        if (sellerCampaigns.length === 0) {
+            block?.classList.remove('hidden');
+            select.disabled = true;
+            if (hint) hint.textContent = noCampaignMessage;
+            return;
+        }
+
+        select.disabled = false;
+        if (sellerCampaigns.length === 1) {
+            select.value = String(sellerCampaigns[0].id);
+            block?.classList.add('hidden');
+            if (hint) hint.textContent = '';
+            return;
+        }
+
+        block?.classList.remove('hidden');
+        if (!select.value && campaignSelect?.value) {
+            select.value = campaignSelect.value;
+        }
+        if (hint) hint.textContent = 'Você tem mais de uma campanha — escolha antes de salvar.';
+    }
+
+    function openVisitModal() {
+        if (!selectedMarker || !canVisit) return;
+        document.getElementById('visit-property-id').value = selectedMarker.property_id;
+        const campaignEl = document.getElementById('visit-campaign-id');
+        if (campaignSelect.value) {
+            campaignEl.value = campaignSelect.value;
+        } else if (!campaignEl.value && campaignEl.options.length === 2) {
+            campaignEl.selectedIndex = 1;
+        }
+        document.getElementById('visit-status').value = '';
+        document.getElementById('visit-notes').value = '';
+        const product = document.getElementById('visit-product');
+        const cNotes = document.getElementById('visit-contract-notes');
+        if (product) product.value = '';
+        if (cNotes) cNotes.value = '';
+        syncVisitContractBlock('');
+        document.querySelectorAll('.visit-quick').forEach((btn) => btn.classList.remove('is-selected'));
+        visitError.classList.add('hidden');
+        visitModal.classList.add('open');
+    }
+
+    function closeVisitModal() {
+        visitModal.classList.remove('open');
+    }
+
+    function openPostVisitModal() {
+        postVisitModal?.classList.add('open');
+    }
+
+    function closePostVisitModal() {
+        postVisitModal?.classList.remove('open');
+    }
+
+    function formatDistance(meters) {
+        if (meters == null || Number.isNaN(meters)) return null;
+        if (meters < 1000) return `${Math.round(meters)} m`;
+        return `${(meters / 1000).toFixed(1)} km`;
+    }
+
+    function distanceMeters(from, to) {
+        if (!from || to?.latitude == null || to?.longitude == null) return null;
+        try {
+            return L.latLng(from.latitude ?? from.lat, from.longitude ?? from.lng)
+                .distanceTo(L.latLng(to.latitude, to.longitude));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function updateDrawerDistance(marker) {
+        const el = document.getElementById('drawer-distance');
+        if (!el) return;
+        const origin = sellerGps || {
+            latitude: map.getCenter().lat,
+            longitude: map.getCenter().lng,
+        };
+        const meters = distanceMeters(origin, marker);
+        if (meters == null) {
+            el.classList.add('hidden');
+            el.textContent = '';
+            return;
+        }
+        el.textContent = `📏 ${formatDistance(meters)} de você`;
+        el.classList.remove('hidden');
+    }
+
+    function pendingPriority(marker) {
+        const status = marker.status || '';
+        if (status === 'new') return 1;
+        if (status === 'return_later') return 2;
+        if (status === 'interested') return 3;
+        return 99;
+    }
+
+    function isPendingHouse(marker) {
+        const status = marker.status || '';
+        return status === 'new' || status === 'return_later' || status === 'interested';
+    }
+
+    function candidateHouses(excludePropertyId) {
+        return markersCache
+            .filter((m) => matchesCommercialFilters(m))
+            .filter((m) => isPendingHouse(m))
+            .filter((m) => Number(m.property_id) !== Number(excludePropertyId || 0))
+            .filter((m) => !visitedInSession.has(Number(m.property_id)));
+    }
+
+    function findNextHouse(origin, excludePropertyId) {
+        const from = origin || sellerGps || {
+            latitude: map.getCenter().lat,
+            longitude: map.getCenter().lng,
+        };
+        const candidates = candidateHouses(excludePropertyId);
+        if (candidates.length === 0) return null;
+
+        const scored = candidates.map((m) => {
+            const dist = distanceMeters(from, m);
+            const ownBoost = (isFieldSeller && currentUserId && Number(m.owner_user_id) === Number(currentUserId))
+                ? -50
+                : 0;
+            return {
+                marker: m,
+                dist: dist == null ? Number.POSITIVE_INFINITY : dist,
+                priority: pendingPriority(m) + ownBoost,
+            };
+        });
+
+        scored.sort((a, b) => {
+            if (a.priority !== b.priority) return a.priority - b.priority;
+            return a.dist - b.dist;
+        });
+
+        return scored[0]?.marker || null;
+    }
+
+    async function ensureSellerGps() {
+        if (sellerGps) return sellerGps;
+        try {
+            const gps = await getGps();
+            sellerGps = { latitude: gps.latitude, longitude: gps.longitude, accuracy: gps.accuracy };
+            return sellerGps;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function goToNextHouse({ fromVisit = false } = {}) {
+        const excludeId = selectedMarker?.property_id;
+        const btn = document.getElementById('btn-next-house');
+        if (btn) btn.disabled = true;
+        try {
+            await ensureSellerGps();
+            const next = findNextHouse(sellerGps || selectedMarker, excludeId);
+            if (!next) {
+                toast(fromVisit
+                    ? 'Visita salva. Não há outra casa pendente por perto.'
+                    : 'Nenhuma casa pendente por perto.');
+                closeDrawer();
+                return;
+            }
+            const meters = distanceMeters(sellerGps || selectedMarker || map.getCenter(), next);
+            suppressMoveLoad = true;
+            const latlng = L.latLng(next.latitude, next.longitude);
+            map.flyToBounds(latlng.toBounds(90), {
+                maxZoom: 17,
+                duration: 0.7,
+                paddingTopLeft: [24, isFieldSeller ? 80 : 40],
+                paddingBottomRight: [24, isFieldSeller ? 160 : 90],
+            });
+            setTimeout(() => { suppressMoveLoad = false; }, 800);
+            openDrawer(next);
+            toast(meters != null
+                ? `Próxima casa · ${formatDistance(meters)}`
+                : 'Próxima casa encontrada');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function renderMarkers(markers, { fit = false } = {}) {
+        const query = searchInput.value;
+        let filtered = markers
+            .filter((m) => matchesSearch(m, query))
+            .filter((m) => matchesCommercialFilters(m));
+
+        clusterGroup.clearLayers();
+        layerByPropertyId = new Map();
+        const bounds = [];
+
+        filtered.forEach((marker) => {
+            if (marker.latitude == null || marker.longitude == null) return;
+            const group = commercial?.groupOf(marker) || marker.commercial_group || 'new';
+
+            const layer = L.marker([marker.latitude, marker.longitude], {
+                icon: coloredIcon(marker.color, marker.location_kind || 'gps'),
+                commercialGroup: group,
+                markerData: marker,
+            });
+            layer.on('click', () => {
+                if (adjustState || regionSelectMode) return;
+                ignoreMapClickUntil = Date.now() + 400;
+                openDrawer(marker);
+            });
+            clusterGroup.addLayer(layer);
+            layerByPropertyId.set(marker.property_id, { layer, marker });
+            bounds.push([marker.latitude, marker.longitude]);
+        });
+
+        highlightSelectedMarker();
+
+        updateMetrics(filtered, lastSummary);
+        statusEl.textContent = filtered.length
+            ? `${filtered.length} ponto(s) nesta área`
+            : 'Nenhum ponto nesta área.';
+        const emptyState = document.getElementById('map-empty-state');
+        if (emptyState) {
+            emptyState.classList.toggle('visible', filtered.length === 0 && initialFitDone);
+        }
+
+        if (fit && bounds.length > 0) {
+            suppressMoveLoad = true;
+            map.fitBounds(bounds, {
+                padding: isFieldSeller ? [56, 56] : [48, 48],
+                paddingBottomRight: isFieldSeller ? [48, 150] : [48, 48],
+                maxZoom: 16,
+            });
+            setTimeout(() => { suppressMoveLoad = false; }, 500);
+            initialFitDone = true;
+        }
+    }
+
+    function showAdjustBanner(text) {
+        if (!adjustBanner) return;
+        const label = document.getElementById('adjust-banner-text');
+        if (label) label.textContent = text || 'Arraste o ponto até a posição correta.';
+        adjustBanner.classList.remove('hidden');
+    }
+
+    function hideAdjustBanner() {
+        adjustBanner?.classList.add('hidden');
+    }
+
+    function openAdjustConfirm(lat, lng) {
+        document.getElementById('adjust-confirm-lat').textContent = Number(lat).toFixed(7);
+        document.getElementById('adjust-confirm-lng').textContent = Number(lng).toFixed(7);
+        document.getElementById('adjust-confirm-error')?.classList.add('hidden');
+        adjustConfirmModal?.classList.add('open');
+    }
+
+    function closeAdjustConfirm() {
+        adjustConfirmModal?.classList.remove('open');
+    }
+
+    function cleanupAdjustLayer() {
+        if (adjustState?.layer) {
+            map.removeLayer(adjustState.layer);
+        }
+    }
+
+    function cancelAdjustMode({ reload = true } = {}) {
+        cleanupAdjustLayer();
+        adjustState = null;
+        hideAdjustBanner();
+        closeAdjustConfirm();
+        document.body.classList.remove('adjust-mode');
+        suppressMoveLoad = false;
+        if (reload) {
+            loadMarkers({ fit: false, useBbox: true });
+        }
+    }
+
+    function startAdjustMode({ propertyId, latitude, longitude, color, locationKind, mode }) {
+        if (!propertyId && mode !== 'create-draft') return;
+        cancelAdjustMode({ reload: false });
+        closeDrawer();
+        closePointModal();
+        closeAdjustConfirm();
+
+        const lat = Number(latitude);
+        const lng = Number(longitude);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+
+        suppressMoveLoad = true;
+        document.body.classList.add('adjust-mode');
+
+        // Hide original clustered marker while dragging a standalone one.
+        const existing = propertyId ? layerByPropertyId.get(Number(propertyId)) : null;
+        if (existing?.layer) {
+            clusterGroup.removeLayer(existing.layer);
+        }
+
+        const layer = L.marker([lat, lng], {
+            icon: coloredIcon(color || '#f97316', locationKind || 'gps'),
+            draggable: true,
+            autoPan: true,
+            zIndexOffset: 1000,
+        }).addTo(map);
+
+        layer.on('dragstart', () => {
+            ignoreMapClickUntil = Date.now() + 800;
+            layer.getElement()?.classList.add('map-marker-dragging');
+        });
+        layer.on('dragend', () => {
+            ignoreMapClickUntil = Date.now() + 800;
+            layer.getElement()?.classList.remove('map-marker-dragging');
+            const pos = layer.getLatLng();
+            if (mode === 'create-draft') {
+                fillPointCoords(pos.lat, pos.lng, lastGpsAccuracy);
+                cleanupAdjustLayer();
+                adjustState = null;
+                hideAdjustBanner();
+                document.body.classList.remove('adjust-mode');
+                suppressMoveLoad = false;
+                pointModal?.classList.add('open');
+                toast('Posição atualizada. Confira e salve o ponto.');
+                return;
+            }
+            openAdjustConfirm(pos.lat, pos.lng);
+        });
+
+        adjustState = {
+            mode: mode || 'existing',
+            propertyId: propertyId ? Number(propertyId) : null,
+            originalLat: lat,
+            originalLng: lng,
+            color: color || '#f97316',
+            locationKind: locationKind || 'gps',
+            layer,
+        };
+
+        map.setView([lat, lng], Math.max(map.getZoom(), 18));
+        showAdjustBanner('Arraste o ponto até a posição correta.');
+        toast('Arraste o marcador até a posição correta.');
+    }
+
+    async function saveAdjustedPosition() {
+        if (!adjustState || adjustState.mode === 'create-draft') return;
+        const pos = adjustState.layer?.getLatLng();
+        if (!pos || !adjustState.propertyId || !pointAdjustTemplate) return;
+
+        const btn = document.getElementById('adjust-confirm-save');
+        const err = document.getElementById('adjust-confirm-error');
+        btn.disabled = true;
+        err?.classList.add('hidden');
+
+        const body = new FormData();
+        body.append('_method', 'PUT');
+        body.append('latitude', String(pos.lat));
+        body.append('longitude', String(pos.lng));
+
+        try {
+            const url = pointAdjustTemplate.replace('__PROPERTY__', adjustState.propertyId);
+            const response = await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+                body,
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload?.message || 'Não foi possível salvar a posição.');
+            }
+
+            const savedId = adjustState.propertyId;
+            cancelAdjustMode({ reload: false });
+            toast('Posição salva no mapa.');
+            await loadMarkers({ fit: false, useBbox: true });
+
+            const refreshed = markersCache.find((m) => Number(m.property_id) === Number(savedId));
+            if (refreshed) {
+                openDrawer(refreshed);
+            }
+        } catch (error) {
+            if (err) {
+                err.textContent = error.message || 'Erro ao salvar.';
+                err.classList.remove('hidden');
+            }
+            toast(error.message || 'Erro ao salvar.', 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function openPostCreateAdjust(propertyId) {
+        pendingPostCreatePropertyId = propertyId;
+        postCreateAdjustModal?.classList.add('open');
+    }
+
+    function closePostCreateAdjust() {
+        pendingPostCreatePropertyId = null;
+        postCreateAdjustModal?.classList.remove('open');
+    }
+
+    async function loadMarkers({ fit = false, useBbox = true } = {}) {
+        const seq = ++loadSeq;
+        statusEl.textContent = 'Carregando mapa...';
+        const emptyState = document.getElementById('map-empty-state');
+        if (emptyState) emptyState.classList.remove('visible');
+        const query = buildQuery(useBbox && initialFitDone);
+        const url = query ? `${markersUrl}?${query}` : markersUrl;
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const payload = await response.json();
+            if (seq !== loadSeq) return;
+
+            markersCache = payload?.data?.markers || [];
+            lastSummary = payload?.data?.summary || null;
+            renderMarkers(markersCache, { fit: fit || !initialFitDone });
+        } catch (error) {
+            console.error(error);
+            countEl.textContent = '0';
+            viewportEl.textContent = '0';
+            statusEl.textContent = 'Sem conexão. Verifique a internet e tente de novo.';
+            toast('Não foi possível carregar o mapa.', 'error');
+        }
+    }
+
+    async function submitVisit(event) {
+        event.preventDefault();
+        const campaignId = document.getElementById('visit-campaign-id').value;
+        const propertyId = document.getElementById('visit-property-id').value;
+        const status = document.getElementById('visit-status').value;
+        const notes = document.getElementById('visit-notes').value;
+        const submitBtn = document.getElementById('visit-submit');
+
+        if (!campaignId) {
+            visitError.textContent = 'Escolha a campanha desta visita.';
+            visitError.classList.remove('hidden');
+            return;
+        }
+        if (!status) {
+            visitError.textContent = 'Escolha como foi o atendimento.';
+            visitError.classList.remove('hidden');
+            return;
+        }
+        if (status === 'installation_requested') {
+            const saleErr = validateSaleFinalizeFields('visit');
+            if (saleErr) {
+                visitError.textContent = saleErr;
+                visitError.classList.remove('hidden');
+                return;
+            }
+        }
+
+        submitBtn.disabled = true;
+        visitError.classList.add('hidden');
+
+        const payload = {
+            property_id: propertyId,
+            status,
+            notes: notes || '',
+            campaign_id: campaignId,
+        };
+        if (status === 'installation_requested') {
+            Object.assign(payload, collectSaleFinalizeFields('visit'));
+        }
+        const followUpAt = combineFollowUpAt('visit-follow-up-date', 'visit-follow-up-time');
+        if (status === 'return_later' && followUpAt) {
+            payload.follow_up_at = followUpAt;
+        }
+        if (selectedMarker) {
+            payload.latitude = selectedMarker.latitude;
+            payload.longitude = selectedMarker.longitude;
+        }
+        if (sellerGps) {
+            payload.latitude = sellerGps.latitude;
+            payload.longitude = sellerGps.longitude;
+        }
+
+        const body = new FormData();
+        appendFormPayload(body, payload);
+
+        try {
+            if (!navigator.onLine && window.ExpandorOfflineQueue) {
+                window.ExpandorOfflineQueue.enqueue('visit.create', payload);
+                updateOfflineBadge();
+                if (propertyId) visitedInSession.add(Number(propertyId));
+                closeVisitModal();
+                closeDrawer();
+                toast('Sem internet — visita guardada no celular.');
+                openPostVisitModal();
+                bumpDayMetric('visits');
+                if (status === 'interested') bumpDayMetric('interested');
+                if (status === 'installation_requested') bumpDayMetric('contracts');
+                return;
+            }
+
+            const url = visitStoreTemplate.replace('__CAMPAIGN__', campaignId);
+            const response = await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+                body,
+            });
+
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(formatApiErrors(result, 'Não foi possível salvar a visita.'));
+            }
+
+            if (propertyId) {
+                visitedInSession.add(Number(propertyId));
+            }
+
+            closeVisitModal();
+            closeDrawer();
+            toast(status === 'installation_requested' ? saleRegisteredToast : 'Visita registrada');
+            await loadMarkers({ fit: false, useBbox: true });
+
+            bumpDayMetric('visits');
+            if (status === 'interested') bumpDayMetric('interested');
+            if (status === 'installation_requested') bumpDayMetric('contracts');
+
+            openPostVisitModal();
+        } catch (error) {
+            if (!navigator.onLine && window.ExpandorOfflineQueue) {
+                window.ExpandorOfflineQueue.enqueue('visit.create', payload);
+                updateOfflineBadge();
+                closeVisitModal();
+                closeDrawer();
+                toast('Sem conexão — visita guardada no celular.');
+                openPostVisitModal();
+            } else {
+                visitError.textContent = error.message || 'Erro ao salvar.';
+                visitError.classList.remove('hidden');
+            }
+        } finally {
+            submitBtn.disabled = false;
+        }
+    }
+
+    function bumpDayMetric(kind) {
+        const map = {
+            visits: ['metric-visits', 'brief-visits'],
+            interested: ['metric-interested', 'brief-interested'],
+            contracts: ['metric-installations', 'brief-contracts'],
+        };
+        (map[kind] || []).forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = String(Number(el.textContent || 0) + 1);
+        });
+    }
+
+    async function flyToSearchHits() {
+        const query = searchInput.value.trim();
+        if (!query) {
+            hideSearchResults();
+            await loadMarkers({ fit: false, useBbox: true });
+            return;
+        }
+
+        statusEl.textContent = 'Buscando…';
+        const params = new URLSearchParams(buildQuery(false));
+        params.set('q', query);
+        const url = `${markersUrl}?${params.toString()}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const payload = await response.json();
+            const hits = payload?.data?.markers || [];
+
+            // Mantém hits da busca visíveis mesmo fora do viewport atual.
+            const byId = new Map(markersCache.map((m) => [Number(m.property_id), m]));
+            hits.forEach((hit) => byId.set(Number(hit.property_id), hit));
+            markersCache = Array.from(byId.values());
+
+            renderMarkers(hits);
+            showSearchResults(hits);
+
+            if (hits.length === 1) {
+                focusSearchHit(hits[0]);
+                statusEl.textContent = '1 resultado';
+            } else if (hits.length > 1) {
+                suppressMoveLoad = true;
+                map.fitBounds(hits.map((h) => [h.latitude, h.longitude]), { padding: [48, 48], maxZoom: 16 });
+                setTimeout(() => { suppressMoveLoad = false; }, 500);
+                statusEl.textContent = `${hits.length} resultado(s)`;
+            } else {
+                hideSearchResults();
+                toast('Nenhum cliente encontrado.');
+                statusEl.textContent = 'Nenhum resultado';
+            }
+        } catch (error) {
+            console.error(error);
+            toast('Não foi possível buscar no mapa.', 'error');
+            statusEl.textContent = 'Falha na busca';
+        }
+    }
+
+    function nowLabel() {
+        const d = new Date();
+        return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function getGps() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Não conseguimos localizar você. Verifique a permissão de localização.'));
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const coords = {
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy,
+                    };
+                    sellerGps = coords;
+                    resolve(coords);
+                },
+                () => reject(new Error('Não conseguimos localizar você.\nVerifique a permissão de localização.')),
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+            );
+        });
+    }
+
+    function fillPointCoords(lat, lng, accuracy) {
+        document.getElementById('point-latitude').value = String(lat);
+        document.getElementById('point-longitude').value = String(lng);
+        lastGpsAccuracy = accuracy != null ? Number(accuracy) : null;
+        document.getElementById('point-gps-accuracy').value = lastGpsAccuracy != null ? String(lastGpsAccuracy) : '';
+        const title = document.getElementById('point-gps-title');
+        if (title) title.textContent = 'Local encontrado.';
+        document.getElementById('point-gps-label').textContent = `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+        document.getElementById('point-meta-label').textContent = `Você: ${sellerName} · ${nowLabel()}`;
+        const accEl = document.getElementById('point-accuracy-label');
+        const classEl = document.getElementById('point-accuracy-class');
+        if (accEl) {
+            accEl.textContent = lastGpsAccuracy != null
+                ? `Precisão: ${Math.round(lastGpsAccuracy)} metros`
+                : '';
+        }
+        if (classEl) {
+            const cls = accuracyClass(lastGpsAccuracy);
+            if (cls) {
+                classEl.textContent = `Classificação: ${cls.label}`;
+                classEl.className = `text-xs mt-0.5 font-medium ${cls.tone}`;
+            } else {
+                classEl.textContent = '';
+            }
+        }
+        const adjustOnMap = document.getElementById('point-adjust-on-map');
+        if (adjustOnMap) {
+            adjustOnMap.classList.toggle('hidden', !(lat && lng));
+        }
+        if (citySelect.value) {
+            document.getElementById('point-city-id').value = citySelect.value;
+        }
+    }
+
+    async function openPointModal(coords, mode = 'create') {
+        if (mode === 'create' && !canCreatePoint) return;
+        if (mode === 'edit' && !canEditPoint) return;
+        if (!pointModal) return;
+
+        pointError.classList.add('hidden');
+        pointForm.reset();
+        document.getElementById('point-mode').value = mode;
+        document.getElementById('point-modal-title').textContent = mode === 'edit'
+            ? 'Editar residência'
+            : (isFieldSeller ? 'Novo atendimento' : 'Nova oportunidade');
+        document.getElementById('point-submit').textContent = mode === 'edit'
+            ? 'Salvar alterações'
+            : (isFieldSeller ? 'Salvar atendimento' : 'Salvar');
+        const title = document.getElementById('point-gps-title');
+        if (title) title.textContent = mode === 'edit' ? 'Local da residência' : 'Capturando localização...';
+
+        const managerStatus = document.getElementById('point-manager-status');
+        const firstApproach = document.getElementById('point-first-approach');
+        if (mode === 'create' && isFieldSeller) {
+            managerStatus?.classList.add('hidden');
+            firstApproach?.classList.remove('hidden');
+            document.getElementById('point-visit-status').value = '';
+            syncPointOutcomeUi('');
+            prepareSellerCampaignSelect();
+            if (sellerCampaigns.length === 0) {
+                pointError.textContent = noCampaignMessage;
+                pointError.classList.remove('hidden');
+            }
+        } else {
+            managerStatus?.classList.remove('hidden');
+            firstApproach?.classList.add('hidden');
+            const interested = document.querySelector('#point-status-group input[value="interested"]');
+            if (interested) interested.checked = true;
+        }
+
+        if (mode === 'edit' && (pointDetails || selectedMarker)) {
+            managerStatus?.classList.remove('hidden');
+            firstApproach?.classList.add('hidden');
+            const data = pointDetails || selectedMarker;
+            document.getElementById('point-property-id').value = data.property_id;
+            if (data.city_id) document.getElementById('point-city-id').value = data.city_id;
+            document.getElementById('point-street').value = data.street || '';
+            document.getElementById('point-number').value = data.number || '';
+            document.getElementById('point-contact-name').value = data.resident_name || '';
+            document.getElementById('point-contact-phone').value = data.resident_phone || '';
+            const notesEl = document.getElementById('point-notes');
+            if (notesEl) notesEl.value = data.notes || '';
+            const statusRadio = document.querySelector(`#point-status-group input[value="${data.status}"]`);
+            if (statusRadio) statusRadio.checked = true;
+            fillPointCoords(data.latitude, data.longitude, null);
+            pointModal.classList.add('open');
+            if (window.lucide) window.lucide.createIcons();
+            return;
+        }
+
+        if (coords) {
+            fillPointCoords(coords.latitude, coords.longitude, coords.accuracy);
+            pointModal.classList.add('open');
+            if (window.lucide) window.lucide.createIcons();
+            return;
+        }
+
+        document.getElementById('point-gps-label').textContent = 'Aguarde um instante';
+        if (title) title.textContent = 'Capturando localização...';
+        document.getElementById('point-accuracy-label').textContent = '';
+        const classEl = document.getElementById('point-accuracy-class');
+        if (classEl) classEl.textContent = '';
+        document.getElementById('point-adjust-on-map')?.classList.add('hidden');
+        pointModal.classList.add('open');
+        try {
+            const gps = await getGps();
+            fillPointCoords(gps.latitude, gps.longitude, gps.accuracy);
+            map.setView([gps.latitude, gps.longitude], Math.max(map.getZoom(), 17));
+        } catch (error) {
+            if (title) title.textContent = 'Localização indisponível';
+            pointError.textContent = error.message.replace(/\n/g, ' ');
+            pointError.classList.remove('hidden');
+            toast(error.message.replace(/\n/g, ' '), 'error');
+        }
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function closePointModal() {
+        pointModal?.classList.remove('open');
+    }
+
+    function openEmptySpot(latlng) {
+        if (!canCreatePoint) return;
+        pendingEmptyLatLng = latlng;
+        emptySpotModal?.classList.add('open');
+    }
+
+    function closeEmptySpot() {
+        pendingEmptyLatLng = null;
+        emptySpotModal?.classList.remove('open');
+    }
+
+    function openDeleteModal() {
+        if (!selectedMarker?.property_id || !pointDetails?.can_delete) return;
+        document.getElementById('delete-point-reason').value = '';
+        document.getElementById('delete-point-error').classList.add('hidden');
+        document.getElementById('delete-point-modal')?.classList.add('open');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-point-modal')?.classList.remove('open');
+    }
+
+    async function confirmDeletePoint() {
+        if (!selectedMarker?.property_id) return;
+        const btn = document.getElementById('delete-point-confirm');
+        const err = document.getElementById('delete-point-error');
+        btn.disabled = true;
+        err.classList.add('hidden');
+
+        const body = new FormData();
+        body.append('_method', 'DELETE');
+        body.append('reason', document.getElementById('delete-point-reason').value || '');
+
+        try {
+            const url = pointShowTemplate.replace('__PROPERTY__', selectedMarker.property_id);
+            const response = await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+                body,
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload?.message || 'Não foi possível excluir.');
+            }
+            closeDeleteModal();
+            closeDrawer();
+            toast('Ponto removido do mapa.');
+            await loadMarkers({ fit: false, useBbox: true });
+        } catch (error) {
+            err.textContent = error.message || 'Não foi possível remover.';
+            err.classList.remove('hidden');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function submitPoint(event) {
+        event.preventDefault();
+        const mode = document.getElementById('point-mode').value || 'create';
+        if (mode === 'create' && !canCreatePoint) return;
+        if (mode === 'edit' && !canEditPoint) return;
+
+        const submitBtn = document.getElementById('point-submit');
+        const useFirstApproach = mode === 'create' && isFieldSeller && firstApproachUrl;
+
+        let status = null;
+        if (useFirstApproach) {
+            status = document.getElementById('point-visit-status')?.value || '';
+            if (!status) {
+                pointError.textContent = 'Escolha o resultado do atendimento.';
+                pointError.classList.remove('hidden');
+                return;
+            }
+            if (sellerCampaigns.length === 0) {
+                pointError.textContent = noCampaignMessage;
+                pointError.classList.remove('hidden');
+                return;
+            }
+            const campaignId = document.getElementById('point-campaign-id')?.value || '';
+            if (sellerCampaigns.length > 1 && !campaignId) {
+                pointError.textContent = 'Selecione a campanha deste atendimento.';
+                pointError.classList.remove('hidden');
+                return;
+            }
+            const productId = (document.getElementById('point-product')?.value || '').trim();
+            const notes = (document.getElementById('point-notes')?.value || '').trim();
+            if (status === 'installation_requested') {
+                const saleErr = validateSaleFinalizeFields('point');
+                if (saleErr) {
+                    pointError.textContent = saleErr;
+                    pointError.classList.remove('hidden');
+                    return;
+                }
+            }
+            void productId;
+            void notes;
+        } else {
+            status = pointForm.querySelector('input[name="status"]:checked')?.value;
+            if (!status) {
+                pointError.textContent = 'Escolha como foi o atendimento.';
+                pointError.classList.remove('hidden');
+                return;
+            }
+        }
+
+        submitBtn.disabled = true;
+        pointError.classList.add('hidden');
+
+        const payload = {
+            city_id: document.getElementById('point-city-id').value,
+            street: document.getElementById('point-street').value.trim(),
+            number: document.getElementById('point-number').value,
+            latitude: document.getElementById('point-latitude').value,
+            longitude: document.getElementById('point-longitude').value,
+            status,
+            contact_name: document.getElementById('point-contact-name').value,
+            contact_phone: document.getElementById('point-contact-phone').value,
+            notes: document.getElementById('point-notes')?.value || '',
+            gps_accuracy: document.getElementById('point-gps-accuracy').value,
+        };
+
+        if (useFirstApproach) {
+            const campaignId = document.getElementById('point-campaign-id')?.value || '';
+            if (campaignId) payload.campaign_id = campaignId;
+            if (status === 'installation_requested') {
+                Object.assign(payload, collectSaleFinalizeFields('point'));
+                if (payload.customer_name && !payload.contact_name) {
+                    payload.contact_name = payload.customer_name;
+                }
+                if (payload.customer_phone && !payload.contact_phone) {
+                    payload.contact_phone = payload.customer_phone;
+                }
+            }
+            const followUpAt = combineFollowUpAt('point-follow-up-date', 'point-follow-up-time');
+            if (status === 'return_later' && followUpAt) payload.follow_up_at = followUpAt;
+        }
+
+        if (!payload.street) {
+            payload.street = isFieldSeller ? 'Local GPS' : '';
+        }
+        if (!payload.street) {
+            pointError.textContent = 'Informe a rua.';
+            pointError.classList.remove('hidden');
+            submitBtn.disabled = false;
+            return;
+        }
+        if (!payload.city_id && citySelect.value) {
+            payload.city_id = citySelect.value;
+            document.getElementById('point-city-id').value = citySelect.value;
+        }
+        if (!payload.city_id) {
+            const cityEl = document.getElementById('point-city-id');
+            if (cityEl?.options?.length) {
+                payload.city_id = cityEl.options[0].value;
+                cityEl.value = payload.city_id;
+            }
+        }
+
+        const body = new FormData();
+        appendFormPayload(body, payload);
+
+        const propertyId = document.getElementById('point-property-id').value;
+        let url = useFirstApproach ? firstApproachUrl : pointStoreUrl;
+        let method = 'POST';
+        if (mode === 'edit' && propertyId) {
+            url = pointShowTemplate.replace('__PROPERTY__', propertyId);
+            body.append('_method', 'PUT');
+            payload.property_id = propertyId;
+        }
+
+        try {
+            if (!navigator.onLine && window.ExpandorOfflineQueue) {
+                window.ExpandorOfflineQueue.enqueue(
+                    mode === 'edit' ? 'point.update' : (useFirstApproach ? 'first_approach' : 'point.create'),
+                    payload
+                );
+                updateOfflineBadge();
+                closePointModal();
+                toast(mode === 'edit'
+                    ? 'Sem internet — atualização guardada no celular.'
+                    : 'Sem internet — atendimento guardado no celular.');
+                return;
+            }
+
+            const response = await fetch(url, {
+                method,
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+                body,
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(formatApiErrors(result, 'Não foi possível salvar o ponto.'));
+            }
+
+            closePointModal();
+            const saleDone = useFirstApproach && status === 'installation_requested';
+            toast(saleDone
+                ? saleRegisteredToast
+                : (useFirstApproach ? 'Atendimento registrado' : (mode === 'edit' ? 'Cliente atualizado' : 'Ponto salvo')));
+            await loadMarkers({ fit: false, useBbox: true });
+            if (result?.data) {
+                const created = {
+                    property_id: result.data.property_id,
+                    latitude: result.data.latitude,
+                    longitude: result.data.longitude,
+                    status: result.data.status,
+                    status_label: result.data.status_label,
+                    address: result.data.address,
+                    resident_name: result.data.resident_name,
+                    resident_phone: result.data.resident_phone,
+                    color: '#f97316',
+                    location_kind: lastGpsAccuracy != null && lastGpsAccuracy > 50 ? 'low_accuracy' : 'gps',
+                    updated_at: nowLabel(),
+                };
+                openDrawer(created);
+                if (mode === 'create') {
+                    if (useFirstApproach) {
+                        visitedInSession.add(Number(result.data.property_id));
+                        bumpDayMetric('visits');
+                        if (result.data.visit_status === 'interested') bumpDayMetric('interested');
+                        if (result.data.visit_status === 'installation_requested') bumpDayMetric('contracts');
+                    }
+                    openPostCreateAdjust(result.data.property_id);
+                }
+            }
+        } catch (error) {
+            if (!navigator.onLine && window.ExpandorOfflineQueue) {
+                window.ExpandorOfflineQueue.enqueue(
+                    mode === 'edit' ? 'point.update' : (useFirstApproach ? 'first_approach' : 'point.create'),
+                    payload
+                );
+                updateOfflineBadge();
+                closePointModal();
+                toast('Sem conexão — ação guardada no celular.');
+            } else {
+                pointError.textContent = error.message || 'Erro ao salvar.';
+                pointError.classList.remove('hidden');
+                toast(error.message || 'Erro ao salvar.', 'error');
+            }
+        } finally {
+            submitBtn.disabled = false;
+        }
+    }
+
+    citySelect.addEventListener('change', () => {
+        filterSectorsByCity();
+        initialFitDone = false;
+        loadMarkers({ fit: true, useBbox: false });
+    });
+    sectorSelect.addEventListener('change', () => {
+        initialFitDone = false;
+        loadMarkers({ fit: true, useBbox: false });
+    });
+    statusSelect.addEventListener('change', () => {
+        initialFitDone = false;
+        loadMarkers({ fit: true, useBbox: false });
+    });
+    campaignSelect.addEventListener('change', () => {
+        document.getElementById('visit-campaign-id').value = campaignSelect.value;
+        initialFitDone = false;
+        loadMarkers({ fit: true, useBbox: false });
+    });
+    sellerSelect.addEventListener('change', () => {
+        renderMarkers(markersCache);
+        if (sellerSelect.value || myTeamFilter?.checked) {
+            loadMarkers({ fit: false, useBbox: true });
+        }
+    });
+
+    document.querySelectorAll('.commercial-filter').forEach((el) => {
+        el.addEventListener('change', () => renderMarkers(markersCache));
+    });
+    myTeamFilter?.addEventListener('change', () => {
+        renderMarkers(markersCache);
+        loadMarkers({ fit: false, useBbox: true });
+    });
+
+    function setBasemap(mode) {
+        if (!mapProvider?.setBasemap) return;
+        mapProvider.setBasemap(mode);
+        document.getElementById('basemap-street')?.classList.toggle('is-active', mode === 'street');
+        document.getElementById('basemap-satellite')?.classList.toggle('is-active', mode === 'satellite');
+        if (mode === 'satellite' && mapProvider.satelliteNote) {
+            toast('Satélite provisório ativo. Google/Mapbox virá depois.');
+        }
+    }
+    document.getElementById('basemap-street')?.addEventListener('click', () => setBasemap('street'));
+    document.getElementById('basemap-satellite')?.addEventListener('click', () => setBasemap('satellite'));
+
+    function clearRegionRect() {
+        if (regionRect) {
+            map.removeLayer(regionRect);
+            regionRect = null;
+        }
+        regionStartLatLng = null;
+    }
+
+    function stopRegionSelect() {
+        regionSelectMode = false;
+        document.body.classList.remove('region-select-mode');
+        clearRegionRect();
+    }
+
+    function openRegionCampaignModal(bounds) {
+        const el = document.getElementById('region-campaign-bounds');
+        if (el && bounds) {
+            el.textContent = `${bounds.getSouthWest().lat.toFixed(5)}, ${bounds.getSouthWest().lng.toFixed(5)} → ${bounds.getNorthEast().lat.toFixed(5)}, ${bounds.getNorthEast().lng.toFixed(5)}`;
+        }
+        document.getElementById('region-campaign-modal')?.classList.add('open');
+    }
+
+    document.getElementById('btn-select-region')?.addEventListener('click', () => {
+        if (regionSelectMode) {
+            stopRegionSelect();
+            toast('Seleção de área cancelada.');
+            return;
+        }
+        regionSelectMode = true;
+        document.body.classList.add('region-select-mode');
+        closeDrawer();
+        toast('Toque e arraste no mapa para marcar a área.');
+    });
+    document.getElementById('region-campaign-close')?.addEventListener('click', () => {
+        document.getElementById('region-campaign-modal')?.classList.remove('open');
+        stopRegionSelect();
+    });
+    document.getElementById('region-campaign-backdrop')?.addEventListener('click', () => {
+        document.getElementById('region-campaign-modal')?.classList.remove('open');
+        stopRegionSelect();
+    });
+
+    map.on('mousedown', (event) => {
+        if (!regionSelectMode || adjustState) return;
+        regionStartLatLng = event.latlng;
+        clearRegionRect();
+        regionRect = L.rectangle(L.latLngBounds(regionStartLatLng, regionStartLatLng), {
+            className: 'leaflet-region-select',
+            interactive: false,
+        }).addTo(map);
+        map.dragging.disable();
+    });
+    map.on('mousemove', (event) => {
+        if (!regionSelectMode || !regionStartLatLng || !regionRect) return;
+        regionRect.setBounds(L.latLngBounds(regionStartLatLng, event.latlng));
+    });
+    map.on('mouseup', (event) => {
+        if (!regionSelectMode || !regionStartLatLng) return;
+        map.dragging.enable();
+        const bounds = L.latLngBounds(regionStartLatLng, event.latlng);
+        if (regionRect) regionRect.setBounds(bounds);
+        regionStartLatLng = null;
+        regionSelectMode = false;
+        document.body.classList.remove('region-select-mode');
+        openRegionCampaignModal(bounds);
+    });
+
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        initialFitDone = false;
+        loadMarkers({ fit: true, useBbox: false });
+    });
+
+    searchInput.addEventListener('input', debounce(flyToSearchHits, 320));
+    searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            flyToSearchHits();
+        }
+        if (event.key === 'Escape') {
+            hideSearchResults();
+        }
+    });
+    searchResultsEl?.addEventListener('click', (event) => {
+        const btn = event.target.closest('button[data-search-index]');
+        if (!btn) return;
+        let hits = [];
+        try { hits = JSON.parse(searchResultsEl.dataset.hits || '[]'); } catch (e) { hits = []; }
+        const hit = hits[Number(btn.dataset.searchIndex)];
+        if (hit) focusSearchHit(hit);
+    });
+    document.addEventListener('click', (event) => {
+        if (!searchResultsEl || searchResultsEl.classList.contains('hidden')) return;
+        if (event.target.closest('#map-search-wrap')) return;
+        hideSearchResults();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+            event.preventDefault();
+            searchInput.focus();
+        }
+        if (event.key === 'Escape') {
+            if (regionSelectMode || document.getElementById('region-campaign-modal')?.classList.contains('open')) {
+                document.getElementById('region-campaign-modal')?.classList.remove('open');
+                stopRegionSelect();
+                return;
+            }
+            if (adjustState) {
+                if (adjustConfirmModal?.classList.contains('open')) {
+                    if (adjustState.layer) {
+                        adjustState.layer.setLatLng([adjustState.originalLat, adjustState.originalLng]);
+                    }
+                    closeAdjustConfirm();
+                    return;
+                }
+                cancelAdjustMode({ reload: true });
+                return;
+            }
+            closeDrawer();
+            closeVisitModal();
+            closePointModal();
+            closeEmptySpot();
+            closeDeleteModal();
+            closePostCreateAdjust();
+            closePostVisitModal();
+        }
+    });
+
+    map.on('moveend', debounce(() => {
+        if (adjustState || regionSelectMode || suppressMoveLoad || !initialFitDone) return;
+        loadMarkers({ fit: false, useBbox: true });
+    }, 400));
+
+    map.on('click', (event) => {
+        if (adjustState || regionSelectMode) return;
+        if (!canCreatePoint) return;
+        if (Date.now() < ignoreMapClickUntil) return;
+        openEmptySpot(event.latlng);
+    });
+
+    clusterGroup.on('click', () => {
+        ignoreMapClickUntil = Date.now() + 400;
+    });
+
+    document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+    drawerBackdrop.addEventListener('click', closeDrawer);
+    document.getElementById('action-visit').addEventListener('click', openVisitModal);
+    document.getElementById('action-edit')?.addEventListener('click', () => openPointModal(null, 'edit'));
+    document.querySelectorAll('.visit-quick').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.visit-quick').forEach((b) => b.classList.remove('is-selected'));
+            btn.classList.add('is-selected');
+            const status = btn.dataset.status || '';
+            document.getElementById('visit-status').value = status;
+            syncVisitContractBlock(status);
+            visitError.classList.add('hidden');
+        });
+    });
+    document.querySelectorAll('.point-outcome').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const status = btn.dataset.status || '';
+            document.getElementById('point-visit-status').value = status;
+            syncPointOutcomeUi(status);
+            pointError.classList.add('hidden');
+        });
+    });
+    document.querySelectorAll('.sale-cart-add').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const prefix = btn.dataset.prefix || 'visit';
+            addSaleCartLine(prefix);
+        });
+    });
+    document.getElementById('btn-next-house')?.addEventListener('click', () => goToNextHouse());
+
+    function tipsStorageKey() {
+        return `expandor.seller.tips.v1.${currentUserId || 'anon'}`;
+    }
+
+    function routeStartedKey() {
+        return `expandor.seller.route.started.${currentUserId || 'anon'}`;
+    }
+
+    function tipsSeen() {
+        try {
+            return localStorage.getItem(tipsStorageKey()) === '1';
+        } catch (e) {
+            return true;
+        }
+    }
+
+    function markTipsSeen() {
+        try {
+            localStorage.setItem(tipsStorageKey(), '1');
+        } catch (e) { /* ignore */ }
+    }
+
+    function routeStarted() {
+        try {
+            return sessionStorage.getItem(routeStartedKey()) === '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function markRouteStarted() {
+        try {
+            sessionStorage.setItem(routeStartedKey(), '1');
+        } catch (e) { /* ignore */ }
+    }
+
+    function openSellerTips() {
+        document.getElementById('seller-tips-modal')?.classList.add('open');
+    }
+
+    function closeSellerTips() {
+        document.getElementById('seller-tips-modal')?.classList.remove('open');
+    }
+
+    function openSellerBrief() {
+        const el = document.getElementById('seller-day-brief');
+        if (!el) return;
+        const next = findNextHouse();
+        const hint = document.getElementById('brief-next-house');
+        if (hint) {
+            hint.textContent = next
+                ? (next.address || next.resident_name || 'Ponto na rota') + (next.status_label ? ` · ${next.status_label}` : '')
+                : 'Ao começar, o mapa leva você até a próxima casa da rota.';
+        }
+        el.classList.add('open');
+    }
+
+    function closeSellerBrief() {
+        document.getElementById('seller-day-brief')?.classList.remove('open');
+    }
+
+    function finishTipsAndShowBrief() {
+        markTipsSeen();
+        closeSellerTips();
+        if (!routeStarted()) openSellerBrief();
+    }
+
+    async function startSellerRoute() {
+        markRouteStarted();
+        closeSellerBrief();
+        await ensureSellerGps().catch(() => {});
+        goToNextHouse();
+        toast('Rota iniciada — boa venda!');
+    }
+
+    function updateOfflineBadge() {
+        const badge = document.getElementById('offline-queue-badge');
+        const countEl = document.getElementById('offline-queue-count');
+        if (!badge || !window.ExpandorOfflineQueue) return;
+        const n = window.ExpandorOfflineQueue.pendingCount();
+        if (countEl) countEl.textContent = String(n);
+        badge.classList.toggle('hidden', n < 1);
+    }
+
+    async function flushOfflineQueue({ silent } = {}) {
+        if (!window.ExpandorOfflineQueue || !navigator.onLine) {
+            updateOfflineBadge();
+            return;
+        }
+        const result = await window.ExpandorOfflineQueue.flush({
+            pointStoreUrl,
+            pointShowTemplate,
+            visitStoreTemplate,
+            firstApproachUrl,
+        });
+        updateOfflineBadge();
+        if (result.synced > 0) {
+            toast(result.synced === 1
+                ? '1 ação offline enviada'
+                : `${result.synced} ações offline enviadas`);
+            await loadMarkers({ fit: false, useBbox: true });
+        } else if (!silent && result.failed > 0) {
+            toast('Algumas ações offline ainda não sincronizaram.', 'error');
+        }
+    }
+
+    function setTeamView(active) {
+        if (isFieldSeller) return;
+        teamViewActive = !!active;
+        const btn = document.getElementById('btn-team-view');
+        const body = document.getElementById('team-view-body');
+        body?.classList.toggle('hidden', !teamViewActive);
+        if (btn) {
+            btn.textContent = teamViewActive ? 'Desativar' : 'Ativar';
+            btn.classList.toggle('bg-sky-500/20', teamViewActive);
+        }
+        document.body.classList.toggle('team-view-mode', teamViewActive);
+        if (teamViewActive) {
+            if (myTeamFilter) myTeamFilter.checked = false;
+            if (sellerSelect) sellerSelect.value = '';
+            toast('Visão da equipe ativa — produtividade no painel.');
+        } else {
+            toast('Visão da equipe desligada.');
+        }
+        renderMarkers(markersCache);
+        loadMarkers({ fit: false, useBbox: true });
+    }
+
+    document.getElementById('btn-team-view')?.addEventListener('click', () => {
+        setTeamView(!teamViewActive);
+    });
+
+    document.querySelectorAll('.team-seller-row').forEach((row) => {
+        row.addEventListener('click', () => {
+            if (!teamViewActive) setTeamView(true);
+            const id = row.dataset.sellerId;
+            if (sellerSelect) sellerSelect.value = id || '';
+            if (myTeamFilter) myTeamFilter.checked = false;
+            renderMarkers(markersCache);
+            loadMarkers({ fit: false, useBbox: true });
+            const name = row.querySelector('span')?.textContent || 'Vendedor';
+            toast(`Foco na rota: ${name.trim()}`);
+        });
+    });
+
+    document.getElementById('post-visit-next')?.addEventListener('click', () => {
+        closePostVisitModal();
+        goToNextHouse({ fromVisit: true });
+    });
+    document.getElementById('post-visit-close')?.addEventListener('click', closePostVisitModal);
+    document.getElementById('post-visit-backdrop')?.addEventListener('click', closePostVisitModal);
+    document.getElementById('action-adjust')?.addEventListener('click', () => {
+        if (!pointDetails?.can_adjust || !pointDetails.property_id) return;
+        startAdjustMode({
+            propertyId: pointDetails.property_id,
+            latitude: pointDetails.latitude,
+            longitude: pointDetails.longitude,
+            color: selectedMarker?.color || '#f97316',
+            locationKind: pointDetails.location_kind || 'gps',
+            mode: 'existing',
+        });
+    });
+    document.getElementById('action-delete')?.addEventListener('click', openDeleteModal);
+    document.getElementById('visit-modal-close').addEventListener('click', closeVisitModal);
+    document.getElementById('visit-modal-backdrop').addEventListener('click', closeVisitModal);
+    visitForm.addEventListener('submit', submitVisit);
+
+    function closeAllSellerPanels() {
+        document.getElementById('commercial-filters')?.classList.remove('open');
+        document.getElementById('toggle-layers')?.classList.remove('seller-tool-is-active');
+        document.getElementById('toggle-layers')?.setAttribute('aria-expanded', 'false');
+    }
+
+    function setSellerPanel(name, open) {
+        if (name !== 'layers') return;
+        if (!open) {
+            closeAllSellerPanels();
+            return;
+        }
+        document.getElementById('commercial-filters')?.classList.add('open');
+        document.getElementById('toggle-layers')?.classList.add('seller-tool-is-active');
+        document.getElementById('toggle-layers')?.setAttribute('aria-expanded', 'true');
+    }
+
+    function toggleSellerPanel(name) {
+        if (name !== 'layers') return;
+        const isOpen = document.getElementById('commercial-filters')?.classList.contains('open');
+        if (isOpen) closeAllSellerPanels();
+        else setSellerPanel('layers', true);
+    }
+
+    document.getElementById('toggle-layers')?.addEventListener('click', () => toggleSellerPanel('layers'));
+    document.getElementById('close-layers')?.addEventListener('click', () => setSellerPanel('layers', false));
+
+    if (isFieldSeller) {
+        map.on('click', () => closeAllSellerPanels());
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeAllSellerPanels();
+        });
+    }
+
+    document.getElementById('toggle-filters-manager')?.addEventListener('click', () => {
+        form.classList.toggle('open');
+        form.classList.toggle('hidden');
+    });
+
+    document.getElementById('toggle-metrics')?.addEventListener('click', () => {
+        metricsPanel.classList.add('open');
+    });
+    document.getElementById('close-metrics')?.addEventListener('click', () => {
+        metricsPanel.classList.remove('open');
+    });
+
+    document.getElementById('btn-new-point')?.addEventListener('click', () => openPointModal(null));
+    document.getElementById('btn-new-point-side')?.addEventListener('click', () => openPointModal(null));
+    document.getElementById('btn-empty-add-point')?.addEventListener('click', () => openPointModal(null));
+    document.getElementById('point-modal-close')?.addEventListener('click', closePointModal);
+    document.getElementById('point-modal-backdrop')?.addEventListener('click', closePointModal);
+    pointForm?.addEventListener('submit', submitPoint);
+    document.getElementById('point-adjust-on-map')?.addEventListener('click', () => {
+        const lat = Number(document.getElementById('point-latitude').value);
+        const lng = Number(document.getElementById('point-longitude').value);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+        startAdjustMode({
+            propertyId: null,
+            latitude: lat,
+            longitude: lng,
+            color: '#f97316',
+            locationKind: lastGpsAccuracy != null && lastGpsAccuracy > 50 ? 'low_accuracy' : 'gps',
+            mode: 'create-draft',
+        });
+    });
+
+    document.getElementById('empty-spot-cancel')?.addEventListener('click', closeEmptySpot);
+    document.getElementById('empty-spot-backdrop')?.addEventListener('click', closeEmptySpot);
+    document.getElementById('empty-spot-confirm')?.addEventListener('click', async () => {
+        const latlng = pendingEmptyLatLng;
+        closeEmptySpot();
+        if (!latlng) return;
+        try {
+            const gps = await getGps();
+            await openPointModal({ latitude: gps.latitude, longitude: gps.longitude, accuracy: gps.accuracy });
+        } catch (error) {
+            await openPointModal({ latitude: latlng.lat, longitude: latlng.lng });
+            toast('Usamos o ponto do mapa. Ative a localização quando puder.', 'error');
+        }
+    });
+
+    document.getElementById('delete-point-cancel')?.addEventListener('click', closeDeleteModal);
+    document.getElementById('delete-point-backdrop')?.addEventListener('click', closeDeleteModal);
+    document.getElementById('delete-point-confirm')?.addEventListener('click', confirmDeletePoint);
+
+    document.getElementById('adjust-banner-cancel')?.addEventListener('click', () => cancelAdjustMode({ reload: true }));
+    document.getElementById('adjust-confirm-cancel')?.addEventListener('click', () => {
+        if (adjustState?.layer) {
+            adjustState.layer.setLatLng([adjustState.originalLat, adjustState.originalLng]);
+        }
+        closeAdjustConfirm();
+    });
+    document.getElementById('adjust-confirm-backdrop')?.addEventListener('click', () => {
+        document.getElementById('adjust-confirm-cancel')?.click();
+    });
+    document.getElementById('adjust-confirm-save')?.addEventListener('click', saveAdjustedPosition);
+
+    document.getElementById('post-create-adjust-skip')?.addEventListener('click', closePostCreateAdjust);
+    document.getElementById('post-create-adjust-backdrop')?.addEventListener('click', closePostCreateAdjust);
+    document.getElementById('post-create-adjust-yes')?.addEventListener('click', () => {
+        const id = pendingPostCreatePropertyId;
+        const marker = markersCache.find((m) => Number(m.property_id) === Number(id)) || selectedMarker;
+        closePostCreateAdjust();
+        if (!id || !marker) return;
+        startAdjustMode({
+            propertyId: id,
+            latitude: marker.latitude,
+            longitude: marker.longitude,
+            color: marker.color || '#f97316',
+            locationKind: marker.location_kind || 'gps',
+            mode: 'existing',
+        });
+    });
+
+    document.getElementById('seller-tips-continue')?.addEventListener('click', finishTipsAndShowBrief);
+    document.getElementById('seller-tips-skip')?.addEventListener('click', finishTipsAndShowBrief);
+    document.getElementById('seller-start-route')?.addEventListener('click', () => {
+        startSellerRoute().catch(() => {});
+    });
+
+    window.addEventListener('online', () => {
+        flushOfflineQueue({ silent: false }).catch(() => {});
+    });
+
+    filterSectorsByCity();
+
+    function applyDeepLinkFilters() {
+        const params = new URLSearchParams(window.location.search);
+        const sectorId = params.get('sector_id');
+        const userId = params.get('user_id');
+
+        if (sectorId && sectorSelect) {
+            const hasOption = Array.from(sectorSelect.options).some((o) => o.value === String(sectorId));
+            if (hasOption) {
+                sectorSelect.value = String(sectorId);
+            }
+        }
+
+        if (userId && !isFieldSeller && sellerSelect) {
+            const hasSeller = Array.from(sellerSelect.options).some((o) => o.value === String(userId));
+            if (hasSeller) {
+                sellerSelect.value = String(userId);
+            } else {
+                const opt = document.createElement('option');
+                opt.value = String(userId);
+                opt.textContent = `Vendedor #${userId}`;
+                sellerSelect.appendChild(opt);
+                sellerSelect.value = String(userId);
+            }
+            if (myTeamFilter) {
+                myTeamFilter.checked = true;
+                teamViewActive = true;
+            }
+        }
+    }
+
+    applyDeepLinkFilters();
+
+    setTimeout(() => {
+        map.invalidateSize();
+        loadMarkers({ fit: true, useBbox: false }).then(() => {
+            const focusId = new URLSearchParams(window.location.search).get('property');
+            if (focusId) {
+                const entry = layerByPropertyId.get(Number(focusId))
+                    || layerByPropertyId.get(String(focusId));
+                if (entry?.marker) {
+                    openDrawer(entry.marker);
+                    if (entry.layer && typeof map.panTo === 'function') {
+                        map.panTo([entry.marker.latitude, entry.marker.longitude]);
+                    }
+                }
+            }
+            if (isFieldSeller) {
+                if (!tipsSeen()) {
+                    openSellerTips();
+                } else if (!routeStarted()) {
+                    openSellerBrief();
+                }
+            }
+        }).catch(() => {});
+        if (window.lucide) window.lucide.createIcons();
+        if (openNewPointOnLoad) {
+            openPointModal(null);
+        }
+        if (isFieldSeller) {
+            ensureSellerGps().catch(() => {});
+            const campaignEl = document.getElementById('visit-campaign-id');
+            if (campaignEl && !campaignEl.value && campaignEl.options.length === 2) {
+                campaignEl.selectedIndex = 1;
+                campaignSelect.value = campaignEl.value;
+            }
+        }
+        updateOfflineBadge();
+        flushOfflineQueue({ silent: true }).catch(() => {});
+    }, 60);
+})();

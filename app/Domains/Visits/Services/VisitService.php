@@ -1,0 +1,402 @@
+<?php
+
+namespace App\Domains\Visits\Services;
+
+use App\Domains\Campaigns\Models\Campaign;
+use App\Domains\Commissions\Actions\GenerateVisitCommissionAction;
+use App\Domains\Company\Models\User;
+use App\Domains\Sales\Models\Sale;
+use App\Domains\Sales\Models\SaleItem;
+use App\Domains\Sales\Products\Models\Product;
+use App\Domains\Sales\Products\Services\StockService;
+use App\Domains\Sales\Properties\Models\Property;
+use App\Domains\Sales\Properties\Services\PropertyService;
+use App\Domains\Sales\Residents\Services\ResidentService;
+use App\Domains\Security\Services\SecurityService;
+use App\Domains\Visits\Enums\FollowUpStatus;
+use App\Domains\Visits\Enums\VisitStatus;
+use App\Domains\Visits\Models\FollowUp;
+use App\Domains\Visits\Models\Visit;
+use App\Domains\Visits\Support\FollowUpSchedule;
+use App\Tenancy\TenantContext;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+class VisitService
+{
+    public function __construct(
+        protected PropertyService $properties,
+        protected SecurityService $security,
+        protected StockService $stock,
+        protected GenerateVisitCommissionAction $generateCommission,
+        protected ResidentService $residents,
+    ) {}
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function register(Campaign $campaign, array $data, ?User $actor = null): Visit
+    {
+        return DB::transaction(function () use ($campaign, $data, $actor) {
+            /** @var TenantContext $context */
+            $context = app(TenantContext::class);
+            $user = $actor ?? $context->user();
+
+            if ($user === null) {
+                throw ValidationException::withMessages([
+                    'user_id' => 'Usuário responsável pela visita não identificado.',
+                ]);
+            }
+
+            /** @var Property $property */
+            $property = Property::query()->findOrFail($data['property_id']);
+
+            if ((int) $property->company_id !== (int) $campaign->company_id) {
+                throw ValidationException::withMessages([
+                    'property_id' => 'O imóvel não pertence à empresa da campanha.',
+                ]);
+            }
+
+            $status = VisitStatus::from($data['status']);
+            $visitedAt = $data['visited_at'] ?? now();
+            $latitude = $data['latitude'] ?? $property->latitude;
+            $longitude = $data['longitude'] ?? $property->longitude;
+
+            $product = null;
+            $plan = isset($data['plan']) ? trim((string) $data['plan']) : null;
+            $plan = $plan !== '' ? $plan : null;
+            $productId = null;
+            $cartLines = [];
+
+            if ($status === VisitStatus::INSTALLATION_REQUESTED) {
+                $cartLines = $this->normalizeSaleCartLines($data, (int) $campaign->company_id);
+                if ($cartLines !== []) {
+                    $names = [];
+                    foreach ($cartLines as $line) {
+                        $this->stock->assertAvailable($line['product'], $line['quantity']);
+                        $names[] = $line['product']->name.($line['quantity'] > 1 ? ' x'.$line['quantity'] : '');
+                    }
+                    $first = $cartLines[0]['product'];
+                    $product = $first;
+                    $productId = $first->id;
+                    $plan = implode(', ', $names);
+                }
+            }
+
+            $visit = Visit::query()->create([
+                'campaign_id' => $campaign->id,
+                'property_id' => $property->id,
+                'user_id' => $data['user_id'] ?? $user->id,
+                'status' => $status,
+                'notes' => $data['notes'] ?? null,
+                'plan' => $plan,
+                'product_id' => $productId,
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'visited_at' => $visitedAt,
+            ]);
+
+            $extras = [];
+            if (filled($plan)) {
+                $extras[] = 'Produto: '.$plan;
+            }
+            if (filled($visit->notes)) {
+                $extras[] = $visit->notes;
+            }
+
+            $isFirst = ! empty($data['first_approach']);
+            if ($isFirst) {
+                $historyDescription = sprintf(
+                    'Primeiro atendimento realizado — Resultado: %s%s',
+                    $status->label(),
+                    $extras !== [] ? "\nObservação: ".implode(' · ', $extras) : ''
+                );
+            } else {
+                $historyDescription = sprintf(
+                    'Visita #%d — %s%s',
+                    $visit->id,
+                    $status->label(),
+                    $extras !== [] ? ': '.implode(' · ', $extras) : '.'
+                );
+            }
+
+            $this->properties->applyVisitOutcome(
+                property: $property,
+                user: $user,
+                newStatus: $status->toPropertyStatus(),
+                description: $historyDescription,
+                latitude: $latitude,
+                longitude: $longitude,
+            );
+
+            if ($status === VisitStatus::INSTALLATION_REQUESTED) {
+                $resident = $this->residents->upsertPrimaryContact($property, [
+                    'name' => $data['customer_name'] ?? $data['contact_name'] ?? null,
+                    'phone' => $data['customer_phone'] ?? $data['contact_phone'] ?? null,
+                    'whatsapp' => $data['customer_whatsapp'] ?? null,
+                    'email' => $data['customer_email'] ?? null,
+                    'document' => $data['customer_document'] ?? null,
+                ]);
+
+                $attributes = [];
+                $rg = isset($data['customer_rg']) ? trim((string) $data['customer_rg']) : '';
+                if ($rg !== '') {
+                    $attributes['rg'] = $rg;
+                }
+
+                $total = 0.0;
+                foreach ($cartLines as $line) {
+                    $total += $line['line_total'];
+                }
+
+                $sale = Sale::query()->create([
+                    'company_id' => $campaign->company_id,
+                    'visit_id' => $visit->id,
+                    'resident_id' => $resident?->id,
+                    'product_id' => $productId,
+                    'negotiated_amount' => round($total, 2),
+                    'notes' => $data['sale_notes'] ?? null,
+                    'attributes' => $attributes !== [] ? $attributes : null,
+                ]);
+
+                foreach ($cartLines as $line) {
+                    /** @var Product $lineProduct */
+                    $lineProduct = $line['product'];
+                    $item = SaleItem::query()->create([
+                        'company_id' => $campaign->company_id,
+                        'sale_id' => $sale->id,
+                        'product_id' => $lineProduct->id,
+                        'product_name' => $lineProduct->name,
+                        'unit_price' => $line['unit_price'],
+                        'quantity' => $line['quantity'],
+                        'line_total' => $line['line_total'],
+                        'commission_amount' => $line['commission_amount'],
+                    ]);
+
+                    $this->generateCommission->executeForSaleItem($visit, $item, $lineProduct, $user);
+                }
+            }
+
+            $this->security->recordAudit(
+                action: 'visit.registered',
+                user: $user,
+                auditable: $visit,
+                newValues: [
+                    'property_id' => $property->id,
+                    'campaign_id' => $campaign->id,
+                    'status' => $status->value,
+                    'plan' => $plan,
+                    'product_id' => $productId,
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                    'visited_at' => (string) $visit->visited_at,
+                    'first_approach' => $isFirst,
+                ],
+            );
+
+            return $visit->load(['property.address', 'user', 'campaign', 'product', 'sale.items']);
+        });
+    }
+
+    /**
+     * Normaliza carrinho: items[] ou legado product_id único.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<array{product: Product, quantity: int, unit_price: float, line_total: float, commission_amount: float}>
+     */
+    protected function normalizeSaleCartLines(array $data, int $companyId): array
+    {
+        $rawItems = $data['items'] ?? null;
+        if (! is_array($rawItems) || $rawItems === []) {
+            $legacyId = isset($data['product_id']) ? (int) $data['product_id'] : 0;
+            if ($legacyId <= 0) {
+                return [];
+            }
+            $rawItems = [['product_id' => $legacyId, 'quantity' => 1]];
+        }
+
+        $merged = [];
+        foreach ($rawItems as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $pid = (int) ($row['product_id'] ?? 0);
+            $qty = max(1, (int) ($row['quantity'] ?? 1));
+            if ($pid <= 0) {
+                continue;
+            }
+            $merged[$pid] = ($merged[$pid] ?? 0) + $qty;
+        }
+
+        $lines = [];
+        foreach ($merged as $pid => $qty) {
+            $product = $this->resolveContractProduct($pid, $companyId);
+            $unitPrice = (float) $product->price;
+            $unitCommission = (float) $product->commission_amount;
+            $lines[] = [
+                'product' => $product,
+                'quantity' => $qty,
+                'unit_price' => $unitPrice,
+                'line_total' => round($unitPrice * $qty, 2),
+                'commission_amount' => round($unitCommission * $qty, 2),
+            ];
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function scheduleFollowUp(Visit $visit, array $data, ?User $actor = null): FollowUp
+    {
+        /** @var TenantContext $context */
+        $context = app(TenantContext::class);
+        $user = $actor ?? $context->user();
+
+        if ($user === null) {
+            throw ValidationException::withMessages([
+                'user_id' => 'Usuário responsável pelo retorno não identificado.',
+            ]);
+        }
+
+        return FollowUp::query()->create([
+            'visit_id' => $visit->id,
+            'user_id' => $data['user_id'] ?? $user->id,
+            'scheduled_at' => FollowUpSchedule::normalize($data['scheduled_at']),
+            'status' => FollowUpStatus::PENDING,
+            'notes' => $data['notes'] ?? null,
+        ]);
+    }
+
+    public function completeFollowUp(FollowUp $followUp, ?string $notes = null): FollowUp
+    {
+        if ($followUp->status !== FollowUpStatus::PENDING) {
+            throw ValidationException::withMessages([
+                'status' => 'Somente retornos pendentes podem ser concluídos.',
+            ]);
+        }
+
+        $followUp->update([
+            'status' => FollowUpStatus::COMPLETED,
+            'completed_at' => now(),
+            'notes' => $notes ?? $followUp->notes,
+        ]);
+
+        return $followUp->refresh();
+    }
+
+    /**
+     * Conclui retorno na Agenda: cria Visit real, marca FollowUp como concluído
+     * e, se o resultado for "Retornar", agenda um novo FollowUp.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{visit: Visit, follow_up: FollowUp, next_follow_up: ?FollowUp}
+     */
+    public function completeFollowUpWithOutcome(FollowUp $followUp, array $data, User $actor): array
+    {
+        return DB::transaction(function () use ($followUp, $data, $actor) {
+            if ($followUp->status !== FollowUpStatus::PENDING) {
+                throw ValidationException::withMessages([
+                    'status' => 'Somente retornos pendentes podem ser concluídos.',
+                ]);
+            }
+
+            $originVisit = $followUp->visit()->with(['campaign', 'property'])->firstOrFail();
+            $campaign = $originVisit->campaign;
+            $property = $originVisit->property;
+
+            if ($campaign === null || $property === null) {
+                throw ValidationException::withMessages([
+                    'visit_id' => 'Retorno sem visita ou imóvel vinculado.',
+                ]);
+            }
+
+            $status = VisitStatus::from($data['status']);
+
+            $visit = $this->register($campaign, [
+                'property_id' => $property->id,
+                'status' => $status->value,
+                'notes' => $data['notes'] ?? null,
+                'plan' => $data['plan'] ?? null,
+                'product_id' => $data['product_id'] ?? null,
+                'items' => $data['items'] ?? null,
+                'customer_name' => $data['customer_name'] ?? null,
+                'customer_phone' => $data['customer_phone'] ?? null,
+                'customer_whatsapp' => $data['customer_whatsapp'] ?? null,
+                'customer_document' => $data['customer_document'] ?? null,
+                'customer_rg' => $data['customer_rg'] ?? null,
+                'customer_email' => $data['customer_email'] ?? null,
+                'sale_notes' => $data['sale_notes'] ?? null,
+                'user_id' => $actor->id,
+                'latitude' => $data['latitude'] ?? $property->latitude ?? $originVisit->latitude,
+                'longitude' => $data['longitude'] ?? $property->longitude ?? $originVisit->longitude,
+                'visited_at' => $data['visited_at'] ?? now(),
+            ], $actor);
+
+            $completed = $this->completeFollowUp($followUp, $data['notes'] ?? $followUp->notes);
+
+            $nextFollowUp = null;
+            if ($status === VisitStatus::RETURN_LATER) {
+                if (empty($data['follow_up_at'])) {
+                    throw ValidationException::withMessages([
+                        'follow_up_at' => 'Informe a data do novo retorno.',
+                    ]);
+                }
+
+                $nextFollowUp = $this->scheduleFollowUp($visit, [
+                    'scheduled_at' => $data['follow_up_at'],
+                    'notes' => $data['follow_up_notes'] ?? null,
+                    'user_id' => $followUp->user_id,
+                ], $actor);
+            }
+
+            $this->security->recordAudit(
+                action: 'follow_up.completed_with_outcome',
+                user: $actor,
+                auditable: $completed,
+                newValues: [
+                    'follow_up_id' => $completed->id,
+                    'visit_id' => $visit->id,
+                    'status' => $status->value,
+                    'next_follow_up_id' => $nextFollowUp?->id,
+                ],
+            );
+
+            return [
+                'visit' => $visit,
+                'follow_up' => $completed,
+                'next_follow_up' => $nextFollowUp,
+            ];
+        });
+    }
+
+    protected function resolveContractProduct(?int $productId, int $companyId): Product
+    {
+        if ($productId === null || $productId <= 0) {
+            throw ValidationException::withMessages([
+                'product_id' => 'Selecione o produto contratado.',
+            ]);
+        }
+
+        /** @var Product|null $product */
+        $product = Product::query()
+            ->whereKey($productId)
+            ->where('company_id', $companyId)
+            ->first();
+
+        if ($product === null) {
+            throw ValidationException::withMessages([
+                'product_id' => 'Produto não encontrado.',
+            ]);
+        }
+
+        if (! $product->isActive()) {
+            throw ValidationException::withMessages([
+                'product_id' => 'Produto inativo não pode ser vendido.',
+            ]);
+        }
+
+        return $product;
+    }
+}
