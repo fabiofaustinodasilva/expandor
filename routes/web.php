@@ -33,6 +33,7 @@ use App\Http\Controllers\Web\Platform\HealthScoreController;
 use App\Http\Controllers\Web\Platform\ImpersonationController;
 use App\Http\Controllers\Web\Platform\PlatformBrandingController;
 use App\Http\Controllers\Web\Platform\PlatformCompanyController;
+use App\Http\Controllers\Web\Platform\PlatformOwnerProfileController;
 use App\Http\Controllers\Web\Platform\PlatformDashboardController;
 use App\Http\Controllers\Web\Security\AuditLogController;
 use App\Http\Controllers\Web\Security\PrivacyController;
@@ -99,13 +100,22 @@ Route::middleware([
 
     Route::middleware('platform.admin')->prefix('platform')->name('platform.')->group(function (): void {
         Route::get('/', PlatformDashboardController::class)->name('dashboard');
+
+        Route::get('/profile', [PlatformOwnerProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile', [PlatformOwnerProfileController::class, 'update'])->name('profile.update');
+
         Route::get('/companies', [PlatformCompanyController::class, 'index'])->name('companies.index');
         Route::get('/companies/create', [PlatformCompanyController::class, 'create'])->name('companies.create');
         Route::post('/companies', [PlatformCompanyController::class, 'store'])->name('companies.store');
         Route::get('/companies/{company}', [PlatformCompanyController::class, 'show'])->name('companies.show');
+        Route::get('/companies/{company}/edit', [PlatformCompanyController::class, 'edit'])->name('companies.edit');
+        Route::put('/companies/{company}', [PlatformCompanyController::class, 'update'])->name('companies.update');
+        Route::delete('/companies/{company}', [PlatformCompanyController::class, 'destroy'])->name('companies.destroy');
+        Route::post('/companies/{company}/restore', [PlatformCompanyController::class, 'restore'])->name('companies.restore');
         Route::post('/companies/{company}/suspend', [PlatformCompanyController::class, 'suspend'])->name('companies.suspend');
         Route::post('/companies/{company}/activate', [PlatformCompanyController::class, 'activate'])->name('companies.activate');
         Route::post('/companies/{company}/convert-trial', [PlatformCompanyController::class, 'convertTrial'])->name('companies.convert-trial');
+        Route::post('/companies/{company}/reset-admin-password', [PlatformCompanyController::class, 'resetAdminPassword'])->name('companies.reset-admin-password');
         Route::post('/companies/{company}/impersonate', [ImpersonationController::class, 'store'])->name('impersonation.store');
         Route::get('/flags', [FeatureFlagController::class, 'index'])->name('flags.index');
         Route::post('/companies/{company}/flags', [FeatureFlagController::class, 'update'])->name('flags.update');

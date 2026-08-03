@@ -8,7 +8,11 @@ use App\Domains\Company\Models\Role;
 use App\Domains\Company\Models\Subscription;
 use App\Domains\Company\Models\User;
 use App\Domains\Platform\Actions\ActivateCompanyAction;
+use App\Domains\Platform\Actions\ResetCompanyAdminPasswordAction;
+use App\Domains\Platform\Actions\RestoreCompanyAction;
+use App\Domains\Platform\Actions\SoftDeleteCompanyAction;
 use App\Domains\Platform\Actions\SuspendCompanyAction;
+use App\Domains\Platform\Actions\UpdatePlatformCompanyAction;
 use App\Domains\Platform\DTOs\CreatedPlatformCompany;
 use App\Domains\Platform\DTOs\PlatformDashboardMetrics;
 use App\Domains\Platform\Repositories\PlatformCompanyRepository;
@@ -29,6 +33,10 @@ class PlatformCompanyService
         protected SecurityService $security,
         protected SuspendCompanyAction $suspendCompany,
         protected ActivateCompanyAction $activateCompany,
+        protected UpdatePlatformCompanyAction $updateCompany,
+        protected SoftDeleteCompanyAction $softDeleteCompany,
+        protected RestoreCompanyAction $restoreCompany,
+        protected ResetCompanyAdminPasswordAction $resetAdminPassword,
         protected HealthScoreService $health,
         protected FeatureFlagService $featureFlags,
     ) {}
@@ -43,13 +51,22 @@ class PlatformCompanyService
         ?string $search = null,
         ?string $status = null,
         ?string $subscriptionStatus = null,
+        bool $withTrashed = false,
+        bool $onlyTrashed = false,
     ): LengthAwarePaginator {
-        return $this->console->paginateClients($perPage, $search, $status, $subscriptionStatus);
+        return $this->console->paginateClients(
+            $perPage,
+            $search,
+            $status,
+            $subscriptionStatus,
+            $withTrashed,
+            $onlyTrashed,
+        );
     }
 
-    public function findClient(int $companyId): Company
+    public function findClient(int $companyId, bool $withTrashed = false): Company
     {
-        $company = $this->console->findClientCompany($companyId);
+        $company = $this->console->findClientCompany($companyId, $withTrashed);
         abort_if($company === null, 404);
 
         return $company;
@@ -98,6 +115,33 @@ class PlatformCompanyService
     public function activate(Company $company, User $actor): Company
     {
         return $this->activateCompany->execute($company, $actor);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function update(Company $company, User $actor, array $data): Company
+    {
+        return $this->updateCompany->execute($company, $actor, $data);
+    }
+
+    public function softDelete(Company $company, User $actor, ?string $reason = null): Company
+    {
+        return $this->softDeleteCompany->execute($company, $actor, $reason);
+    }
+
+    public function restore(Company $company, User $actor): Company
+    {
+        return $this->restoreCompany->execute($company, $actor);
+    }
+
+    public function resetAdministratorPassword(
+        Company $company,
+        User $actor,
+        string $password,
+        ?int $userId = null,
+    ): User {
+        return $this->resetAdminPassword->execute($company, $actor, $password, $userId);
     }
 
     /**

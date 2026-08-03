@@ -13,7 +13,7 @@
         @endcan
     </div>
 
-    <form method="GET" class="card" style="margin-bottom:1rem; display:grid; gap:0.75rem; grid-template-columns:2fr 1fr 1fr auto;">
+    <form method="GET" class="card" style="margin-bottom:1rem; display:grid; gap:0.75rem; grid-template-columns:2fr 1fr 1fr 1fr auto;">
         <input class="form-control" type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Buscar nome, e-mail, WhatsApp ou documento">
         <select class="form-control" name="status">
             <option value="">Status empresa</option>
@@ -27,6 +27,10 @@
             <option value="active" @selected(($filters['subscription_status'] ?? '') === 'active')>active</option>
             <option value="past_due" @selected(($filters['subscription_status'] ?? '') === 'past_due')>past_due</option>
             <option value="cancelled" @selected(($filters['subscription_status'] ?? '') === 'cancelled')>cancelled</option>
+        </select>
+        <select class="form-control" name="archived">
+            <option value="" @selected(($filters['archived'] ?? '') === '')>Ativas no sistema</option>
+            <option value="1" @selected(($filters['archived'] ?? '') === '1')>Excluídas</option>
         </select>
         <button class="btn btn-primary" type="submit">Filtrar</button>
     </form>
@@ -68,6 +72,9 @@
                     <td>{{ $company->created_at?->format('d/m/Y') }}</td>
                     <td>
                         <span class="badge">{{ $company->status }}</span>
+                        @if($company->trashed())
+                            <div class="header-meta">excluída</div>
+                        @endif
                         @if($health)
                             <div class="header-meta">Health {{ $health->score }}</div>
                         @endif

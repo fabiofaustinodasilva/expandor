@@ -21,6 +21,12 @@ class ActivateCompanyAction
             ]);
         }
 
+        if ($company->trashed()) {
+            throw ValidationException::withMessages([
+                'company' => ['Restaure a empresa antes de reativar.'],
+            ]);
+        }
+
         $old = $company->status;
         $company->forceFill(['status' => Company::STATUS_ACTIVE])->save();
 

@@ -148,6 +148,7 @@
             <div class="nav-group">
                 <div class="nav-label">Plataforma</div>
                 <a class="nav-link {{ request()->routeIs('platform.dashboard') ? 'active' : '' }}" href="{{ route('platform.dashboard') }}">Dashboard</a>
+                <a class="nav-link {{ request()->routeIs('platform.profile.*') ? 'active' : '' }}" href="{{ route('platform.profile.edit') }}">Meu perfil</a>
                 @can('platform.manageCompanies')
                     <a class="nav-link {{ request()->routeIs('platform.companies.*') ? 'active' : '' }}" href="{{ route('platform.companies.index') }}">Empresas</a>
                 @endcan
@@ -173,10 +174,13 @@
             <div class="header-user">
                 <strong>{{ $authUser?->name }}</strong>
                 <div class="header-meta">{{ $authUser?->email }}</div>
-                <form method="POST" action="{{ route('logout') }}" style="margin-top: 0.5rem;">
-                    @csrf
-                    <button class="btn btn-ghost" type="submit">Sair</button>
-                </form>
+                <div class="actions" style="margin-top:0.5rem; justify-content:flex-end;">
+                    <a class="btn btn-ghost" href="{{ route('platform.profile.edit') }}">Perfil</a>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button class="btn btn-ghost" type="submit">Sair</button>
+                    </form>
+                </div>
             </div>
         </header>
 

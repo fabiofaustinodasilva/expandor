@@ -53,12 +53,15 @@ class PlatformConsoleRepository
             ->get();
     }
 
-    public function findClientCompany(int $companyId): ?Company
+    public function findClientCompany(int $companyId, bool $withTrashed = false): ?Company
     {
-        return Company::query()
-            ->where('id', $companyId)
-            ->where('is_system', false)
-            ->first();
+        $query = Company::query()->where('is_system', false);
+
+        if ($withTrashed) {
+            $query->withTrashed();
+        }
+
+        return $query->where('id', $companyId)->first();
     }
 
     public function paginateClients(
@@ -66,9 +69,18 @@ class PlatformConsoleRepository
         ?string $search = null,
         ?string $status = null,
         ?string $subscriptionStatus = null,
+        bool $withTrashed = false,
+        bool $onlyTrashed = false,
     ): LengthAwarePaginator {
-        $paginator = Company::query()
-            ->where('is_system', false)
+        $query = Company::query()->where('is_system', false);
+
+        if ($onlyTrashed) {
+            $query->onlyTrashed();
+        } elseif ($withTrashed) {
+            $query->withTrashed();
+        }
+
+        $paginator = $query
             ->when($search, function ($query) use ($search): void {
                 $query->where(function ($inner) use ($search): void {
                     $inner->where('name', 'like', '%'.$search.'%')

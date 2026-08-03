@@ -21,6 +21,12 @@ class SuspendCompanyAction
             ]);
         }
 
+        if ($company->trashed()) {
+            throw ValidationException::withMessages([
+                'company' => ['Não é possível suspender uma empresa excluída.'],
+            ]);
+        }
+
         $old = $company->status;
         $company->forceFill(['status' => Company::STATUS_SUSPENDED])->save();
 

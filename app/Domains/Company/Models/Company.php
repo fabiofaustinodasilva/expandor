@@ -33,6 +33,8 @@ class Company extends Model
         'logo',
         'status',
         'is_system',
+        'deleted_by',
+        'deletion_reason',
     ];
 
     protected function casts(): array
