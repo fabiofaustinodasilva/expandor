@@ -140,11 +140,30 @@ class WizardService
         }
 
         $roleId = Role::query()->where('slug', $data['role'] ?? Role::MANAGER)->value('id');
+        $email = (string) $data['email'];
+
+        $existing = User::query()
+            ->withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('email', $email)
+            ->first();
+
+        if ($existing !== null) {
+            $this->users->update($existing, [
+                'role_id' => $roleId,
+                'name' => $data['name'],
+                'email' => $email,
+                'password' => $data['password'] ?? null,
+                'status' => User::STATUS_ACTIVE,
+            ]);
+
+            return;
+        }
 
         $this->users->create([
             'role_id' => $roleId,
             'name' => $data['name'],
-            'email' => $data['email'],
+            'email' => $email,
             'password' => $data['password'] ?? 'password',
             'status' => User::STATUS_ACTIVE,
         ], $company);
@@ -192,17 +211,21 @@ class WizardService
             return;
         }
 
-        Product::query()->create([
-            'company_id' => $company->id,
-            'name' => $data['name'],
-            'description' => $data['description'] ?? null,
-            'price' => $data['price'] ?? 0,
-            'commission_amount' => $data['commission_amount'] ?? 0,
-            'stock_control' => (bool) ($data['stock_control'] ?? false),
-            'stock_quantity' => (int) ($data['stock_quantity'] ?? 0),
-            'minimum_stock' => (int) ($data['minimum_stock'] ?? 0),
-            'status' => Product::STATUS_ACTIVE,
-            'is_demo' => false,
-        ]);
+        Product::query()->withoutGlobalScopes()->updateOrCreate(
+            [
+                'company_id' => $company->id,
+                'name' => $data['name'],
+            ],
+            [
+                'description' => $data['description'] ?? null,
+                'price' => $data['price'] ?? 0,
+                'commission_amount' => $data['commission_amount'] ?? 0,
+                'stock_control' => (bool) ($data['stock_control'] ?? false),
+                'stock_quantity' => (int) ($data['stock_quantity'] ?? 0),
+                'minimum_stock' => (int) ($data['minimum_stock'] ?? 0),
+                'status' => Product::STATUS_ACTIVE,
+                'is_demo' => false,
+            ]
+        );
     }
 }
