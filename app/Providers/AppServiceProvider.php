@@ -23,8 +23,16 @@ use App\Domains\Company\Models\Company;
 use App\Domains\Company\Models\User;
 use App\Domains\Company\Policies\CompanyPolicy;
 use App\Domains\Company\Policies\UserPolicy;
+use App\Domains\Onboarding\DTOs\SaasOnboardingBanner;
+use App\Domains\Onboarding\Events\OnboardingCompanyCompleted;
+use App\Domains\Onboarding\Events\OnboardingCompleted;
+use App\Domains\Onboarding\Events\OnboardingCustomerCreated;
+use App\Domains\Onboarding\Events\OnboardingStarted;
+use App\Domains\Onboarding\Events\OnboardingTeamCompleted;
+use App\Domains\Onboarding\Listeners\RecordSaasOnboardingAudit;
 use App\Domains\Onboarding\Policies\OnboardingPolicy;
 use App\Domains\Onboarding\Services\OnboardingService;
+use App\Domains\Onboarding\Services\SaasOnboardingService;
 use App\Domains\Platform\Policies\PlatformPolicy;
 use App\Domains\Sales\Properties\Models\Address;
 use App\Domains\Sales\Properties\Models\Property;
@@ -124,6 +132,12 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(MessageRegistered::class, LogMessageRegistered::class);
         Event::listen(MessageQueuedForDelivery::class, DispatchWhatsAppSendJob::class);
 
+        Event::listen(OnboardingStarted::class, [RecordSaasOnboardingAudit::class, 'handleStarted']);
+        Event::listen(OnboardingCompanyCompleted::class, [RecordSaasOnboardingAudit::class, 'handleCompanyCompleted']);
+        Event::listen(OnboardingTeamCompleted::class, [RecordSaasOnboardingAudit::class, 'handleTeamCompleted']);
+        Event::listen(OnboardingCustomerCreated::class, [RecordSaasOnboardingAudit::class, 'handleCustomerCreated']);
+        Event::listen(OnboardingCompleted::class, [RecordSaasOnboardingAudit::class, 'handleCompleted']);
+
         Event::listen(DiagnosingHealth::class, function (): void {
             DB::select('select 1');
         });
@@ -139,6 +153,7 @@ class AppServiceProvider extends ServiceProvider
 
             $onboardingStatus = null;
             $trialBanner = null;
+            $saasOnboardingBanner = null;
             if ($user instanceof User && ! $user->isPlatformAdmin() && $user->company) {
                 try {
                     $onboardingStatus = app(OnboardingService::class)->status($user->company);
@@ -152,10 +167,24 @@ class AppServiceProvider extends ServiceProvider
                 } catch (\Throwable) {
                     $trialBanner = null;
                 }
+
+                try {
+                    if ($user->company->needsSaasOnboarding()) {
+                        $progress = app(SaasOnboardingService::class)->progress($user->company);
+                        $saasOnboardingBanner = new SaasOnboardingBanner(
+                            show: true,
+                            percent: $progress->percent,
+                            continueUrl: $progress->continueUrl,
+                        );
+                    }
+                } catch (\Throwable) {
+                    $saasOnboardingBanner = null;
+                }
             }
 
             $view->with('onboardingStatus', $onboardingStatus);
             $view->with('trialBanner', $trialBanner);
+            $view->with('saasOnboardingBanner', $saasOnboardingBanner);
         });
     }
 

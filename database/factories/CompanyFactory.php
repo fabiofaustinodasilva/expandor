@@ -21,7 +21,20 @@ class CompanyFactory extends Factory
             'email' => fake()->unique()->companyEmail(),
             'phone' => fake()->numerify('(##) ####-####'),
             'status' => Company::STATUS_ACTIVE,
+            // Testes / empresas “antigas”: fora do funil premium por padrão.
+            'onboarding_status' => Company::ONBOARDING_COMPLETED,
+            'onboarding_step' => 5,
+            'onboarding_completed_at' => now(),
         ];
+    }
+
+    public function pendingOnboarding(): static
+    {
+        return $this->state(fn () => [
+            'onboarding_status' => Company::ONBOARDING_PENDING,
+            'onboarding_step' => 1,
+            'onboarding_completed_at' => null,
+        ]);
     }
 
     public function suspended(): static

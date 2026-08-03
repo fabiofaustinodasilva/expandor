@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\Marketplace\MarketplaceController;
+use App\Http\Controllers\Web\Onboarding\SaasOnboardingController;
 use App\Http\Controllers\Web\Onboarding\SetupWizardController;
 use App\Http\Controllers\Web\Onboarding\TourController;
 use App\Http\Controllers\Web\Onboarding\TrialConversionController;
@@ -278,6 +279,17 @@ Route::middleware([
     Route::post('/follow-ups/{followUp}/complete', [FollowUpController::class, 'complete'])->name('follow-ups.complete');
 
     Route::get('/company/plan', [CompanyPlanController::class, 'show'])->name('company.plan.show');
+
+    Route::get('/onboarding', [SaasOnboardingController::class, 'index'])->name('onboarding.index');
+    Route::get('/onboarding/company', [SaasOnboardingController::class, 'company'])->name('onboarding.company');
+    Route::put('/onboarding/company', [SaasOnboardingController::class, 'updateCompany'])->name('onboarding.company.update');
+    Route::get('/onboarding/team', [SaasOnboardingController::class, 'team'])->name('onboarding.team');
+    Route::post('/onboarding/team', [SaasOnboardingController::class, 'storeTeam'])->name('onboarding.team.store');
+    Route::get('/onboarding/customer', [SaasOnboardingController::class, 'customer'])->name('onboarding.customer');
+    Route::post('/onboarding/customer', [SaasOnboardingController::class, 'storeCustomer'])->name('onboarding.customer.store');
+    Route::get('/onboarding/finish', [SaasOnboardingController::class, 'finish'])->name('onboarding.finish');
+    Route::post('/onboarding/complete', [SaasOnboardingController::class, 'complete'])->name('onboarding.complete');
+
     Route::get('/setup/{step?}', [SetupWizardController::class, 'show'])->name('setup.show');
     Route::post('/setup', [SetupWizardController::class, 'store'])->name('setup.store');
     Route::post('/setup/demo', [SetupWizardController::class, 'demo'])->name('setup.demo');

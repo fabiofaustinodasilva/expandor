@@ -23,6 +23,9 @@ class PlatformSeeder extends Seeder
                 'phone' => null,
                 'status' => Company::STATUS_ACTIVE,
                 'is_system' => true,
+                'onboarding_status' => Company::ONBOARDING_COMPLETED,
+                'onboarding_step' => 5,
+                'onboarding_completed_at' => now(),
             ]
         );
 

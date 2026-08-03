@@ -21,6 +21,12 @@ class Company extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    public const ONBOARDING_PENDING = 'pending';
+
+    public const ONBOARDING_IN_PROGRESS = 'in_progress';
+
+    public const ONBOARDING_COMPLETED = 'completed';
+
     protected $fillable = [
         'name',
         'legal_name',
@@ -32,6 +38,9 @@ class Company extends Model
         'segment',
         'logo',
         'status',
+        'onboarding_status',
+        'onboarding_step',
+        'onboarding_completed_at',
         'is_system',
         'deleted_by',
         'deletion_reason',
@@ -41,7 +50,23 @@ class Company extends Model
     {
         return [
             'is_system' => 'boolean',
+            'onboarding_step' => 'integer',
+            'onboarding_completed_at' => 'datetime',
         ];
+    }
+
+    public function hasCompletedSaasOnboarding(): bool
+    {
+        return $this->onboarding_status === self::ONBOARDING_COMPLETED;
+    }
+
+    public function needsSaasOnboarding(): bool
+    {
+        if ($this->isSystem()) {
+            return false;
+        }
+
+        return ! $this->hasCompletedSaasOnboarding();
     }
     protected static function newFactory(): CompanyFactory
     {

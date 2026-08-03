@@ -289,6 +289,7 @@
 
     <div class="main">
         @include('onboarding.partials.trial-banner')
+        @include('onboarding.partials.saas-onboarding-banner')
         <header class="header">
             <div>
                 <div class="header-meta">Empresa atual</div>

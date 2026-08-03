@@ -243,6 +243,7 @@
 
     <div class="op-main">
         @include('onboarding.partials.trial-banner')
+        @include('onboarding.partials.saas-onboarding-banner')
         @if(session('success'))
             <div class="op-page" style="padding-bottom:0;"><div class="alert alert-success">{{ session('success') }}</div></div>
         @endif
