@@ -11,6 +11,7 @@ use App\Domains\Payments\Models\Customer;
 use App\Domains\Payments\Models\WebhookEvent;
 use App\Domains\Payments\Providers\ProviderFactory;
 use App\Domains\Payments\Repositories\PaymentRepository;
+use App\Domains\Security\Services\SecurityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -26,6 +27,7 @@ class WebhookService
         protected PaymentService $payments,
         protected InvoiceService $invoices,
         protected SubscriptionService $subscriptions,
+        protected SecurityService $security,
     ) {}
 
     /**
@@ -63,6 +65,13 @@ class WebhookService
             $provisioned = DB::transaction(function () use ($webhook, $parsed, $gateway) {
                 if ($parsed->isPaymentFailed) {
                     $this->handleFailedPayment($gateway, $parsed->gatewayPaymentId, $parsed->payload);
+                    $this->security->recordAudit(
+                        action: 'payments.payment.refused',
+                        newValues: [
+                            'gateway' => $gateway,
+                            'gateway_payment_id' => $parsed->gatewayPaymentId,
+                        ],
+                    );
 
                     return false;
                 }
@@ -151,6 +160,16 @@ class WebhookService
             'paid_at' => now(),
         ])->save();
 
+        $this->security->recordAudit(
+            action: 'payments.payment.approved',
+            auditable: $checkout,
+            newValues: [
+                'checkout_uuid' => $checkout->uuid,
+                'gateway' => $gateway,
+                'gateway_payment_id' => $parsed->gatewayPaymentId,
+            ],
+        );
+
         $provisioned = $this->provision->execute($checkout->fresh(), $customer);
         $subscription = Subscription::query()
             ->withoutGlobalScopes()
@@ -188,6 +207,17 @@ class WebhookService
             'status' => CheckoutStatus::Provisioned,
             'provisioned_at' => now(),
         ])->save();
+
+        $this->security->recordAudit(
+            action: 'payments.company.provisioned',
+            auditable: $provisioned->company,
+            newValues: [
+                'company_id' => $provisioned->company->id,
+                'checkout_uuid' => $checkout->uuid,
+                'admin_email' => $provisioned->administrator->email,
+            ],
+            companyId: $provisioned->company->id,
+        );
 
         Mail::to($provisioned->administrator->email)->send(new WelcomeCredentialsMail(
             company: $provisioned->company,

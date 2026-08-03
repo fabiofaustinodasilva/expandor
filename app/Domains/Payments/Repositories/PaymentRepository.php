@@ -144,6 +144,7 @@ class PaymentRepository
         return Plan::query()
             ->where('status', Plan::STATUS_ACTIVE)
             ->where('price', '>', 0)
+            ->orderBy('display_order')
             ->orderBy('price')
             ->paginate($perPage);
     }

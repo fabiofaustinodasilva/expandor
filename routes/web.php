@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\Marketplace\MarketplaceController;
 use App\Http\Controllers\Web\Onboarding\SetupWizardController;
 use App\Http\Controllers\Web\Onboarding\TourController;
 use App\Http\Controllers\Web\Onboarding\TrialConversionController;
@@ -31,6 +32,7 @@ use App\Http\Controllers\Web\Operations\TeamController;
 use App\Http\Controllers\Web\Platform\FeatureFlagController;
 use App\Http\Controllers\Web\Platform\HealthScoreController;
 use App\Http\Controllers\Web\Platform\ImpersonationController;
+use App\Http\Controllers\Web\Platform\PlatformBillingController;
 use App\Http\Controllers\Web\Platform\PlatformBrandingController;
 use App\Http\Controllers\Web\Platform\PlatformCompanyController;
 use App\Http\Controllers\Web\Platform\PlatformOwnerProfileController;
@@ -61,7 +63,11 @@ use App\Http\Controllers\Web\Visits\FollowUpController;
 use App\Http\Controllers\Web\Visits\VisitController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/login');
+Route::get('/', [MarketplaceController::class, 'home'])->name('marketplace.home');
+Route::get('/planos', [MarketplaceController::class, 'plans'])->name('marketplace.plans');
+Route::get('/assinar', [MarketplaceController::class, 'subscribe'])->name('marketplace.subscribe');
+Route::get('/assinar/aguardando', [CheckoutController::class, 'waiting'])->name('checkout.waiting');
+Route::get('/assinar/status/{uuid}', [CheckoutController::class, 'status'])->name('checkout.status');
 
 Route::get('/plans', [CheckoutController::class, 'plans'])->name('plans.index');
 Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout.create');
@@ -113,6 +119,8 @@ Route::middleware([
         Route::put('/plans/{plan}', [PlatformPlanController::class, 'update'])->name('plans.update');
         Route::post('/plans/{plan}/activate', [PlatformPlanController::class, 'activate'])->name('plans.activate');
         Route::post('/plans/{plan}/deactivate', [PlatformPlanController::class, 'deactivate'])->name('plans.deactivate');
+
+        Route::get('/billing', [PlatformBillingController::class, 'index'])->name('billing.index');
 
         Route::get('/companies', [PlatformCompanyController::class, 'index'])->name('companies.index');
         Route::get('/companies/create', [PlatformCompanyController::class, 'create'])->name('companies.create');

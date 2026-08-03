@@ -21,8 +21,10 @@ return [
             'timeout' => (int) env('ASAAS_TIMEOUT', 30),
         ],
         'mercadopago' => [
+            'base_url' => env('MERCADO_PAGO_BASE_URL', 'https://api.mercadopago.com'),
             'access_token' => env('MERCADO_PAGO_TOKEN'),
             'webhook_token' => env('MERCADO_PAGO_WEBHOOK_TOKEN'),
+            'timeout' => (int) env('MERCADO_PAGO_TIMEOUT', 30),
         ],
         'stripe' => [
             'key' => env('STRIPE_KEY'),

@@ -25,6 +25,9 @@ class PlanSeeder extends Seeder
                 'max_teams' => 1,
                 'max_products' => 50,
                 'max_storage_mb' => 512,
+                'max_visits' => 200,
+                'display_order' => 30,
+                'is_featured' => false,
                 'features' => PlanCatalog::normalizeFeatures([
                     'crm' => true,
                     'ai' => false,
@@ -48,6 +51,9 @@ class PlanSeeder extends Seeder
                 'max_teams' => 10,
                 'max_products' => 5000,
                 'max_storage_mb' => 10240,
+                'max_visits' => 10000,
+                'display_order' => 10,
+                'is_featured' => true,
                 'features' => PlanCatalog::normalizeFeatures([
                     'crm' => true,
                     'ai' => false,
@@ -71,6 +77,9 @@ class PlanSeeder extends Seeder
                 'max_teams' => null,
                 'max_products' => null,
                 'max_storage_mb' => null,
+                'max_visits' => null,
+                'display_order' => 20,
+                'is_featured' => false,
                 'features' => PlanCatalog::normalizeFeatures([
                     'crm' => true,
                     'ai' => true,

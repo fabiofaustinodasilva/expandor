@@ -34,8 +34,11 @@ class Plan extends Model
         'max_teams',
         'max_products',
         'max_storage_mb',
+        'max_visits',
         'features',
         'status',
+        'display_order',
+        'is_featured',
     ];
 
     protected function casts(): array
@@ -44,6 +47,9 @@ class Plan extends Model
             'price' => 'decimal:2',
             'price_yearly' => 'decimal:2',
             'trial_days' => 'integer',
+            'max_visits' => 'integer',
+            'display_order' => 'integer',
+            'is_featured' => 'boolean',
             'features' => 'array',
         ];
     }

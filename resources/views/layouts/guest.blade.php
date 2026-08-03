@@ -63,8 +63,11 @@
 <body>
 <div class="wrap">
     <div class="topnav">
-        <strong>{{ config('app.name') }}</strong>
-        <a href="{{ route('login') }}">Já tenho conta</a>
+        <strong><a href="{{ route('marketplace.home') }}" style="color:inherit; text-decoration:none;">{{ config('app.name') }}</a></strong>
+        <div style="display:flex; gap:1rem; align-items:center;">
+            <a href="{{ route('marketplace.plans') }}">Planos</a>
+            <a href="{{ route('login') }}">Já tenho conta</a>
+        </div>
     </div>
     @if($errors->any())
         <div class="error">

@@ -20,7 +20,10 @@ class PlatformPlanService
 
     public function paginate(int $perPage = 20): LengthAwarePaginator
     {
-        return Plan::query()->orderBy('price')->paginate($perPage);
+        return Plan::query()
+            ->orderBy('display_order')
+            ->orderBy('price')
+            ->paginate($perPage);
     }
 
     public function find(int $planId): Plan
@@ -137,8 +140,11 @@ class PlatformPlanService
             'max_teams' => $this->nullableInt($data['max_teams'] ?? null),
             'max_products' => $this->nullableInt($data['max_products'] ?? null),
             'max_storage_mb' => $this->nullableInt($data['max_storage_mb'] ?? null),
+            'max_visits' => $this->nullableInt($data['max_visits'] ?? null),
             'features' => $features,
             'status' => $data['status'] ?? Plan::STATUS_ACTIVE,
+            'display_order' => (int) ($data['display_order'] ?? 100),
+            'is_featured' => (bool) ($data['is_featured'] ?? false),
         ];
     }
 

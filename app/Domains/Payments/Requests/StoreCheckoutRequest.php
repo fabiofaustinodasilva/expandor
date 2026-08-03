@@ -6,6 +6,7 @@ use App\Domains\Payments\Enums\BillingCycle;
 use App\Domains\Payments\Enums\PaymentMethodType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class StoreCheckoutRequest extends FormRequest
 {
@@ -33,6 +34,7 @@ class StoreCheckoutRequest extends FormRequest
                 PaymentMethodType::Boleto->value,
                 PaymentMethodType::Card->value,
             ])],
+            'admin_password' => ['nullable', 'string', 'confirmed', Password::defaults()],
         ];
     }
 }

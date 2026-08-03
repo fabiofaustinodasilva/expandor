@@ -71,8 +71,42 @@ class PaymentService
         if ($gatewayPaymentId) {
             $existing = $this->repository->findPaymentByGateway($checkout->gateway, $gatewayPaymentId);
             if ($existing !== null) {
-                return $existing;
+                $existing->forceFill([
+                    'company_id' => $company?->id ?? $existing->company_id,
+                    'invoice_id' => $invoice?->id ?? $existing->invoice_id,
+                    'method' => $method ?? $existing->method,
+                    'raw' => $raw ?: $existing->raw,
+                ])->save();
+
+                if ($existing->status !== PaymentStatus::Paid) {
+                    return $this->markPaid($existing->fresh());
+                }
+
+                return $existing->fresh();
             }
+        }
+
+        $pending = Payment::query()
+            ->withoutGlobalScopes()
+            ->where('checkout_session_id', $checkout->id)
+            ->where('status', PaymentStatus::Pending)
+            ->latest('id')
+            ->first();
+
+        if ($pending !== null) {
+            $pending->forceFill([
+                'company_id' => $company?->id,
+                'customer_id' => $customer->id,
+                'subscription_id' => $company
+                    ? $this->repository->activeSubscription($company)?->id
+                    : null,
+                'invoice_id' => $invoice?->id,
+                'gateway_payment_id' => $gatewayPaymentId ?? $pending->gateway_payment_id ?? ('local_'.$checkout->uuid),
+                'method' => $method ?? $pending->method,
+                'raw' => $raw ?: $pending->raw,
+            ])->save();
+
+            return $this->markPaid($pending->fresh());
         }
 
         $payment = $this->create([

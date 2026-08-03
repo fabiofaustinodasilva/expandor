@@ -155,6 +155,9 @@
                 @can('platform.managePlans')
                     <a class="nav-link {{ request()->routeIs('platform.plans.*') ? 'active' : '' }}" href="{{ route('platform.plans.index') }}">Planos</a>
                 @endcan
+                @can('platform.manageCompanies')
+                    <a class="nav-link {{ request()->routeIs('platform.billing.*') ? 'active' : '' }}" href="{{ route('platform.billing.index') }}">Billing</a>
+                @endcan
                 @can('platform.manageBranding')
                     <a class="nav-link {{ request()->routeIs('platform.branding.*') ? 'active' : '' }}" href="{{ route('platform.branding.edit') }}">Branding</a>
                 @endcan

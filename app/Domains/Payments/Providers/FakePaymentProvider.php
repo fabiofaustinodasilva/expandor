@@ -37,13 +37,19 @@ class FakePaymentProvider implements PaymentProviderContract
     {
         $sessionId = 'fake_sess_'.Str::lower(Str::random(12));
         $uuid = (string) ($data['checkout_uuid'] ?? Str::uuid());
+        $billingType = strtoupper((string) ($data['billing_type'] ?? 'UNDEFINED'));
+
+        $checkoutUrl = $billingType === 'PIX'
+            ? url('/assinar/aguardando?session='.$uuid)
+            : url('/checkout/success?session='.$uuid.'&provider=fake');
 
         return new GatewayCheckoutResult(
             gatewaySessionId: $sessionId,
-            checkoutUrl: url('/checkout/success?session='.$uuid.'&provider=fake'),
+            checkoutUrl: $checkoutUrl,
             raw: [
                 'session_id' => $sessionId,
                 'amount' => $data['amount'] ?? 0,
+                'billing_type' => $billingType,
             ],
         );
     }

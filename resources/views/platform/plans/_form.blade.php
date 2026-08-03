@@ -46,6 +46,22 @@
     </div>
 </div>
 
+<div class="grid grid-2" style="margin-bottom:1rem;">
+    <div class="form-group">
+        <label for="display_order">Ordem de exibição</label>
+        <input class="form-control" type="number" min="0" max="9999" name="display_order" id="display_order" value="{{ old('display_order', $plan->display_order ?? 100) }}">
+        <div class="header-meta">Menor número aparece primeiro no marketplace.</div>
+    </div>
+    <div class="form-group" style="display:flex; align-items:flex-end; padding-bottom:0.35rem;">
+        @php $featured = (bool) old('is_featured', $plan->is_featured ?? false); @endphp
+        <label style="display:flex; gap:.6rem; align-items:center; color:var(--text);">
+            <input type="hidden" name="is_featured" value="0">
+            <input type="checkbox" name="is_featured" value="1" id="is_featured" @checked($featured)>
+            Badge Mais vendido
+        </label>
+    </div>
+</div>
+
 <h2 style="margin:1.25rem 0 .85rem; font-size:1rem;">Limites</h2>
 <div class="grid grid-2" style="margin-bottom:1rem;">
     <div class="form-group">
@@ -71,6 +87,10 @@
     <div class="form-group">
         <label for="max_storage_mb">Máx. storage (MB)</label>
         <input class="form-control" type="number" min="0" name="max_storage_mb" id="max_storage_mb" value="{{ old('max_storage_mb', $plan->max_storage_mb ?? '') }}" placeholder="ilimitado">
+    </div>
+    <div class="form-group">
+        <label for="max_visits">Máx. visitas</label>
+        <input class="form-control" type="number" min="0" name="max_visits" id="max_visits" value="{{ old('max_visits', $plan->max_visits ?? '') }}" placeholder="ilimitado">
     </div>
 </div>
 

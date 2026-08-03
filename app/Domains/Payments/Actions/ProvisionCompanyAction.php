@@ -26,7 +26,10 @@ class ProvisionCompanyAction
     public function execute(CheckoutSession $checkout, Customer $customer): ProvisionedCompany
     {
         $adminRole = Role::query()->where('slug', Role::ADMINISTRATOR)->firstOrFail();
-        $plainPassword = Str::password(12);
+        $payloadPassword = data_get($checkout->payload, 'admin_password');
+        $plainPassword = filled($payloadPassword)
+            ? (string) $payloadPassword
+            : Str::password(12);
 
         return DB::transaction(function () use ($checkout, $customer, $adminRole, $plainPassword) {
             $company = Company::query()->create([
@@ -105,10 +108,14 @@ class ProvisionCompanyAction
 
             $customer->forceFill(['company_id' => $company->id])->save();
 
+            $payload = is_array($checkout->payload) ? $checkout->payload : [];
+            unset($payload['admin_password']);
+
             $checkout->forceFill([
                 'company_id' => $company->id,
                 'customer_id' => $customer->id,
                 'provisioned_at' => now(),
+                'payload' => $payload,
             ])->save();
 
             // Ensure subscription is available through relation for callers.

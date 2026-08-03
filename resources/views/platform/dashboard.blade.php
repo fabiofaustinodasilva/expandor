@@ -59,6 +59,11 @@
             <div style="font-size:1.8rem; font-weight:700;">R$ {{ number_format($metrics->arr, 2, ',', '.') }}</div>
         </div>
         <div class="card">
+            <div class="header-meta">Receita prevista (ARR)</div>
+            <div style="font-size:1.8rem; font-weight:700;">R$ {{ number_format($metrics->arr ?: ($metrics->mrr * 12), 2, ',', '.') }}</div>
+            <div class="header-meta">MRR × 12</div>
+        </div>
+        <div class="card">
             <div class="header-meta">Receita mensal</div>
             <div style="font-size:1.8rem; font-weight:700;">R$ {{ number_format($metrics->monthlyRevenue, 2, ',', '.') }}</div>
         </div>
@@ -102,6 +107,52 @@
                 <div style="font-size:1.8rem; font-weight:700;">{{ number_format($metrics->trialConversionRate, 1, ',', '.') }}%</div>
             </div>
         @endisset
+    </div>
+
+    @php
+        $planRows = collect($metrics->clientsByPlan);
+        $maxClients = max(1, (int) $planRows->max(fn ($row) => (int) ($row['count'] ?? 0)));
+        $maxPlanMrr = max(1.0, (float) $planRows->max(fn ($row) => (float) ($row['mrr'] ?? 0)));
+    @endphp
+
+    <div class="card" style="margin-bottom:1rem;">
+        <h2 style="margin-top:0;">Gráficos — clientes e receita por plano</h2>
+        <div class="grid grid-2">
+            <div>
+                <div class="header-meta" style="margin-bottom:0.75rem;">Clientes por plano</div>
+                @forelse($planRows as $slug => $row)
+                    @php $pct = round(((int) $row['count'] / $maxClients) * 100); @endphp
+                    <div style="margin-bottom:0.65rem;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.25rem;">
+                            <span>{{ $slug }}</span>
+                            <span class="header-meta">{{ $row['count'] }}</span>
+                        </div>
+                        <div style="height:10px; background:var(--bg-soft); border-radius:999px; overflow:hidden;">
+                            <div style="height:100%; width:{{ $pct }}%; background:linear-gradient(90deg,#F59E0B,#D97706);"></div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="header-meta">Sem dados de planos.</div>
+                @endforelse
+            </div>
+            <div>
+                <div class="header-meta" style="margin-bottom:0.75rem;">MRR por plano</div>
+                @forelse($planRows as $slug => $row)
+                    @php $pct = round(((float) $row['mrr'] / $maxPlanMrr) * 100); @endphp
+                    <div style="margin-bottom:0.65rem;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.25rem;">
+                            <span>{{ $slug }}</span>
+                            <span class="header-meta">R$ {{ number_format((float) $row['mrr'], 2, ',', '.') }}</span>
+                        </div>
+                        <div style="height:10px; background:var(--bg-soft); border-radius:999px; overflow:hidden;">
+                            <div style="height:100%; width:{{ $pct }}%; background:linear-gradient(90deg,#22C55E,#15803D);"></div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="header-meta">Sem dados de receita.</div>
+                @endforelse
+            </div>
+        </div>
     </div>
 
     <div class="card">

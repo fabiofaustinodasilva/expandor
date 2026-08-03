@@ -5,10 +5,13 @@ namespace App\Domains\Payments\Actions;
 use App\Domains\Payments\DTOs\CheckoutResult;
 use App\Domains\Payments\Enums\BillingCycle;
 use App\Domains\Payments\Enums\CheckoutStatus;
+use App\Domains\Payments\Enums\PaymentStatus;
 use App\Domains\Payments\Models\CheckoutSession;
 use App\Domains\Payments\Models\Customer;
+use App\Domains\Payments\Models\Payment;
 use App\Domains\Payments\Providers\ProviderFactory;
 use App\Domains\Payments\Repositories\PaymentRepository;
+use App\Domains\Security\Services\SecurityService;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -17,6 +20,7 @@ class CreateCheckoutAction
     public function __construct(
         protected ProviderFactory $providers,
         protected PaymentRepository $repository,
+        protected SecurityService $security,
     ) {}
 
     /**
@@ -44,8 +48,10 @@ class CreateCheckoutAction
             ?? BillingCycle::Monthly;
 
         $amount = $billingCycle === BillingCycle::Yearly
-            ? round((float) $plan->price * 12 * 0.9, 2)
+            ? $plan->yearlyPrice()
             : (float) $plan->price;
+
+        $paymentMethod = strtoupper((string) ($data['payment_method'] ?? 'UNDEFINED'));
 
         $gatewayCustomer = $provider->createCustomer([
             'name' => $data['buyer_name'],
@@ -71,7 +77,9 @@ class CreateCheckoutAction
             'amount' => $amount,
             'description' => 'Expandor — '.$plan->name,
             'checkout_uuid' => $uuid,
-            'billing_type' => $data['payment_method'] ?? 'UNDEFINED',
+            'billing_type' => $paymentMethod,
+            'buyer_name' => $data['buyer_name'],
+            'buyer_email' => $data['buyer_email'],
             'success_url' => url(config('payments.checkout.success_url', '/checkout/success').'?session='.$uuid),
             'cancel_url' => url(config('payments.checkout.cancel_url', '/checkout/cancel')),
         ]);
@@ -96,8 +104,37 @@ class CreateCheckoutAction
             'payload' => [
                 'customer' => $gatewayCustomer->raw,
                 'checkout' => $gatewayCheckout->raw,
+                'payment_method' => $paymentMethod,
+                'admin_password' => filled($data['admin_password'] ?? null)
+                    ? (string) $data['admin_password']
+                    : null,
             ],
         ]);
+
+        Payment::query()->withoutGlobalScopes()->create([
+            'company_id' => null,
+            'customer_id' => $customer->id,
+            'checkout_session_id' => $session->id,
+            'amount' => $amount,
+            'currency' => config('payments.currency', 'BRL'),
+            'status' => PaymentStatus::Pending,
+            'method' => strtolower($paymentMethod === 'CREDIT_CARD' ? 'card' : ($paymentMethod === 'PIX' ? 'pix' : 'undefined')),
+            'gateway' => $provider->name(),
+            'gateway_payment_id' => $gatewayCheckout->gatewaySessionId,
+            'raw' => $gatewayCheckout->raw,
+        ]);
+
+        $this->security->recordAudit(
+            action: 'payments.checkout.started',
+            auditable: $session,
+            newValues: [
+                'uuid' => $uuid,
+                'plan_id' => $plan->id,
+                'amount' => $amount,
+                'gateway' => $provider->name(),
+                'payment_method' => $paymentMethod,
+            ],
+        );
 
         return new CheckoutResult(
             session: $session,

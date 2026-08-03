@@ -36,6 +36,9 @@ class StorePlatformPlanRequest extends FormRequest
             'max_teams' => ['nullable', 'integer', 'min:0'],
             'max_products' => ['nullable', 'integer', 'min:0'],
             'max_storage_mb' => ['nullable', 'integer', 'min:0'],
+            'max_visits' => ['nullable', 'integer', 'min:0'],
+            'display_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'is_featured' => ['sometimes', 'boolean'],
             'features' => ['nullable', 'array'],
             'status' => ['required', 'in:'.Plan::STATUS_ACTIVE.','.Plan::STATUS_INACTIVE],
         ], $featureRules);
@@ -52,6 +55,9 @@ class StorePlatformPlanRequest extends FormRequest
             'price' => 'preço mensal',
             'price_yearly' => 'preço anual',
             'trial_days' => 'dias de trial',
+            'max_visits' => 'máx. visitas',
+            'display_order' => 'ordem de exibição',
+            'is_featured' => 'destaque',
             'status' => 'status',
         ];
     }
@@ -68,6 +74,9 @@ class StorePlatformPlanRequest extends FormRequest
             $normalized[$key] = filter_var($features[$key] ?? false, FILTER_VALIDATE_BOOLEAN);
         }
 
-        $this->merge(['features' => $normalized]);
+        $this->merge([
+            'features' => $normalized,
+            'is_featured' => filter_var($this->input('is_featured', false), FILTER_VALIDATE_BOOLEAN),
+        ]);
     }
 }
