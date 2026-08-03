@@ -78,6 +78,30 @@
             <div class="header-meta">Clientes inadimplentes</div>
             <div style="font-size:1.8rem; font-weight:700;">{{ number_format($metrics->pastDueClients, 0, ',', '.') }}</div>
         </div>
+        @isset($metrics->totalCompanies)
+            <div class="card">
+                <div class="header-meta">Empresas totais</div>
+                <div style="font-size:1.8rem; font-weight:700;">{{ number_format($metrics->totalCompanies, 0, ',', '.') }}</div>
+            </div>
+        @endisset
+        @isset($metrics->cancelledClients)
+            <div class="card">
+                <div class="header-meta">Clientes cancelados</div>
+                <div style="font-size:1.8rem; font-weight:700;">{{ number_format($metrics->cancelledClients, 0, ',', '.') }}</div>
+            </div>
+        @endisset
+        @isset($metrics->churnRate)
+            <div class="card">
+                <div class="header-meta">Churn</div>
+                <div style="font-size:1.8rem; font-weight:700;">{{ number_format($metrics->churnRate, 1, ',', '.') }}%</div>
+            </div>
+        @endisset
+        @isset($metrics->trialConversionRate)
+            <div class="card">
+                <div class="header-meta">Conversão de trial</div>
+                <div style="font-size:1.8rem; font-weight:700;">{{ number_format($metrics->trialConversionRate, 1, ',', '.') }}%</div>
+            </div>
+        @endisset
     </div>
 
     <div class="card">

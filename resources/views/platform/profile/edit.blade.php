@@ -51,4 +51,17 @@
             </div>
         </form>
     </div>
+
+    <div class="card" style="max-width:640px; margin-top:1rem;">
+        <h2 style="margin-top:0; font-size:1rem;">Autenticação em dois fatores (2FA)</h2>
+        <p class="header-meta" style="margin-top:0;">Estrutura preparada — ativação em sprint futura</p>
+        <p>
+            <strong>Status:</strong>
+            {{ $user->two_factor_enabled ? 'Habilitado' : 'Desabilitado' }}
+        </p>
+        <p>
+            <strong>Confirmado em:</strong>
+            {{ optional($user->two_factor_confirmed_at)->format('d/m/Y H:i') ?: '—' }}
+        </p>
+    </div>
 @endsection

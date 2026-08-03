@@ -3,6 +3,7 @@
 namespace App\Domains\Platform\Repositories;
 
 use App\Domains\AI\Models\AIConversation;
+use App\Domains\Audit\Models\AuditLog;
 use App\Domains\Communication\Enums\MessageStatus;
 use App\Domains\Communication\Models\Message;
 use App\Domains\Company\Models\Company;
@@ -44,6 +45,22 @@ class PlatformCompanyRepository
         $onboarding = app(OnboardingService::class)->platformMetrics();
         $console = app(PlatformConsoleRepository::class);
 
+        $totalCompanies = Company::query()->where('is_system', false)->count();
+        $cancelledClients = Company::query()
+            ->where('is_system', false)
+            ->where('status', Company::STATUS_CANCELLED)
+            ->count();
+        $churnRate = round($cancelledClients / max($totalCompanies, 1) * 100, 1);
+
+        $trial = (int) $revenue['trial_clients'];
+        $converted = AuditLog::query()
+            ->withoutGlobalScopes()
+            ->where('action', 'acquisition.trial.converted')
+            ->count();
+        $trialConversionRate = ($converted + $trial) > 0
+            ? round($converted / ($converted + $trial) * 100, 1)
+            : 0.0;
+
         return new PlatformDashboardMetrics(
             activeCompanies: Company::query()
                 ->where('is_system', false)
@@ -70,7 +87,7 @@ class PlatformCompanyRepository
             arr: (float) $revenue['arr'],
             monthlyRevenue: (float) $revenue['monthly_revenue'],
             yearlyRevenue: (float) $revenue['yearly_revenue'],
-            trialClients: (int) $revenue['trial_clients'],
+            trialClients: $trial,
             suspendedClients: (int) $revenue['suspended_clients'],
             pastDueClients: (int) $revenue['past_due_clients'],
             clientsByPlan: collect($revenue['clients_by_plan'])->map(fn ($item) => [
@@ -91,6 +108,10 @@ class PlatformCompanyRepository
             atRiskCompanies: $console->countByRisk(HealthRiskLevel::AtRisk) + $console->countByRisk(HealthRiskLevel::Medium),
             criticalCompanies: $console->countByRisk(HealthRiskLevel::Critical),
             activeImpersonations: $console->activeImpersonationsCount(),
+            totalCompanies: $totalCompanies,
+            cancelledClients: $cancelledClients,
+            churnRate: $churnRate,
+            trialConversionRate: $trialConversionRate,
         );
     }
 }

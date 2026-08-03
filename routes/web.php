@@ -35,6 +35,8 @@ use App\Http\Controllers\Web\Platform\PlatformBrandingController;
 use App\Http\Controllers\Web\Platform\PlatformCompanyController;
 use App\Http\Controllers\Web\Platform\PlatformOwnerProfileController;
 use App\Http\Controllers\Web\Platform\PlatformDashboardController;
+use App\Http\Controllers\Web\Platform\PlatformPlanController;
+use App\Http\Controllers\Web\Platform\PlatformSubscriptionController;
 use App\Http\Controllers\Web\Security\AuditLogController;
 use App\Http\Controllers\Web\Security\PrivacyController;
 use App\Http\Controllers\Web\SalesApp\SalesAppCampaignController;
@@ -104,6 +106,14 @@ Route::middleware([
         Route::get('/profile', [PlatformOwnerProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [PlatformOwnerProfileController::class, 'update'])->name('profile.update');
 
+        Route::get('/plans', [PlatformPlanController::class, 'index'])->name('plans.index');
+        Route::get('/plans/create', [PlatformPlanController::class, 'create'])->name('plans.create');
+        Route::post('/plans', [PlatformPlanController::class, 'store'])->name('plans.store');
+        Route::get('/plans/{plan}/edit', [PlatformPlanController::class, 'edit'])->name('plans.edit');
+        Route::put('/plans/{plan}', [PlatformPlanController::class, 'update'])->name('plans.update');
+        Route::post('/plans/{plan}/activate', [PlatformPlanController::class, 'activate'])->name('plans.activate');
+        Route::post('/plans/{plan}/deactivate', [PlatformPlanController::class, 'deactivate'])->name('plans.deactivate');
+
         Route::get('/companies', [PlatformCompanyController::class, 'index'])->name('companies.index');
         Route::get('/companies/create', [PlatformCompanyController::class, 'create'])->name('companies.create');
         Route::post('/companies', [PlatformCompanyController::class, 'store'])->name('companies.store');
@@ -116,6 +126,16 @@ Route::middleware([
         Route::post('/companies/{company}/activate', [PlatformCompanyController::class, 'activate'])->name('companies.activate');
         Route::post('/companies/{company}/convert-trial', [PlatformCompanyController::class, 'convertTrial'])->name('companies.convert-trial');
         Route::post('/companies/{company}/reset-admin-password', [PlatformCompanyController::class, 'resetAdminPassword'])->name('companies.reset-admin-password');
+        Route::put('/companies/{company}/admin-contact', [PlatformCompanyController::class, 'updateAdminContact'])->name('companies.admin-contact');
+        Route::post('/companies/{company}/admin-block', [PlatformCompanyController::class, 'blockAdmin'])->name('companies.admin-block');
+        Route::post('/companies/{company}/admin-unblock', [PlatformCompanyController::class, 'unblockAdmin'])->name('companies.admin-unblock');
+        Route::post('/companies/{company}/admin-force-logout', [PlatformCompanyController::class, 'forceLogoutAdmin'])->name('companies.admin-force-logout');
+        Route::post('/companies/{company}/change-administrator', [PlatformCompanyController::class, 'changeAdministrator'])->name('companies.change-administrator');
+        Route::post('/companies/{company}/subscription/renew-trial', [PlatformSubscriptionController::class, 'renewTrial'])->name('companies.subscription.renew-trial');
+        Route::post('/companies/{company}/subscription/change-plan', [PlatformSubscriptionController::class, 'changePlan'])->name('companies.subscription.change-plan');
+        Route::put('/companies/{company}/subscription/dates', [PlatformSubscriptionController::class, 'updateDates'])->name('companies.subscription.dates');
+        Route::post('/companies/{company}/subscription/cancel', [PlatformSubscriptionController::class, 'cancel'])->name('companies.subscription.cancel');
+        Route::post('/companies/{company}/subscription/reactivate', [PlatformSubscriptionController::class, 'reactivate'])->name('companies.subscription.reactivate');
         Route::post('/companies/{company}/impersonate', [ImpersonationController::class, 'store'])->name('impersonation.store');
         Route::get('/flags', [FeatureFlagController::class, 'index'])->name('flags.index');
         Route::post('/companies/{company}/flags', [FeatureFlagController::class, 'update'])->name('flags.update');

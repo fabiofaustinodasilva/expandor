@@ -33,5 +33,9 @@ class PlatformDashboardMetrics
         public readonly int $atRiskCompanies = 0,
         public readonly int $criticalCompanies = 0,
         public readonly int $activeImpersonations = 0,
+        public readonly int $totalCompanies = 0,
+        public readonly int $cancelledClients = 0,
+        public readonly float $churnRate = 0,
+        public readonly float $trialConversionRate = 0,
     ) {}
 }

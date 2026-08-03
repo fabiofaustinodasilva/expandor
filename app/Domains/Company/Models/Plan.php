@@ -3,6 +3,7 @@
 namespace App\Domains\Company\Models;
 
 use App\Domains\Billing\Models\PlanFeature;
+use App\Domains\Platform\Support\PlanCatalog;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,9 +26,14 @@ class Plan extends Model
         'slug',
         'description',
         'price',
+        'price_yearly',
+        'trial_days',
         'max_users',
         'max_properties',
         'max_campaigns',
+        'max_teams',
+        'max_products',
+        'max_storage_mb',
         'features',
         'status',
     ];
@@ -36,6 +42,8 @@ class Plan extends Model
     {
         return [
             'price' => 'decimal:2',
+            'price_yearly' => 'decimal:2',
+            'trial_days' => 'integer',
             'features' => 'array',
         ];
     }
@@ -48,5 +56,27 @@ class Plan extends Model
     public function planFeatures(): HasMany
     {
         return $this->hasMany(PlanFeature::class);
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    public function featureMap(): array
+    {
+        return PlanCatalog::normalizeFeatures($this->features);
+    }
+
+    public function hasCatalogFeature(string $key): bool
+    {
+        return $this->featureMap()[$key] ?? false;
+    }
+
+    public function yearlyPrice(): float
+    {
+        if ($this->price_yearly !== null) {
+            return (float) $this->price_yearly;
+        }
+
+        return round((float) $this->price * 12 * 0.9, 2);
     }
 }

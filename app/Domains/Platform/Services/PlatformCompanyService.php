@@ -39,6 +39,8 @@ class PlatformCompanyService
         protected ResetCompanyAdminPasswordAction $resetAdminPassword,
         protected HealthScoreService $health,
         protected FeatureFlagService $featureFlags,
+        protected CompanyOperationalMetricsService $operationalMetrics,
+        protected PlatformSubscriptionService $subscriptions,
     ) {}
 
     public function dashboardMetrics(): PlatformDashboardMetrics
@@ -104,6 +106,12 @@ class PlatformCompanyService
             'users' => $users,
             'flags' => $this->featureFlags->statesForCompany($company),
             'health' => $healthDto,
+            'ops' => $this->operationalMetrics->for($company),
+            'subscriptionEvents' => $this->subscriptions->history($company),
+            'plans' => Plan::query()
+                ->where('status', Plan::STATUS_ACTIVE)
+                ->orderBy('price')
+                ->get(),
         ];
     }
 

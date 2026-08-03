@@ -4,12 +4,17 @@ namespace App\Http\Controllers\Web\Platform;
 
 use App\Domains\Acquisition\Actions\ConvertTrialCompanyAction;
 use App\Domains\Company\Models\Plan;
+use App\Domains\Company\Models\User;
 use App\Domains\Platform\Actions\CreatePlatformCompanyAction;
+use App\Domains\Platform\Requests\ChangeCompanyAdministratorRequest;
 use App\Domains\Platform\Requests\ResetCompanyAdminPasswordRequest;
 use App\Domains\Platform\Requests\SoftDeleteCompanyRequest;
 use App\Domains\Platform\Requests\StorePlatformCompanyRequest;
 use App\Domains\Platform\Requests\SuspendCompanyRequest;
+use App\Domains\Platform\Requests\ToggleCompanyAdminStatusRequest;
+use App\Domains\Platform\Requests\UpdateCompanyAdminContactRequest;
 use App\Domains\Platform\Requests\UpdatePlatformCompanyRequest;
+use App\Domains\Platform\Services\PlatformCompanyAdminService;
 use App\Domains\Platform\Services\PlatformCompanyService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +27,7 @@ class PlatformCompanyController extends Controller
         protected PlatformCompanyService $platform,
         protected CreatePlatformCompanyAction $createCompany,
         protected ConvertTrialCompanyAction $convertTrial,
+        protected PlatformCompanyAdminService $admins,
     ) {}
 
     public function index(Request $request): View
@@ -161,5 +167,65 @@ class PlatformCompanyController extends Controller
             'success',
             'Trial convertido em cliente ativo ('.$subscription->plan?->name.').'
         );
+    }
+
+    public function updateAdminContact(UpdateCompanyAdminContactRequest $request, int $company): RedirectResponse
+    {
+        $model = $this->platform->findClient($company);
+        $admin = $this->resolveCompanyUser($model->id, (int) $request->validated('user_id'));
+
+        $this->admins->updateContact(
+            $model,
+            $admin,
+            $request->user(),
+            $request->safe()->only(['email', 'phone', 'whatsapp']),
+        );
+
+        return back()->with('success', 'Contato do administrador atualizado.');
+    }
+
+    public function blockAdmin(ToggleCompanyAdminStatusRequest $request, int $company): RedirectResponse
+    {
+        $model = $this->platform->findClient($company);
+        $admin = $this->resolveCompanyUser($model->id, (int) $request->validated('user_id'));
+        $this->admins->blockLogin($model, $admin, $request->user());
+
+        return back()->with('success', "Login de {$admin->email} bloqueado.");
+    }
+
+    public function unblockAdmin(ToggleCompanyAdminStatusRequest $request, int $company): RedirectResponse
+    {
+        $model = $this->platform->findClient($company);
+        $admin = $this->resolveCompanyUser($model->id, (int) $request->validated('user_id'));
+        $this->admins->unblockLogin($model, $admin, $request->user());
+
+        return back()->with('success', "Login de {$admin->email} desbloqueado.");
+    }
+
+    public function forceLogoutAdmin(ToggleCompanyAdminStatusRequest $request, int $company): RedirectResponse
+    {
+        $model = $this->platform->findClient($company);
+        $admin = $this->resolveCompanyUser($model->id, (int) $request->validated('user_id'));
+        $this->admins->forceLogout($model, $admin, $request->user());
+
+        return back()->with('success', "Sessões de {$admin->email} encerradas.");
+    }
+
+    public function changeAdministrator(ChangeCompanyAdministratorRequest $request, int $company): RedirectResponse
+    {
+        $model = $this->platform->findClient($company);
+        $admin = $this->resolveCompanyUser($model->id, (int) $request->validated('user_id'));
+        $updated = $this->admins->changeAdministrator($model, $admin, $request->user());
+
+        return back()->with('success', "Administrador alterado para {$updated->email}.");
+    }
+
+    protected function resolveCompanyUser(int $companyId, int $userId): User
+    {
+        return User::query()
+            ->withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('id', $userId)
+            ->firstOrFail();
     }
 }
