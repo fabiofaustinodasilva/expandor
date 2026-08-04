@@ -45,6 +45,10 @@ class MarketplaceSettingsRepository
         $setting->save();
         $this->forgetCache();
 
-        return $setting->fresh() ?? $setting;
+        $fresh = $setting->fresh() ?? $setting;
+        // Regrava o cache imediatamente para a Landing refletir o save sem esperar o próximo miss.
+        Cache::put(self::CACHE_KEY, $fresh, now()->addMinutes(10));
+
+        return $fresh;
     }
 }

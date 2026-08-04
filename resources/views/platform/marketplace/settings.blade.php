@@ -110,6 +110,7 @@
                 </div>
 
                 <h2>WhatsApp</h2>
+                <input type="hidden" name="whatsapp_enabled" value="0">
                 <div class="form-group">
                     <label style="display:inline-flex; gap:.45rem; align-items:center;">
                         <input type="checkbox" name="whatsapp_enabled" value="1" @checked(old('whatsapp_enabled', $settings->whatsapp_enabled))>
@@ -119,12 +120,30 @@
                 <div class="form-group">
                     <label for="whatsapp_number">Número (com DDI)</label>
                     <input class="form-control" id="whatsapp_number" name="whatsapp_number" maxlength="40"
-                           value="{{ old('whatsapp_number', $settings->whatsapp_number) }}" placeholder="5511999999999">
+                           value="{{ old('whatsapp_number', $settings->whatsapp_number) }}" placeholder="5562999999999">
                 </div>
                 <div class="form-group">
                     <label for="whatsapp_message">Mensagem padrão</label>
                     <input class="form-control" id="whatsapp_message" name="whatsapp_message" maxlength="255"
                            value="{{ old('whatsapp_message', $settings->whatsapp_message) }}">
+                </div>
+
+                @php
+                    $waPreview = $settings->whatsappLink();
+                    $waDigits = $settings->whatsappDigits();
+                @endphp
+                <div class="card" style="background:rgba(37,211,102,.08); border:1px solid rgba(37,211,102,.25); margin-top:.75rem;">
+                    <h3 style="margin:0 0 .5rem;">Preview WhatsApp</h3>
+                    @if($settings->hasWhatsAppButton() && $waPreview)
+                        <div class="header-meta">✔ WhatsApp ativo</div>
+                        <div style="margin-top:.35rem;">Número: <strong>+{{ $waDigits }}</strong></div>
+                        <div style="margin-top:.35rem;">Mensagem padrão: <em>{{ $settings->whatsapp_message ?: 'Olá! Gostaria de conhecer o Expandor.' }}</em></div>
+                        <div style="margin-top:.75rem;">
+                            <a class="btn btn-primary" href="{{ $waPreview }}" target="_blank" rel="noopener">Abrir conversa</a>
+                        </div>
+                    @else
+                        <div class="header-meta">WhatsApp inativo — ative o botão e informe o número para exibir na Landing.</div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -134,6 +153,7 @@
                 <h2 style="margin-top:0;">Redes sociais</h2>
 
                 <div class="form-group">
+                    <input type="hidden" name="instagram_enabled" value="0">
                     <label style="display:inline-flex; gap:.45rem; align-items:center;">
                         <input type="checkbox" name="instagram_enabled" value="1" @checked(old('instagram_enabled', $settings->instagram_enabled))>
                         Instagram
@@ -143,6 +163,7 @@
                 </div>
 
                 <div class="form-group">
+                    <input type="hidden" name="facebook_enabled" value="0">
                     <label style="display:inline-flex; gap:.45rem; align-items:center;">
                         <input type="checkbox" name="facebook_enabled" value="1" @checked(old('facebook_enabled', $settings->facebook_enabled))>
                         Facebook
@@ -152,6 +173,17 @@
                 </div>
 
                 <div class="form-group">
+                    <input type="hidden" name="linkedin_enabled" value="0">
+                    <label style="display:inline-flex; gap:.45rem; align-items:center;">
+                        <input type="checkbox" name="linkedin_enabled" value="1" @checked(old('linkedin_enabled', $settings->linkedin_enabled))>
+                        LinkedIn
+                    </label>
+                    <input class="form-control" name="linkedin_url" type="url" style="margin-top:.5rem;"
+                           value="{{ old('linkedin_url', $settings->linkedin_url) }}" placeholder="https://linkedin.com/...">
+                </div>
+
+                <div class="form-group">
+                    <input type="hidden" name="youtube_enabled" value="0">
                     <label style="display:inline-flex; gap:.45rem; align-items:center;">
                         <input type="checkbox" name="youtube_enabled" value="1" @checked(old('youtube_enabled', $settings->youtube_enabled))>
                         YouTube
@@ -161,12 +193,40 @@
                 </div>
 
                 <div class="form-group">
+                    <input type="hidden" name="tiktok_enabled" value="0">
                     <label style="display:inline-flex; gap:.45rem; align-items:center;">
-                        <input type="checkbox" name="linkedin_enabled" value="1" @checked(old('linkedin_enabled', $settings->linkedin_enabled))>
-                        LinkedIn
+                        <input type="checkbox" name="tiktok_enabled" value="1" @checked(old('tiktok_enabled', $settings->tiktok_enabled))>
+                        TikTok
                     </label>
-                    <input class="form-control" name="linkedin_url" type="url" style="margin-top:.5rem;"
-                           value="{{ old('linkedin_url', $settings->linkedin_url) }}" placeholder="https://linkedin.com/...">
+                    <input class="form-control" name="tiktok_url" type="url" style="margin-top:.5rem;"
+                           value="{{ old('tiktok_url', $settings->tiktok_url) }}" placeholder="https://tiktok.com/@...">
+                </div>
+
+                <div class="form-group">
+                    <input type="hidden" name="twitter_enabled" value="0">
+                    <label style="display:inline-flex; gap:.45rem; align-items:center;">
+                        <input type="checkbox" name="twitter_enabled" value="1" @checked(old('twitter_enabled', $settings->twitter_enabled))>
+                        X (Twitter)
+                    </label>
+                    <input class="form-control" name="twitter_url" type="url" style="margin-top:.5rem;"
+                           value="{{ old('twitter_url', $settings->twitter_url) }}" placeholder="https://x.com/...">
+                </div>
+
+                @php $socialPreview = $settings->socialNetworks(); @endphp
+                <div class="card" style="margin-top:.75rem; background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.25);">
+                    <h3 style="margin:0 0 .5rem;">Preview redes</h3>
+                    @if(count($socialPreview) > 0)
+                        <ul style="margin:0; padding-left:1.1rem;">
+                            @foreach($socialPreview as $network)
+                                <li style="margin-bottom:.35rem;">
+                                    ✔ {{ $network['label'] }} —
+                                    <a href="{{ $network['url'] }}" target="_blank" rel="noopener">{{ $network['url'] }}</a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <div class="header-meta">Nenhuma rede ativa. Marque a rede e informe a URL para exibir no rodapé da Landing.</div>
+                    @endif
                 </div>
             </div>
 

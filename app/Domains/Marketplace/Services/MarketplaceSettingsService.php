@@ -38,6 +38,7 @@ class MarketplaceSettingsService
                 'primary_color', 'secondary_color', 'background_color', 'button_color',
                 'whatsapp_number', 'whatsapp_message',
                 'instagram_url', 'facebook_url', 'youtube_url', 'linkedin_url',
+                'tiktok_url', 'twitter_url',
                 'seo_title', 'seo_description', 'seo_keywords',
             ] as $field) {
                 if (array_key_exists($field, $data)) {
@@ -48,11 +49,10 @@ class MarketplaceSettingsService
 
             foreach ([
                 'whatsapp_enabled', 'instagram_enabled', 'facebook_enabled',
-                'youtube_enabled', 'linkedin_enabled',
+                'youtube_enabled', 'linkedin_enabled', 'tiktok_enabled', 'twitter_enabled',
             ] as $flag) {
-                if (array_key_exists($flag, $data)) {
-                    $row->{$flag} = (bool) $data[$flag];
-                }
+                // prepareForValidation sempre envia os booleans; fallback false se ausente.
+                $row->{$flag} = array_key_exists($flag, $data) ? (bool) $data[$flag] : false;
             }
 
             $fileMap = [

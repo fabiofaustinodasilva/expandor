@@ -30,6 +30,10 @@ class MarketplaceSetting extends Model
         'youtube_url',
         'linkedin_enabled',
         'linkedin_url',
+        'tiktok_enabled',
+        'tiktok_url',
+        'twitter_enabled',
+        'twitter_url',
         'seo_title',
         'seo_description',
         'seo_keywords',
@@ -43,6 +47,8 @@ class MarketplaceSetting extends Model
             'facebook_enabled' => 'boolean',
             'youtube_enabled' => 'boolean',
             'linkedin_enabled' => 'boolean',
+            'tiktok_enabled' => 'boolean',
+            'twitter_enabled' => 'boolean',
         ];
     }
 
@@ -59,19 +65,83 @@ class MarketplaceSetting extends Model
         return Storage::disk('public')->url($path);
     }
 
-    public function whatsappLink(?string $context = null): ?string
+    public function hasWhatsAppButton(): bool
     {
-        if (! $this->whatsapp_enabled || ! filled($this->whatsapp_number)) {
+        return (bool) $this->whatsapp_enabled && filled($this->whatsapp_number);
+    }
+
+    /**
+     * Número apenas dígitos, com DDI 55 quando ausente (padrão BR).
+     */
+    public function whatsappDigits(): ?string
+    {
+        if (! filled($this->whatsapp_number)) {
             return null;
         }
 
-        $number = preg_replace('/\D+/', '', (string) $this->whatsapp_number);
-        $base = (string) ($this->whatsapp_message ?: 'Olá, conheci o Expandor pelo site e gostaria de uma demonstração.');
+        $number = preg_replace('/\D+/', '', (string) $this->whatsapp_number) ?: '';
+        if ($number === '') {
+            return null;
+        }
+
+        if (! str_starts_with($number, '55') && strlen($number) <= 11) {
+            $number = '55'.$number;
+        }
+
+        return $number;
+    }
+
+    public function whatsappLink(?string $context = null): ?string
+    {
+        if (! $this->hasWhatsAppButton()) {
+            return null;
+        }
+
+        $number = $this->whatsappDigits();
+        if ($number === null) {
+            return null;
+        }
+
+        $base = (string) ($this->whatsapp_message ?: 'Olá! Gostaria de conhecer o Expandor.');
         if (filled($context)) {
             $base = trim($base.' '.$context);
         }
-        $text = rawurlencode($base);
 
-        return 'https://wa.me/'.$number.'?text='.$text;
+        return 'https://wa.me/'.$number.'?text='.rawurlencode($base);
+    }
+
+    /**
+     * Redes sociais ativas com URL válida.
+     *
+     * @return list<array{key: string, label: string, url: string, event: string|null}>
+     */
+    public function socialNetworks(): array
+    {
+        $catalog = [
+            ['key' => 'instagram', 'label' => 'Instagram', 'enabled' => 'instagram_enabled', 'url' => 'instagram_url', 'event' => 'marketplace.instagram_clicked'],
+            ['key' => 'facebook', 'label' => 'Facebook', 'enabled' => 'facebook_enabled', 'url' => 'facebook_url', 'event' => 'marketplace.facebook_clicked'],
+            ['key' => 'linkedin', 'label' => 'LinkedIn', 'enabled' => 'linkedin_enabled', 'url' => 'linkedin_url', 'event' => 'marketplace.linkedin_clicked'],
+            ['key' => 'youtube', 'label' => 'YouTube', 'enabled' => 'youtube_enabled', 'url' => 'youtube_url', 'event' => 'marketplace.youtube_clicked'],
+            ['key' => 'tiktok', 'label' => 'TikTok', 'enabled' => 'tiktok_enabled', 'url' => 'tiktok_url', 'event' => 'marketplace.tiktok_clicked'],
+            ['key' => 'twitter', 'label' => 'X', 'enabled' => 'twitter_enabled', 'url' => 'twitter_url', 'event' => 'marketplace.twitter_clicked'],
+        ];
+
+        $links = [];
+        foreach ($catalog as $item) {
+            $enabled = (bool) $this->{$item['enabled']};
+            $url = trim((string) ($this->{$item['url']} ?? ''));
+            if (! $enabled || $url === '') {
+                continue;
+            }
+
+            $links[] = [
+                'key' => $item['key'],
+                'label' => $item['label'],
+                'url' => $url,
+                'event' => $item['event'],
+            ];
+        }
+
+        return $links;
     }
 }

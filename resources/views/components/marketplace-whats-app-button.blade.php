@@ -4,7 +4,43 @@
     $link = $settings->whatsappLink($context);
 @endphp
 
-@if($settings->whatsapp_enabled && $link)
+@if($settings->hasWhatsAppButton() && $link)
+    <style>
+        @keyframes mkp-wa-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.55); }
+            70% { box-shadow: 0 0 0 14px rgba(37, 211, 102, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+        }
+        .mkp-whatsapp {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 220;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #25D366;
+            color: #fff;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 8px 24px rgba(37, 211, 102, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            animation: mkp-wa-pulse 2.2s ease-out infinite;
+            text-decoration: none;
+        }
+        .mkp-whatsapp:hover {
+            transform: scale(1.08);
+            box-shadow: 0 12px 32px rgba(37, 211, 102, 0.5);
+        }
+        @media (max-width: 480px) {
+            .mkp-whatsapp {
+                width: 52px;
+                height: 52px;
+                bottom: 1rem;
+                right: 1rem;
+            }
+        }
+    </style>
     <a
         href="{{ $link }}"
         class="mkp-whatsapp"

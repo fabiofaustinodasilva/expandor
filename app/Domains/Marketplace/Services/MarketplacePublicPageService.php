@@ -142,11 +142,28 @@ class MarketplacePublicPageService
     }
 
     /**
+     * Aplica defaults apenas em campos textuais/SEO vazios.
+     * Nunca sobrescreve flags de WhatsApp/redes (evita apagar configuração do CMS).
+     *
      * @param  array<string, mixed>  $defaultSettings
      */
     protected function overlaySettings(MarketplaceSetting $settings, array $defaultSettings): MarketplaceSetting
     {
+        // Clona para não mutar a instância em cache.
+        $settings = clone $settings;
+
+        $skip = [
+            'whatsapp_enabled', 'instagram_enabled', 'facebook_enabled',
+            'youtube_enabled', 'linkedin_enabled', 'tiktok_enabled', 'twitter_enabled',
+            'whatsapp_number', 'instagram_url', 'facebook_url', 'youtube_url',
+            'linkedin_url', 'tiktok_url', 'twitter_url',
+        ];
+
         foreach ($defaultSettings as $key => $value) {
+            if (in_array($key, $skip, true)) {
+                continue;
+            }
+
             $current = $settings->getAttribute($key);
             if ($current === null || $current === '') {
                 $settings->setAttribute($key, $value);
