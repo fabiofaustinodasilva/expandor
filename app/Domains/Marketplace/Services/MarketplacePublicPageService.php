@@ -3,6 +3,7 @@
 namespace App\Domains\Marketplace\Services;
 
 use App\Domains\Company\Models\Plan;
+use App\Domains\Marketplace\Growth\Services\MarketplaceCaseService;
 use App\Domains\Marketplace\Models\MarketplaceSetting;
 use App\Domains\Marketplace\Repositories\MarketplaceContentRepository;
 use App\Domains\Marketplace\Repositories\MarketplaceSettingsRepository;
@@ -14,6 +15,7 @@ class MarketplacePublicPageService
     public function __construct(
         protected MarketplaceSettingsRepository $settings,
         protected MarketplaceContentRepository $content,
+        protected MarketplaceCaseService $cases,
     ) {}
 
     /**
@@ -25,12 +27,13 @@ class MarketplacePublicPageService
      *   gallery: Collection,
      *   videos: Collection,
      *   plans: Collection,
-     *   featureLabels: array<string, string>
+     *   cases: Collection,
+     *   featureLabels: array<string, string>,
+     *   whatsappContext: string|null
      * }
      */
     public function assemble(bool $bypassCache = false): array
     {
-        // Conteúdo público é lido direto do banco; cache de settings fica no repositório.
         unset($bypassCache);
 
         return $this->build();
@@ -45,7 +48,9 @@ class MarketplacePublicPageService
      *   gallery: Collection,
      *   videos: Collection,
      *   plans: Collection,
-     *   featureLabels: array<string, string>
+     *   cases: Collection,
+     *   featureLabels: array<string, string>,
+     *   whatsappContext: string|null
      * }
      */
     protected function build(): array
@@ -65,7 +70,9 @@ class MarketplacePublicPageService
             'gallery' => $this->content->activeMedia('image'),
             'videos' => $this->content->activeMedia('video'),
             'plans' => $plans,
+            'cases' => $this->cases->active(),
             'featureLabels' => PlanCatalog::featureLabels(),
+            'whatsappContext' => 'Origem: Marketplace',
         ];
     }
 }

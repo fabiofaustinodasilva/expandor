@@ -662,6 +662,7 @@
         </nav>
 
         <div class="mkp-header-actions">
+            <a href="#demo" class="mkp-btn mkp-btn-outline">Solicitar demonstração</a>
             <a class="mkp-btn mkp-btn-ghost" href="{{ route('login') }}">Entrar</a>
             <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">Teste grátis</a>
         </div>
@@ -683,7 +684,7 @@
                     $heroImage = $section->imageUrl() ?: $settings->mediaUrl($settings->hero_image);
                     $heroVideo = $section->videoUrl() ?: ($settings->hero_video ?: null);
                 @endphp
-                <section id="inicio" class="mkp-section mkp-hero mkp-fade">
+                <section id="inicio" class="mkp-section mkp-hero mkp-fade" data-mkp-view="marketplace.hero_view">
                     <div class="mkp-container">
                         <div class="mkp-hero-grid">
                             <div class="mkp-hero-copy">
@@ -769,7 +770,7 @@
                         ];
                     }
                 @endphp
-                <section id="recursos" class="mkp-section mkp-fade">
+                <section id="recursos" class="mkp-section mkp-fade" data-mkp-view="marketplace.feature_view">
                     <div class="mkp-container">
                         <div class="mkp-section-head">
                             @if($section->subtitle)
@@ -912,7 +913,7 @@
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Plans)
                 @if($plans->isNotEmpty())
-                    <section id="planos" class="mkp-section mkp-fade">
+                    <section id="planos" class="mkp-section mkp-fade" data-mkp-view="marketplace.plan_view">
                         <div class="mkp-container">
                             <div class="mkp-section-head">
                                 @if($section->subtitle)
@@ -1025,6 +1026,8 @@
                 @break
         @endswitch
     @endforeach
+
+    @include('marketplace.partials.growth-blocks')
 </main>
 
 <footer class="mkp-footer">
@@ -1036,7 +1039,7 @@
     </div>
 </footer>
 
-<x-marketplace-whats-app-button :settings="$settings" />
+<x-marketplace-whats-app-button :settings="$settings" :context="$whatsappContext ?? null" />
 
 <script>
 (function () {
@@ -1088,18 +1091,33 @@
     });
 
     var fadeEls = document.querySelectorAll('.mkp-fade');
+    var trackedViews = {};
     if ('IntersectionObserver' in window) {
         var observer = new IntersectionObserver(function (entries) {
             entries.forEach(function (entry) {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('is-visible');
+                    var viewEvent = entry.target.getAttribute('data-mkp-view');
+                    if (viewEvent && !trackedViews[viewEvent]) {
+                        trackedViews[viewEvent] = true;
+                        trackEvent(viewEvent, {});
+                    }
                     observer.unobserve(entry.target);
                 }
             });
         }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
         fadeEls.forEach(function (el) { observer.observe(el); });
+        document.querySelectorAll('[data-mkp-view]').forEach(function (el) {
+            if (!el.classList.contains('mkp-fade')) {
+                observer.observe(el);
+            }
+        });
     } else {
         fadeEls.forEach(function (el) { el.classList.add('is-visible'); });
+        document.querySelectorAll('[data-mkp-view]').forEach(function (el) {
+            var viewEvent = el.getAttribute('data-mkp-view');
+            if (viewEvent) trackEvent(viewEvent, {});
+        });
     }
 
     document.querySelectorAll('.mkp-faq-q').forEach(function (btn) {

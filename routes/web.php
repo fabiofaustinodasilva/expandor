@@ -2,8 +2,14 @@
 
 use App\Http\Controllers\Web\Marketplace\MarketplaceAnalyticsController;
 use App\Http\Controllers\Web\Marketplace\MarketplaceController;
+use App\Http\Controllers\Web\Marketplace\MarketplaceGrowthController;
+use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceAnalyticsDashboardController;
+use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceCampaignsController;
+use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceCasesController;
+use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceLeadsController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceMediaController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSectionController;
+use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSegmentsController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSettingsController;
 use App\Http\Controllers\Web\Onboarding\SaasOnboardingController;
 use App\Http\Controllers\Web\Onboarding\SetupWizardController;
@@ -69,13 +75,24 @@ use App\Http\Controllers\Web\Visits\FollowUpController;
 use App\Http\Controllers\Web\Visits\VisitController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [MarketplaceController::class, 'home'])->name('marketplace.home');
-Route::get('/marketplace', [MarketplaceController::class, 'home'])->name('marketplace.landing');
-Route::get('/planos', [MarketplaceController::class, 'plans'])->name('marketplace.plans');
-Route::get('/assinar', [MarketplaceController::class, 'subscribe'])->name('marketplace.subscribe');
+Route::middleware('marketplace.attribution')->group(function (): void {
+    Route::get('/', [MarketplaceController::class, 'home'])->name('marketplace.home');
+    Route::get('/marketplace', [MarketplaceController::class, 'home'])->name('marketplace.landing');
+    Route::get('/marketplace/{segment}', [MarketplaceGrowthController::class, 'segment'])
+        ->where('segment', '^[a-z0-9]+(?:-[a-z0-9]+)*$')
+        ->name('marketplace.segment');
+    Route::get('/planos', [MarketplaceController::class, 'plans'])->name('marketplace.plans');
+    Route::get('/assinar', [MarketplaceController::class, 'subscribe'])->name('marketplace.subscribe');
+    Route::post('/marketplace/leads', [MarketplaceGrowthController::class, 'storeLead'])
+        ->middleware('throttle:20,1')
+        ->name('marketplace.leads.store');
+    Route::post('/marketplace/roi', [MarketplaceGrowthController::class, 'calculateRoi'])
+        ->middleware('throttle:30,1')
+        ->name('marketplace.roi.calculate');
+});
 Route::get('/sitemap.xml', [MarketplaceController::class, 'sitemap'])->name('marketplace.sitemap');
 Route::post('/marketplace/events', [MarketplaceAnalyticsController::class, 'store'])
-    ->middleware('throttle:60,1')
+    ->middleware(['throttle:60,1', 'marketplace.attribution'])
     ->name('marketplace.events.store');
 Route::get('/assinar/aguardando', [CheckoutController::class, 'waiting'])->name('checkout.waiting');
 Route::get('/assinar/status/{uuid}', [CheckoutController::class, 'status'])->name('checkout.status');
@@ -186,6 +203,19 @@ Route::middleware([
             Route::post('/media/faqs', [MarketplaceMediaController::class, 'storeFaq'])->name('media.faqs.store');
             Route::delete('/media/faqs/{faq}', [MarketplaceMediaController::class, 'destroyFaq'])->name('media.faqs.destroy');
             Route::delete('/media/{medium}', [MarketplaceMediaController::class, 'destroy'])->name('media.destroy');
+
+            Route::get('/leads', [MarketplaceLeadsController::class, 'index'])->name('leads.index');
+            Route::put('/leads/{lead}', [MarketplaceLeadsController::class, 'updateStatus'])->name('leads.update');
+            Route::get('/analytics', MarketplaceAnalyticsDashboardController::class)->name('analytics');
+            Route::get('/segments', [MarketplaceSegmentsController::class, 'index'])->name('segments.index');
+            Route::post('/segments', [MarketplaceSegmentsController::class, 'store'])->name('segments.store');
+            Route::delete('/segments/{segment}', [MarketplaceSegmentsController::class, 'destroy'])->name('segments.destroy');
+            Route::get('/cases', [MarketplaceCasesController::class, 'index'])->name('cases.index');
+            Route::post('/cases', [MarketplaceCasesController::class, 'store'])->name('cases.store');
+            Route::delete('/cases/{case}', [MarketplaceCasesController::class, 'destroy'])->name('cases.destroy');
+            Route::get('/campaigns', [MarketplaceCampaignsController::class, 'index'])->name('campaigns.index');
+            Route::post('/campaigns', [MarketplaceCampaignsController::class, 'store'])->name('campaigns.store');
+            Route::delete('/campaigns/{campaign}', [MarketplaceCampaignsController::class, 'destroy'])->name('campaigns.destroy');
         });
     });
 

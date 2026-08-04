@@ -59,14 +59,18 @@ class MarketplaceSetting extends Model
         return Storage::disk('public')->url($path);
     }
 
-    public function whatsappLink(): ?string
+    public function whatsappLink(?string $context = null): ?string
     {
         if (! $this->whatsapp_enabled || ! filled($this->whatsapp_number)) {
             return null;
         }
 
         $number = preg_replace('/\D+/', '', (string) $this->whatsapp_number);
-        $text = rawurlencode((string) ($this->whatsapp_message ?: 'Olá! Quero saber mais sobre o Expandor.'));
+        $base = (string) ($this->whatsapp_message ?: 'Olá, conheci o Expandor pelo site e gostaria de uma demonstração.');
+        if (filled($context)) {
+            $base = trim($base.' '.$context);
+        }
+        $text = rawurlencode($base);
 
         return 'https://wa.me/'.$number.'?text='.$text;
     }

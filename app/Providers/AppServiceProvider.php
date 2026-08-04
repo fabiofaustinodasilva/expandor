@@ -37,6 +37,9 @@ use App\Domains\Onboarding\Listeners\RecordSaasOnboardingAudit;
 use App\Domains\Onboarding\Policies\OnboardingPolicy;
 use App\Domains\Onboarding\Services\OnboardingService;
 use App\Domains\Onboarding\Services\SaasOnboardingService;
+use App\Domains\Marketplace\Growth\Listeners\RecordLeadCreatedAnalytics;
+use App\Domains\Marketplace\Growth\Listeners\SyncTrialActivationFromOnboarding;
+use App\Domains\Marketplace\Growth\Events\MarketplaceLeadCreated;
 use App\Domains\Marketplace\Policies\MarketplacePolicy;
 use App\Domains\Platform\Listeners\SyncActivationEventsFromOnboarding;
 use App\Domains\Platform\Policies\PlatformPolicy;
@@ -153,6 +156,8 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(OnboardingCustomerCreated::class, [SyncActivationEventsFromOnboarding::class, 'handleCustomer']);
         Event::listen(OnboardingDealCreated::class, [SyncActivationEventsFromOnboarding::class, 'handleDeal']);
         Event::listen(OnboardingCompleted::class, [SyncActivationEventsFromOnboarding::class, 'handleCompleted']);
+        Event::listen(OnboardingCompleted::class, SyncTrialActivationFromOnboarding::class);
+        Event::listen(MarketplaceLeadCreated::class, RecordLeadCreatedAnalytics::class);
 
         Event::listen(DiagnosingHealth::class, function (): void {
             DB::select('select 1');

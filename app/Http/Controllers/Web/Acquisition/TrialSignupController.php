@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\Acquisition;
 use App\Domains\Acquisition\Actions\ProvisionTrialCompanyAction;
 use App\Domains\Acquisition\Requests\StartTrialRequest;
 use App\Domains\Company\Enums\CompanySegment;
+use App\Domains\Marketplace\Growth\Services\TrialGrowthIntelligenceService;
 use App\Domains\Marketplace\Services\MarketplaceAnalyticsService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +17,7 @@ class TrialSignupController extends Controller
     public function __construct(
         protected ProvisionTrialCompanyAction $provision,
         protected MarketplaceAnalyticsService $marketplaceAnalytics,
+        protected TrialGrowthIntelligenceService $trialGrowth,
     ) {}
 
     public function create(): View
@@ -37,8 +39,13 @@ class TrialSignupController extends Controller
         $request->session()->regenerate();
 
         $this->marketplaceAnalytics->record(MarketplaceAnalyticsService::SIGNUP_COMPLETED, $request, [
-            'company_id' => $result->company->id ?? null,
+            'company_id' => $result->company->id,
         ]);
+
+        $this->trialGrowth->markTrialStarted(
+            $result->company,
+            $result->administrator->email ?? null,
+        );
 
         $message = $result->demoGenerated
             ? 'Teste grátis iniciado com dados de demonstração. Complete o Setup Wizard para liberar o ambiente.'

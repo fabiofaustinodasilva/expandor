@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             OnboardingSeeder::class,
             FeatureFlagSeeder::class,
             MarketplaceCmsSeeder::class,
+            MarketplaceGrowthSeeder::class,
         ]);
     }
 }

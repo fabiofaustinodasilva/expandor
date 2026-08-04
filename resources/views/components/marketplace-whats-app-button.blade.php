@@ -1,7 +1,7 @@
-@props(['settings'])
+@props(['settings', 'context' => null])
 
 @php
-    $link = $settings->whatsappLink();
+    $link = $settings->whatsappLink($context);
 @endphp
 
 @if($settings->whatsapp_enabled && $link)

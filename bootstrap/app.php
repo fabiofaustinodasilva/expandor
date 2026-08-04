@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenancy.active' => \App\Tenancy\Middleware\EnsureTenantIsActive::class,
             'permission' => \App\Http\Middleware\EnsurePermission::class,
             'platform.admin' => \App\Domains\Platform\Middleware\EnsurePlatformAdmin::class,
+            'marketplace.attribution' => \App\Domains\Marketplace\Growth\Middleware\CaptureMarketplaceAttribution::class,
         ]);
 
         // Auth -> Tenancy -> Route Model Binding
