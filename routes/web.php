@@ -44,6 +44,7 @@ use App\Http\Controllers\Web\Operations\SettingsController;
 use App\Http\Controllers\Web\Operations\TeamController;
 use App\Http\Controllers\Web\Platform\FeatureFlagController;
 use App\Http\Controllers\Web\Platform\SaasHealthController;
+use App\Http\Controllers\Web\Platform\SaasIntelligenceController;
 use App\Http\Controllers\Web\Platform\HealthScoreController;
 use App\Http\Controllers\Web\Platform\ImpersonationController;
 use App\Http\Controllers\Web\Platform\PlatformBillingController;
@@ -139,6 +140,11 @@ Route::middleware([
     Route::middleware('platform.admin')->prefix('platform')->name('platform.')->group(function (): void {
         Route::get('/', PlatformDashboardController::class)->name('dashboard');
         Route::get('/activation', SaasHealthController::class)->name('activation.index');
+        Route::get('/saas-intelligence', SaasIntelligenceController::class)->name('saas.intelligence');
+        Route::post('/saas-intelligence/recalculate-health', [SaasIntelligenceController::class, 'recalculateHealth'])
+            ->name('saas.intelligence.recalculate-health');
+        Route::get('/companies/{company}/usage', [SaasIntelligenceController::class, 'companyUsage'])
+            ->name('companies.usage');
 
         Route::get('/profile', [PlatformOwnerProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [PlatformOwnerProfileController::class, 'update'])->name('profile.update');

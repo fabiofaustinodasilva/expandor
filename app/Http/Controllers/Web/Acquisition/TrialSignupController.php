@@ -7,6 +7,7 @@ use App\Domains\Acquisition\Requests\StartTrialRequest;
 use App\Domains\Company\Enums\CompanySegment;
 use App\Domains\Marketplace\Growth\Services\TrialGrowthIntelligenceService;
 use App\Domains\Marketplace\Services\MarketplaceAnalyticsService;
+use App\Domains\SaasGrowth\Services\TrialIntelligenceService;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,7 @@ class TrialSignupController extends Controller
         protected ProvisionTrialCompanyAction $provision,
         protected MarketplaceAnalyticsService $marketplaceAnalytics,
         protected TrialGrowthIntelligenceService $trialGrowth,
+        protected TrialIntelligenceService $saasTrial,
     ) {}
 
     public function create(): View
@@ -46,6 +48,8 @@ class TrialSignupController extends Controller
             $result->company,
             $result->administrator->email ?? null,
         );
+
+        $this->saasTrial->markStarted($result->company);
 
         $message = $result->demoGenerated
             ? 'Teste grátis iniciado com dados de demonstração. Complete o Setup Wizard para liberar o ambiente.'

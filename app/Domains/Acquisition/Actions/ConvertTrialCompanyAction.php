@@ -80,6 +80,9 @@ class ConvertTrialCompanyAction
                 companyId: $company->id,
             );
 
+            app(\App\Domains\SaasGrowth\Services\TrialIntelligenceService::class)
+                ->markConverted($company);
+
             return $subscription->fresh(['plan']);
         });
     }

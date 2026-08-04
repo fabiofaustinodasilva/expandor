@@ -87,7 +87,10 @@ class PlatformPlanService
     public function deactivate(Plan $plan, User $actor): Plan
     {
         $old = $plan->status;
-        $plan->forceFill(['status' => Plan::STATUS_INACTIVE])->save();
+        $plan->forceFill([
+            'status' => Plan::STATUS_INACTIVE,
+            'active' => false,
+        ])->save();
 
         $this->security->recordAudit(
             action: 'platform.plan.deactivated',
@@ -103,7 +106,10 @@ class PlatformPlanService
     public function activate(Plan $plan, User $actor): Plan
     {
         $old = $plan->status;
-        $plan->forceFill(['status' => Plan::STATUS_ACTIVE])->save();
+        $plan->forceFill([
+            'status' => Plan::STATUS_ACTIVE,
+            'active' => true,
+        ])->save();
 
         $this->security->recordAudit(
             action: 'platform.plan.activated',
@@ -127,6 +133,11 @@ class PlatformPlanService
             $features[$key] = (bool) ($data['features'][$key] ?? false);
         }
 
+        $maxUsers = $this->nullableInt($data['users_limit'] ?? $data['max_users'] ?? null);
+        $maxCustomers = $this->nullableInt($data['customers_limit'] ?? $data['max_properties'] ?? null);
+        $maxStorage = $this->nullableInt($data['storage_limit'] ?? $data['max_storage_mb'] ?? null);
+        $status = $data['status'] ?? Plan::STATUS_ACTIVE;
+
         return [
             'name' => $data['name'],
             'slug' => $slug,
@@ -134,15 +145,21 @@ class PlatformPlanService
             'price' => $data['price'] ?? 0,
             'price_yearly' => $data['price_yearly'] ?? null,
             'trial_days' => $data['trial_days'] ?? null,
-            'max_users' => $this->nullableInt($data['max_users'] ?? null),
-            'max_properties' => $this->nullableInt($data['max_properties'] ?? null),
+            'max_users' => $maxUsers,
+            'users_limit' => $maxUsers,
+            'max_properties' => $maxCustomers,
+            'customers_limit' => $maxCustomers,
             'max_campaigns' => $this->nullableInt($data['max_campaigns'] ?? null),
             'max_teams' => $this->nullableInt($data['max_teams'] ?? null),
             'max_products' => $this->nullableInt($data['max_products'] ?? null),
-            'max_storage_mb' => $this->nullableInt($data['max_storage_mb'] ?? null),
+            'max_storage_mb' => $maxStorage,
+            'storage_limit' => $maxStorage,
             'max_visits' => $this->nullableInt($data['max_visits'] ?? null),
             'features' => $features,
-            'status' => $data['status'] ?? Plan::STATUS_ACTIVE,
+            'status' => $status,
+            'active' => array_key_exists('active', $data)
+                ? (bool) $data['active']
+                : $status === Plan::STATUS_ACTIVE,
             'display_order' => (int) ($data['display_order'] ?? 100),
             'is_featured' => (bool) ($data['is_featured'] ?? false),
         ];

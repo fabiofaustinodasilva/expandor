@@ -16,6 +16,7 @@ class CompanyHealthScore extends Model
         'company_id',
         'score',
         'risk_level',
+        'classification',
         'factors',
         'calculated_at',
     ];
