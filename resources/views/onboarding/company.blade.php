@@ -3,19 +3,16 @@
 @section('title', 'Empresa — Onboarding')
 
 @section('content')
-    <div data-saas-onboarding="1" data-saas-step="company">
-        <div style="margin-bottom:1.15rem;">
+    <x-saas-onboarding-shell :progress="$progress" step-key="company">
+        <div style="margin-bottom:1rem;">
             <h1 class="page-title" style="margin:0;">Dados da empresa</h1>
             <p class="header-meta" style="margin:.35rem 0 0;">Configure as informações principais do seu negócio.</p>
         </div>
 
-        @include('onboarding.partials.saas-progress', ['progress' => $progress])
-
-        <div class="card">
+        <div class="saas-onb-card">
             <form method="POST" action="{{ route('onboarding.company.update') }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-
                 <div class="grid grid-2" style="gap:1rem;">
                     <div>
                         <label for="name">Nome da empresa</label>
@@ -25,7 +22,6 @@
                     <div>
                         <label for="logo">Logo</label>
                         <input id="logo" name="logo" type="file" accept="image/*">
-                        @error('logo') <div class="header-meta" style="color:var(--accent-2);">{{ $message }}</div> @enderror
                     </div>
                     <div>
                         <label for="phone">Telefone</label>
@@ -48,12 +44,11 @@
                         <input id="state" name="state" type="text" maxlength="2" placeholder="UF" value="{{ old('state') }}">
                     </div>
                 </div>
-
-                <div style="margin-top:1.25rem; display:flex; gap:.75rem; flex-wrap:wrap;">
+                <div class="saas-onb-actions">
                     <button class="btn btn-primary" type="submit">Salvar e continuar</button>
                     <a class="btn btn-ghost" href="{{ route('onboarding.index') }}">Voltar</a>
                 </div>
             </form>
         </div>
-    </div>
+    </x-saas-onboarding-shell>
 @endsection

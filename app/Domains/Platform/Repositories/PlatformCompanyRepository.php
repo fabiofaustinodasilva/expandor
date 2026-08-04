@@ -43,6 +43,7 @@ class PlatformCompanyRepository
 
         $revenue = app(BillingAutomationService::class)->platformRevenueMetrics();
         $onboarding = app(OnboardingService::class)->platformMetrics();
+        $saasActivation = app(\App\Domains\Onboarding\Services\SaasOnboardingService::class)->activationMetrics();
         $console = app(PlatformConsoleRepository::class);
 
         $totalCompanies = Company::query()->where('is_system', false)->count();
@@ -103,6 +104,10 @@ class PlatformCompanyRepository
             onboardingAvgHours: $onboarding['onboarding_avg_hours'],
             onboardingStuck: (int) $onboarding['onboarding_stuck'],
             onboardingCompletionRate: (float) $onboarding['onboarding_completion_rate'],
+            saasOnboardingStarted: (int) $saasActivation['onboarding_started'],
+            saasOnboardingCompleted: (int) $saasActivation['onboarding_completed'],
+            activationRate: (float) $saasActivation['activation_rate'],
+            averageActivationTimeHours: $saasActivation['average_activation_time_hours'],
             averageHealthScore: $console->averageHealthScore(),
             healthyCompanies: $console->countByRisk(HealthRiskLevel::Healthy),
             atRiskCompanies: $console->countByRisk(HealthRiskLevel::AtRisk) + $console->countByRisk(HealthRiskLevel::Medium),

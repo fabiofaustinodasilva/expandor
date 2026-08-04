@@ -201,6 +201,22 @@
                 <div class="header-meta">Taxa de conclusão</div>
                 <div style="font-size:1.5rem; font-weight:700;">{{ number_format($metrics->onboardingCompletionRate, 1, ',', '.') }}%</div>
             </div>
+            <div>
+                <div class="header-meta">Onboarding started (SaaS)</div>
+                <div style="font-size:1.5rem; font-weight:700;" data-saas-metric="started">{{ number_format($metrics->saasOnboardingStarted, 0, ',', '.') }}</div>
+            </div>
+            <div>
+                <div class="header-meta">Onboarding completed (SaaS)</div>
+                <div style="font-size:1.5rem; font-weight:700;" data-saas-metric="completed">{{ number_format($metrics->saasOnboardingCompleted, 0, ',', '.') }}</div>
+            </div>
+            <div>
+                <div class="header-meta">Activation rate</div>
+                <div style="font-size:1.5rem; font-weight:700;" data-saas-metric="activation-rate">{{ number_format($metrics->activationRate, 1, ',', '.') }}%</div>
+            </div>
+            <div>
+                <div class="header-meta">Average activation time (h)</div>
+                <div style="font-size:1.5rem; font-weight:700;" data-saas-metric="avg-activation">{{ $metrics->averageActivationTimeHours !== null ? number_format($metrics->averageActivationTimeHours, 1, ',', '.') : '—' }}</div>
+            </div>
         </div>
     </div>
 

@@ -69,7 +69,7 @@ class SaveOnboardingCustomerAction
                 ], $actor);
             }
 
-            $company = $this->saasOnboarding->advanceTo($company, SaasOnboardingService::STEP_FINISH);
+            $company = $this->saasOnboarding->advanceTo($company, SaasOnboardingService::STEP_SALES_SETUP);
             OnboardingCustomerCreated::dispatch($company, $actor, [
                 'lead_id' => $lead->id,
                 'name' => $lead->name,

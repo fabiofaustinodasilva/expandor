@@ -149,7 +149,7 @@ class SaasOnboardingSprint730Test extends TestCase
                 'city' => 'São Paulo',
                 'state' => 'SP',
             ])
-            ->assertRedirect(route('onboarding.finish'));
+            ->assertRedirect(route('onboarding.deal'));
 
         $this->assertSame(1, Lead::query()->withoutGlobalScopes()
             ->where('company_id', $company->id)
@@ -164,7 +164,7 @@ class SaasOnboardingSprint730Test extends TestCase
                 'city' => 'São Paulo',
                 'state' => 'SP',
             ])
-            ->assertRedirect(route('onboarding.finish'));
+            ->assertRedirect(route('onboarding.deal'));
 
         $this->assertSame(1, Lead::query()->withoutGlobalScopes()
             ->where('company_id', $company->id)

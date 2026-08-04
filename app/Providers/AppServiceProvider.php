@@ -24,10 +24,14 @@ use App\Domains\Company\Models\User;
 use App\Domains\Company\Policies\CompanyPolicy;
 use App\Domains\Company\Policies\UserPolicy;
 use App\Domains\Onboarding\DTOs\SaasOnboardingBanner;
+use App\Domains\Onboarding\Events\OnboardingBrandingCompleted;
 use App\Domains\Onboarding\Events\OnboardingCompanyCompleted;
 use App\Domains\Onboarding\Events\OnboardingCompleted;
 use App\Domains\Onboarding\Events\OnboardingCustomerCreated;
+use App\Domains\Onboarding\Events\OnboardingDealCreated;
+use App\Domains\Onboarding\Events\OnboardingDismissed;
 use App\Domains\Onboarding\Events\OnboardingStarted;
+use App\Domains\Onboarding\Events\OnboardingStepSkipped;
 use App\Domains\Onboarding\Events\OnboardingTeamCompleted;
 use App\Domains\Onboarding\Listeners\RecordSaasOnboardingAudit;
 use App\Domains\Onboarding\Policies\OnboardingPolicy;
@@ -136,6 +140,10 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(OnboardingCompanyCompleted::class, [RecordSaasOnboardingAudit::class, 'handleCompanyCompleted']);
         Event::listen(OnboardingTeamCompleted::class, [RecordSaasOnboardingAudit::class, 'handleTeamCompleted']);
         Event::listen(OnboardingCustomerCreated::class, [RecordSaasOnboardingAudit::class, 'handleCustomerCreated']);
+        Event::listen(OnboardingDealCreated::class, [RecordSaasOnboardingAudit::class, 'handleDealCreated']);
+        Event::listen(OnboardingBrandingCompleted::class, [RecordSaasOnboardingAudit::class, 'handleBrandingCompleted']);
+        Event::listen(OnboardingStepSkipped::class, [RecordSaasOnboardingAudit::class, 'handleStepSkipped']);
+        Event::listen(OnboardingDismissed::class, [RecordSaasOnboardingAudit::class, 'handleDismissed']);
         Event::listen(OnboardingCompleted::class, [RecordSaasOnboardingAudit::class, 'handleCompleted']);
 
         Event::listen(DiagnosingHealth::class, function (): void {

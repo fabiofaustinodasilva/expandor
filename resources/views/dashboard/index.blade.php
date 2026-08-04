@@ -55,6 +55,8 @@
         </div>
     @endif
 
+    @include('onboarding.partials.activation-card')
+
     <div class="card" style="margin-bottom:1rem;">
         <form method="GET" action="{{ route('dashboard') }}" class="grid grid-4" style="align-items:end;">
             <input type="hidden" name="period" value="{{ $period }}">

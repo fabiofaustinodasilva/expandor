@@ -23,7 +23,7 @@ class CompanyFactory extends Factory
             'status' => Company::STATUS_ACTIVE,
             // Testes / empresas “antigas”: fora do funil premium por padrão.
             'onboarding_status' => Company::ONBOARDING_COMPLETED,
-            'onboarding_step' => 5,
+            'onboarding_step' => 7,
             'onboarding_completed_at' => now(),
         ];
     }

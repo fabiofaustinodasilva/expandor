@@ -9,6 +9,7 @@ use App\Domains\Analytics\Services\DashboardMetricsService;
 use App\Domains\Company\Models\Role;
 use App\Domains\Company\Services\DashboardService;
 use App\Domains\Onboarding\Services\OnboardingService;
+use App\Domains\Onboarding\Services\SaasOnboardingService;
 use App\Domains\Sales\Territory\Repositories\TerritoryRepository;
 use App\Http\Controllers\Controller;
 use App\Support\CommercialTerminology;
@@ -21,6 +22,7 @@ class DashboardController extends Controller
         protected DashboardMetricsService $metrics,
         protected TerritoryRepository $territory,
         protected OnboardingService $onboarding,
+        protected SaasOnboardingService $saasOnboarding,
         protected AnalyticsRepository $analytics,
     ) {}
 
@@ -62,9 +64,19 @@ class DashboardController extends Controller
         $metrics = $this->metrics->metrics($filters, $user);
 
         $onboarding = null;
+        $saasActivationCard = ['show' => false, 'progress' => null];
+        $saasWorkspaceReady = false;
         $company = $user->company;
         if ($company && ! $company->isSystem()) {
             $onboarding = $this->onboarding->status($company);
+            if ($this->saasOnboarding->shouldShowActivationCard($company, $user)) {
+                $saasActivationCard = [
+                    'show' => true,
+                    'progress' => $this->saasOnboarding->progress($company),
+                ];
+            }
+            $saasWorkspaceReady = $this->saasOnboarding->shouldShowWorkspaceReady($company, $user)
+                || (bool) $request->session()->pull('saas_workspace_ready', false);
         }
 
         return view('dashboard.index', array_merge($summary, [
@@ -76,6 +88,8 @@ class DashboardController extends Controller
             'sellers' => $isSeller ? [] : $this->analytics->filterableSellers(),
             'statusLabels' => CommercialTerminology::visitStatusOptions(),
             'onboarding' => $onboarding,
+            'saasActivationCard' => $saasActivationCard,
+            'saasWorkspaceReady' => $saasWorkspaceReady,
             'isSeller' => $isSeller,
             'commissionsUrl' => route('commissions.index'),
             'canViewCommissions' => $user->hasPermission('commissions.manage')

@@ -287,8 +287,15 @@ Route::middleware([
     Route::post('/onboarding/team', [SaasOnboardingController::class, 'storeTeam'])->name('onboarding.team.store');
     Route::get('/onboarding/customer', [SaasOnboardingController::class, 'customer'])->name('onboarding.customer');
     Route::post('/onboarding/customer', [SaasOnboardingController::class, 'storeCustomer'])->name('onboarding.customer.store');
+    Route::get('/onboarding/deal', [SaasOnboardingController::class, 'deal'])->name('onboarding.deal');
+    Route::post('/onboarding/deal', [SaasOnboardingController::class, 'storeDeal'])->name('onboarding.deal.store');
+    Route::get('/onboarding/branding', [SaasOnboardingController::class, 'branding'])->name('onboarding.branding');
+    Route::post('/onboarding/branding', [SaasOnboardingController::class, 'storeBranding'])->name('onboarding.branding.store');
     Route::get('/onboarding/finish', [SaasOnboardingController::class, 'finish'])->name('onboarding.finish');
     Route::post('/onboarding/complete', [SaasOnboardingController::class, 'complete'])->name('onboarding.complete');
+    Route::post('/onboarding/skip', [SaasOnboardingController::class, 'skip'])->name('onboarding.skip');
+    Route::post('/onboarding/dismiss', [SaasOnboardingController::class, 'dismiss'])->name('onboarding.dismiss');
+    Route::post('/onboarding/dismiss-ready', [SaasOnboardingController::class, 'dismissWorkspaceReady'])->name('onboarding.dismiss-ready');
 
     Route::get('/setup/{step?}', [SetupWizardController::class, 'show'])->name('setup.show');
     Route::post('/setup', [SetupWizardController::class, 'store'])->name('setup.store');
