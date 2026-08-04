@@ -41,6 +41,7 @@ class PlatformCompanyService
         protected FeatureFlagService $featureFlags,
         protected CompanyOperationalMetricsService $operationalMetrics,
         protected PlatformSubscriptionService $subscriptions,
+        protected ActivationIntelligenceService $activation,
     ) {}
 
     public function dashboardMetrics(): PlatformDashboardMetrics
@@ -106,6 +107,7 @@ class PlatformCompanyService
             'users' => $users,
             'flags' => $this->featureFlags->statesForCompany($company),
             'health' => $healthDto,
+            'activation' => $this->activation->snapshot($company),
             'ops' => $this->operationalMetrics->for($company),
             'subscriptionEvents' => $this->subscriptions->history($company),
             'plans' => Plan::query()

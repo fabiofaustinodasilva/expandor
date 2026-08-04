@@ -10,6 +10,7 @@ use App\Domains\Company\Models\Role;
 use App\Domains\Company\Services\DashboardService;
 use App\Domains\Onboarding\Services\OnboardingService;
 use App\Domains\Onboarding\Services\SaasOnboardingService;
+use App\Domains\Platform\Services\ActivationIntelligenceService;
 use App\Domains\Sales\Territory\Repositories\TerritoryRepository;
 use App\Http\Controllers\Controller;
 use App\Support\CommercialTerminology;
@@ -23,6 +24,7 @@ class DashboardController extends Controller
         protected TerritoryRepository $territory,
         protected OnboardingService $onboarding,
         protected SaasOnboardingService $saasOnboarding,
+        protected ActivationIntelligenceService $activationIntelligence,
         protected AnalyticsRepository $analytics,
     ) {}
 
@@ -66,6 +68,7 @@ class DashboardController extends Controller
         $onboarding = null;
         $saasActivationCard = ['show' => false, 'progress' => null];
         $saasWorkspaceReady = false;
+        $activationGuidance = null;
         $company = $user->company;
         if ($company && ! $company->isSystem()) {
             $onboarding = $this->onboarding->status($company);
@@ -77,6 +80,7 @@ class DashboardController extends Controller
             }
             $saasWorkspaceReady = $this->saasOnboarding->shouldShowWorkspaceReady($company, $user)
                 || (bool) $request->session()->pull('saas_workspace_ready', false);
+            $activationGuidance = $this->activationIntelligence->snapshot($company);
         }
 
         return view('dashboard.index', array_merge($summary, [
@@ -90,6 +94,7 @@ class DashboardController extends Controller
             'onboarding' => $onboarding,
             'saasActivationCard' => $saasActivationCard,
             'saasWorkspaceReady' => $saasWorkspaceReady,
+            'activationGuidance' => $activationGuidance,
             'isSeller' => $isSeller,
             'commissionsUrl' => route('commissions.index'),
             'canViewCommissions' => $user->hasPermission('commissions.manage')

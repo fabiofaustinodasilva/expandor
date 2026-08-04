@@ -56,6 +56,7 @@
     @endif
 
     @include('onboarding.partials.activation-card')
+    @include('onboarding.partials.activation-guidance')
 
     <div class="card" style="margin-bottom:1rem;">
         <form method="GET" action="{{ route('dashboard') }}" class="grid grid-4" style="align-items:end;">

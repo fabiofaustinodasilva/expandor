@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->job(new \App\Domains\Payments\Jobs\RetryFailedPaymentsJob)->hourly();
         $schedule->job(new \App\Domains\Payments\Jobs\ExpireTrialsJob)->daily();
         $schedule->job(new \App\Domains\Payments\Jobs\RenewSubscriptionsJob)->daily();
+        $schedule->job(new \App\Domains\Platform\Jobs\DetectInactiveTenantsJob)->daily();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web\Auth;
 
 use App\Domains\Company\Models\User;
+use App\Domains\Platform\Services\ActivationIntelligenceService;
 use App\Domains\Security\Services\SecurityService;
 use App\Http\Controllers\Controller;
 use App\Tenancy\TenantManager;
@@ -17,6 +18,7 @@ class LoginController extends Controller
 {
     public function __construct(
         protected SecurityService $security,
+        protected ActivationIntelligenceService $activation,
     ) {}
 
     public function create(): View
@@ -59,6 +61,10 @@ class LoginController extends Controller
         $user->forceFill(['last_login_at' => now()])->save();
 
         $this->security->recordSuccessfulLogin($user, $request);
+
+        if ($user->company && ! $user->company->isSystem()) {
+            $this->activation->trackLogin($user->company, $user);
+        }
 
         if ($user->isPlatformAdmin()) {
             return redirect()->intended(route('platform.dashboard'));

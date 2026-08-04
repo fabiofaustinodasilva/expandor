@@ -37,6 +37,7 @@ use App\Domains\Onboarding\Listeners\RecordSaasOnboardingAudit;
 use App\Domains\Onboarding\Policies\OnboardingPolicy;
 use App\Domains\Onboarding\Services\OnboardingService;
 use App\Domains\Onboarding\Services\SaasOnboardingService;
+use App\Domains\Platform\Listeners\SyncActivationEventsFromOnboarding;
 use App\Domains\Platform\Policies\PlatformPolicy;
 use App\Domains\Sales\Properties\Models\Address;
 use App\Domains\Sales\Properties\Models\Property;
@@ -145,6 +146,11 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(OnboardingStepSkipped::class, [RecordSaasOnboardingAudit::class, 'handleStepSkipped']);
         Event::listen(OnboardingDismissed::class, [RecordSaasOnboardingAudit::class, 'handleDismissed']);
         Event::listen(OnboardingCompleted::class, [RecordSaasOnboardingAudit::class, 'handleCompleted']);
+
+        Event::listen(OnboardingStarted::class, [SyncActivationEventsFromOnboarding::class, 'handleStarted']);
+        Event::listen(OnboardingCustomerCreated::class, [SyncActivationEventsFromOnboarding::class, 'handleCustomer']);
+        Event::listen(OnboardingDealCreated::class, [SyncActivationEventsFromOnboarding::class, 'handleDeal']);
+        Event::listen(OnboardingCompleted::class, [SyncActivationEventsFromOnboarding::class, 'handleCompleted']);
 
         Event::listen(DiagnosingHealth::class, function (): void {
             DB::select('select 1');

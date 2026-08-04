@@ -66,6 +66,71 @@
             </ul>
         </div>
 
+        <div class="card" data-activation-score="1">
+            <h2 style="margin-top:0;">Activation Score</h2>
+            <div style="font-size:2rem; font-weight:700;">
+                {{ $activation->score }}/100
+                <span style="font-size:1rem;">{{ $activation->status->emoji() }} {{ $activation->status->label() }}</span>
+            </div>
+            <div class="header-meta">Ativação {{ $activation->activationPercent }}% · Etapa: {{ $activation->lastStepLabel ?? '—' }}</div>
+            <p><strong>Último login:</strong> {{ $activation->lastLoginAt ? \Illuminate\Support\Carbon::parse($activation->lastLoginAt)->format('d/m/Y H:i') : '—' }}</p>
+            <p><strong>Última atividade:</strong> {{ $activation->lastActivityAt ? \Illuminate\Support\Carbon::parse($activation->lastActivityAt)->diffForHumans() : '—' }}</p>
+            <p><strong>Onboarding:</strong> {{ $activation->onboardingStatus }} (step {{ $activation->onboardingStep }})</p>
+            @if($activation->isStuck)
+                <p style="color:var(--warning);"><strong>⚠ Empresa parada no onboarding</strong></p>
+            @endif
+        </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:1rem;">
+        <div class="card">
+            <h2 style="margin-top:0;">Informações</h2>
+            <p><strong>Nome:</strong> {{ $company->name }}</p>
+            <p><strong>Plano:</strong> {{ $ops->planName ?? '—' }}</p>
+            <p><strong>Status:</strong> {{ $company->status }}</p>
+            <p><strong>Criação:</strong> {{ $ops->createdAt ? \Illuminate\Support\Carbon::parse($ops->createdAt)->format('d/m/Y H:i') : '—' }}</p>
+            <p><strong>Último acesso:</strong> {{ $ops->lastAccessAt ? \Illuminate\Support\Carbon::parse($ops->lastAccessAt)->format('d/m/Y H:i') : '—' }}</p>
+        </div>
+        <div class="card">
+            <h2 style="margin-top:0;">Uso</h2>
+            <p><strong>Usuários:</strong> {{ $activation->usage['users'] ?? 0 }}</p>
+            <p><strong>Clientes:</strong> {{ $activation->usage['customers'] ?? 0 }}</p>
+            <p><strong>Negócios:</strong> {{ $activation->usage['deals'] ?? 0 }}</p>
+            <p><strong>Uploads / branding:</strong> {{ $activation->usage['uploads'] ?? 0 }}</p>
+            <p><strong>Módulos:</strong> {{ $activation->usage['modules'] ?: '—' }}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:1rem;">
+        <div class="card" data-activation-timeline="1">
+            <h2 style="margin-top:0;">Timeline de atividade</h2>
+            <ul style="list-style:none; padding:0; margin:0; display:grid; gap:.45rem;">
+                @foreach($activation->timeline as $event)
+                    <li style="color:{{ $event['done'] ? 'var(--success, #22C55E)' : 'var(--muted)' }};">
+                        {{ $event['done'] ? '✓' : '○' }} {{ $event['label'] }}
+                        @if($event['at'])
+                            <span class="header-meta">· {{ \Illuminate\Support\Carbon::parse($event['at'])->format('d/m/Y H:i') }}</span>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+        <div class="card" data-activation-alerts="1">
+            <h2 style="margin-top:0;">Alertas CS</h2>
+            <ul style="list-style:none; padding:0; margin:0; display:grid; gap:.55rem;">
+                @forelse($activation->alerts as $alert)
+                    <li style="border:1px solid var(--border); border-radius:8px; padding:.55rem .7rem;">
+                        <div class="header-meta">{{ strtoupper($alert['severity']) }}</div>
+                        <div>{{ $alert['message'] }}</div>
+                    </li>
+                @empty
+                    <li class="header-meta">Sem alertas para esta empresa.</li>
+                @endforelse
+            </ul>
+        </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:1rem;">
         <div class="card">
             <h2 style="margin-top:0;">Métricas operacionais</h2>
             <p><strong>Criada em:</strong> {{ $ops->createdAt ? \Illuminate\Support\Carbon::parse($ops->createdAt)->format('d/m/Y H:i') : '—' }}</p>

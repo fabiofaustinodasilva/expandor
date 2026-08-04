@@ -148,6 +148,7 @@
             <div class="nav-group">
                 <div class="nav-label">Plataforma</div>
                 <a class="nav-link {{ request()->routeIs('platform.dashboard') ? 'active' : '' }}" href="{{ route('platform.dashboard') }}">Dashboard</a>
+                <a class="nav-link {{ request()->routeIs('platform.activation.*') ? 'active' : '' }}" href="{{ route('platform.activation.index') }}">SaaS Health</a>
                 <a class="nav-link {{ request()->routeIs('platform.profile.*') ? 'active' : '' }}" href="{{ route('platform.profile.edit') }}">Meu perfil</a>
                 @can('platform.manageCompanies')
                     <a class="nav-link {{ request()->routeIs('platform.companies.*') ? 'active' : '' }}" href="{{ route('platform.companies.index') }}">Empresas</a>
