@@ -1,35 +1,35 @@
 <?php
 
 /**
- * Conteúdo padrão do Marketplace público.
- * O CMS apenas personaliza — estes defaults garantem landing completa
- * mesmo em instalação limpa sem nenhum cadastro no CMS.
+ * Conteúdo padrão do Marketplace público (Sprint 8.0.3 — Premium Conversion).
+ * CMS personaliza; defaults garantem landing completa sem cadastro.
  */
 return [
 
     'brand' => 'Expandor',
 
     'settings' => [
-        'title' => 'Expandor — CRM inteligente para vendas',
-        'subtitle' => 'CRM + Pipeline + WhatsApp + Equipe + Gestão Comercial em uma única plataforma.',
-        'description' => 'O Expandor une CRM, pipeline, agenda, WhatsApp e gestão de equipe para sua operação comercial vender mais com clareza.',
+        'title' => 'Expandor',
+        'subtitle' => 'Controle clientes, vendedores, campanhas, visitas, mapas e resultados em tempo real em uma única plataforma.',
+        'description' => 'O Expandor ajuda empresas com equipes externas a vender mais e controlar toda a operação comercial.',
         'primary_color' => '#3B82F6',
         'secondary_color' => '#0F172A',
         'background_color' => '#0B1220',
         'button_color' => '#F59E0B',
         'whatsapp_message' => 'Olá! Quero saber mais sobre o Expandor.',
-        'seo_title' => 'Expandor — CRM inteligente para vendas',
-        'seo_description' => 'Venda mais, organize o comercial e escale sua empresa. CRM + Pipeline + WhatsApp + Equipe em uma única plataforma. Teste grátis.',
-        'seo_keywords' => 'crm, vendas, saas, expandor, gestão comercial, pipeline, whatsapp',
+        'seo_title' => 'Expandor - Plataforma inteligente para vendas externas',
+        'seo_description' => 'Gerencie vendedores, clientes, campanhas e resultados com inteligência.',
+        'seo_keywords' => 'crm, vendas externas, campo, campanhas, mapa, expandor, gestão comercial',
     ],
 
     'nav' => [
         ['label' => 'Início', 'href' => '#inicio'],
+        ['label' => 'Produto', 'href' => '#produto'],
+        ['label' => 'Como funciona', 'href' => '#como-funciona'],
         ['label' => 'Recursos', 'href' => '#recursos'],
         ['label' => 'Planos', 'href' => '#planos'],
         ['label' => 'Clientes', 'href' => '#clientes'],
         ['label' => 'FAQ', 'href' => '#faq'],
-        ['label' => 'Demonstração', 'href' => '#demonstracao'],
     ],
 
     'nav_actions' => [
@@ -45,7 +45,7 @@ return [
             'route' => true,
         ],
         [
-            'label' => 'Teste grátis',
+            'label' => 'Começar teste grátis',
             'href' => 'signup.create',
             'style' => 'primary',
             'route' => true,
@@ -56,18 +56,22 @@ return [
     'footer' => [
         'links' => [
             ['label' => 'Início', 'href' => '#inicio'],
-            ['label' => 'Recursos', 'href' => '#recursos'],
+            ['label' => 'Produto', 'href' => '#produto'],
             ['label' => 'Planos', 'href' => '#planos'],
             ['label' => 'FAQ', 'href' => '#faq'],
-            ['label' => 'Teste grátis', 'href' => 'signup.create', 'route' => true],
+            ['label' => 'Começar teste grátis', 'href' => 'signup.create', 'route' => true],
         ],
         'rights' => 'Todos os direitos reservados.',
     ],
 
     'section_order' => [
         'hero',
+        'showcase',
+        'how_it_works',
+        'before_after',
         'about',
         'features',
+        'social_proof',
         'video',
         'testimonials',
         'plans',
@@ -77,25 +81,40 @@ return [
 
     'sections' => [
         'hero' => [
-            'title' => "Venda mais.\nOrganize seu comercial.\nEscale sua empresa.",
-            'subtitle' => 'CRM + Pipeline + WhatsApp + Equipe + Gestão Comercial em uma única plataforma.',
-            'description' => null,
-            'button_text' => 'Teste grátis',
+            'title' => 'Transforme sua equipe de vendas externas em uma operação inteligente',
+            'subtitle' => 'Controle clientes, vendedores, campanhas, visitas, mapas e resultados em tempo real em uma única plataforma.',
+            'description' => 'O Expandor ajuda empresas com equipes externas a vender mais e controlar toda a operação.',
+            'button_text' => 'Começar teste grátis',
             'button_url' => '/cadastro',
             'button_text_secondary' => 'Solicitar demonstração',
             'button_url_secondary' => '#demo',
-            'image' => '/images/marketplace/hero-saas.svg',
+            'image' => '/images/marketplace/screens/dashboard.svg',
             'video' => null,
             'order' => 1,
+        ],
+        'showcase' => [
+            'title' => 'Veja o Expandor funcionando',
+            'subtitle' => 'Telas reais da operação comercial',
+            'description' => null,
+            'order' => 2,
+        ],
+        'how_it_works' => [
+            'title' => 'Como funciona',
+            'subtitle' => 'Do time ao resultado em seis passos',
+            'description' => null,
+            'order' => 3,
+        ],
+        'before_after' => [
+            'title' => 'Da operação caótica ao controle total',
+            'subtitle' => 'O que muda com o Expandor',
+            'description' => null,
+            'order' => 4,
         ],
         'about' => [
             'title' => 'Quem Somos',
             'subtitle' => 'Feito para operação comercial real',
-            'description' => 'O Expandor nasceu para unir CRM, território, visitas, pipeline e comissões em uma experiência SaaS clara — do primeiro cliente ao time em escala. Acreditamos que vender bem exige processo, visibilidade e velocidade no mesmo lugar.',
-            'button_text' => null,
-            'button_url' => null,
-            'image' => null,
-            'order' => 2,
+            'description' => 'O Expandor nasceu para unir CRM, território, visitas, pipeline e comissões em uma experiência SaaS clara — do primeiro cliente ao time em escala.',
+            'order' => 99,
         ],
         'features' => [
             'title' => 'Recursos',
@@ -110,44 +129,93 @@ return [
                 ['title' => 'Dashboard', 'description' => 'Tenha visão executiva de funil, metas e desempenho.'],
                 ['title' => 'Equipe', 'description' => 'Controle usuários, papéis e permissões com segurança.'],
                 ['title' => 'Metas', 'description' => 'Defina objetivos e acompanhe o progresso comercial.'],
-                ['title' => 'Marketplace', 'description' => 'Página pública pronta para converter visitantes em trials.'],
-                ['title' => 'Inteligência Comercial', 'description' => 'Insights para priorizar o que gera mais resultado.'],
+                ['title' => 'Mapa', 'description' => 'Visualize campanhas e vendedores no território.'],
+                ['title' => 'Comissões', 'description' => 'Acompanhe resultados e ranking da equipe.'],
             ],
-            'order' => 3,
+            'order' => 5,
+        ],
+        'social_proof' => [
+            'title' => 'Empresas organizam suas operações comerciais com Expandor',
+            'subtitle' => 'Números da plataforma',
+            'description' => null,
+            'order' => 6,
         ],
         'video' => [
-            'title' => 'Demonstração do CRM',
-            'subtitle' => 'Veja o sistema funcionando',
-            'description' => 'Uma visão rápida da jornada comercial no Expandor — do lead ao fechamento.',
+            'title' => 'Vídeo demonstrativo',
+            'subtitle' => 'Veja o sistema em ação',
+            'description' => 'Uma visão rápida da jornada comercial no Expandor.',
             'image' => '/images/marketplace/product-preview.svg',
             'video' => null,
-            'order' => 4,
+            'order' => 7,
         ],
         'testimonials' => [
             'title' => 'Clientes',
             'subtitle' => 'Quem já opera com Expandor',
             'description' => null,
-            'order' => 5,
+            'order' => 8,
         ],
         'plans' => [
             'title' => 'Planos',
             'subtitle' => 'Escolha o ritmo certo para crescer',
-            'description' => 'Comece no teste grátis e evolua conforme sua operação escala.',
-            'order' => 6,
+            'description' => 'Comece o teste grátis e evolua conforme sua operação escala.',
+            'order' => 9,
         ],
         'faq' => [
             'title' => 'Perguntas frequentes',
             'subtitle' => 'Respostas objetivas antes de começar',
             'description' => null,
-            'order' => 7,
+            'order' => 10,
         ],
         'cta' => [
-            'title' => 'Pronto para vender com mais clareza?',
+            'title' => 'Pronto para transformar sua operação de campo?',
             'subtitle' => 'Comece o teste grátis em minutos.',
             'description' => 'Sem cartão para explorar. Configure sua empresa e leve o time para um processo comercial único.',
-            'button_text' => 'Começar agora',
+            'button_text' => 'Começar teste grátis',
             'button_url' => '/cadastro',
-            'order' => 8,
+            'order' => 11,
+        ],
+    ],
+
+    'showcase' => [
+        ['title' => 'Dashboard principal', 'image' => '/images/marketplace/screens/dashboard.svg'],
+        ['title' => 'Mapa de campanhas', 'image' => '/images/marketplace/screens/map.svg'],
+        ['title' => 'Agenda dos vendedores', 'image' => '/images/marketplace/screens/agenda.svg'],
+        ['title' => 'CRM de clientes', 'image' => '/images/marketplace/screens/crm.svg'],
+        ['title' => 'Pipeline comercial', 'image' => '/images/marketplace/screens/pipeline.svg'],
+        ['title' => 'Comissão dos vendedores', 'image' => '/images/marketplace/screens/commissions.svg'],
+        ['title' => 'Ranking da equipe', 'image' => '/images/marketplace/screens/ranking.svg'],
+        ['title' => 'Dashboard de conversão', 'image' => '/images/marketplace/screens/conversion.svg'],
+    ],
+
+    'how_it_works' => [
+        ['step' => 1, 'title' => 'Cadastre sua equipe', 'description' => 'Convide vendedores e gestores com papéis e permissões claros.'],
+        ['step' => 2, 'title' => 'Crie campanhas', 'description' => 'Monte campanhas por território, meta e período.'],
+        ['step' => 3, 'title' => 'Acompanhe vendedores no mapa', 'description' => 'Veja onde a equipe está e o que está em andamento.'],
+        ['step' => 4, 'title' => 'Controle visitas e clientes', 'description' => 'Registre visitas, follow-ups e histórico no CRM.'],
+        ['step' => 5, 'title' => 'Analise resultados', 'description' => 'Dashboards, funil e indicadores em tempo real.'],
+        ['step' => 6, 'title' => 'Aumente vendas', 'description' => 'Priorize o que gera resultado e escale com processo.'],
+    ],
+
+    'before_after' => [
+        'before' => [
+            'Vendedores sem acompanhamento',
+            'Informações espalhadas',
+            'Dificuldade para medir resultados',
+        ],
+        'after' => [
+            'Equipe organizada',
+            'Mapa inteligente',
+            'Indicadores em tempo real',
+        ],
+    ],
+
+    'social_proof' => [
+        'title' => 'Empresas organizam suas operações comerciais com Expandor',
+        'metrics' => [
+            ['key' => 'sellers', 'label' => 'Vendedores gerenciados'],
+            ['key' => 'customers', 'label' => 'Clientes cadastrados'],
+            ['key' => 'visits', 'label' => 'Visitas realizadas'],
+            ['key' => 'campaigns', 'label' => 'Campanhas criadas'],
         ],
     ],
 
@@ -199,7 +267,7 @@ return [
         ],
         [
             'question' => 'Posso personalizar a landing do Marketplace?',
-            'answer' => 'Sim. O CMS da plataforma permite ajustar textos, imagens, FAQ e depoimentos. Sem configuração, a landing já vem completa com conteúdo padrão.',
+            'answer' => 'Sim. O CMS da plataforma permite ajustar textos, imagens, FAQ, vídeo e prova social. Sem configuração, a landing já vem completa.',
             'order' => 4,
             'active' => true,
         ],

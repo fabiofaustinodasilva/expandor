@@ -32,11 +32,13 @@ class MarketplaceSettingsController extends Controller
                 'logo' => $request->file('logo'),
                 'favicon' => $request->file('favicon'),
                 'hero_image' => $request->file('hero_image'),
+                'og_image' => $request->file('og_image'),
             ],
             [
                 'logo' => $request->boolean('remove_logo'),
                 'favicon' => $request->boolean('remove_favicon'),
                 'hero_image' => $request->boolean('remove_hero_image'),
+                'og_image' => $request->boolean('remove_og_image'),
             ],
         );
 

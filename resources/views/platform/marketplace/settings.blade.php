@@ -59,11 +59,27 @@
                     preview-height="96px"
                 />
 
+                <x-media-upload
+                    name="og_image"
+                    label="Imagem Open Graph (social)"
+                    :current-url="$settings->mediaUrl($settings->og_image)"
+                    remove-name="remove_og_image"
+                    accept="image/jpeg,image/png,image/webp"
+                    hint="Imagem usada em compartilhamentos (WhatsApp, LinkedIn, etc.). Até 8MB."
+                    preview-height="96px"
+                />
+
                 <div class="form-group">
                     <label for="hero_video">Vídeo do hero (URL)</label>
                     <input class="form-control" id="hero_video" name="hero_video" type="text"
                            value="{{ old('hero_video', $settings->hero_video) }}" placeholder="https://...">
                     <div class="header-meta" style="margin-top:.35rem;">URL de vídeo MP4 ou link externo.</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="demo_video_url">Vídeo demonstração (YouTube, Vimeo ou MP4)</label>
+                    <input class="form-control" id="demo_video_url" name="demo_video_url" type="text"
+                           value="{{ old('demo_video_url', $settings->demo_video_url) }}" placeholder="https://youtube.com/watch?v=...">
                 </div>
 
                 <div class="form-group">
@@ -253,6 +269,77 @@
                 <div class="actions" style="margin-top:1.25rem;">
                     <button class="btn btn-primary" type="submit">Salvar configuração</button>
                 </div>
+            </div>
+        </div>
+
+        @php
+            $conversion = old('conversion_content', $settings->conversion_content ?? []);
+            $howLines = collect($conversion['how_it_works'] ?? [])
+                ->map(fn ($s) => trim(($s['title'] ?? '').(filled($s['description'] ?? null) ? ' | '.$s['description'] : '')))
+                ->filter()
+                ->implode("\n");
+            $beforeText = implode("\n", $conversion['before_after']['before'] ?? []);
+            $afterText = implode("\n", $conversion['before_after']['after'] ?? []);
+        @endphp
+
+        <div class="card" style="margin-top:1rem;">
+            <h2 style="margin-top:0;">Conteúdo de conversão (Premium)</h2>
+            <div class="header-meta" style="margin-bottom:1rem;">
+                Personalize prova social, jornada e antes/depois. Deixe em branco para usar o conteúdo padrão.
+                Imagens da plataforma: use <a href="{{ route('platform.marketplace.media.index') }}">Marketplace → Mídia</a> (galeria ativa alimenta o carrossel).
+            </div>
+
+            <div class="form-group">
+                <label for="social_proof_title">Título da prova social</label>
+                <input class="form-control" id="social_proof_title" name="conversion_content[social_proof_title]" maxlength="255"
+                       value="{{ $conversion['social_proof_title'] ?? '' }}"
+                       placeholder="Empresas organizam suas operações comerciais com Expandor">
+            </div>
+
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label for="before_text">Antes (um item por linha)</label>
+                    <textarea class="form-control" id="before_text" name="conversion_content[before_text]" rows="5"
+                              placeholder="vendedores sem acompanhamento">{{ $beforeText }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="after_text">Depois (um item por linha)</label>
+                    <textarea class="form-control" id="after_text" name="conversion_content[after_text]" rows="5"
+                              placeholder="equipe organizada">{{ $afterText }}</textarea>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="how_it_works_text">Como funciona (um passo por linha: Título | Descrição)</label>
+                <textarea class="form-control" id="how_it_works_text" name="conversion_content[how_it_works_text]" rows="7"
+                          placeholder="Cadastre sua equipe | Convide vendedores...">{{ $howLines }}</textarea>
+            </div>
+
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label for="metric_sellers">Override métrica — vendedores</label>
+                    <input class="form-control" id="metric_sellers" name="conversion_content[metrics][sellers]" type="number" min="0"
+                           value="{{ $conversion['metrics']['sellers'] ?? '' }}" placeholder="Automático do sistema">
+                </div>
+                <div class="form-group">
+                    <label for="metric_customers">Override métrica — clientes</label>
+                    <input class="form-control" id="metric_customers" name="conversion_content[metrics][customers]" type="number" min="0"
+                           value="{{ $conversion['metrics']['customers'] ?? '' }}" placeholder="Automático do sistema">
+                </div>
+                <div class="form-group">
+                    <label for="metric_visits">Override métrica — visitas</label>
+                    <input class="form-control" id="metric_visits" name="conversion_content[metrics][visits]" type="number" min="0"
+                           value="{{ $conversion['metrics']['visits'] ?? '' }}" placeholder="Automático do sistema">
+                </div>
+                <div class="form-group">
+                    <label for="metric_campaigns">Override métrica — campanhas</label>
+                    <input class="form-control" id="metric_campaigns" name="conversion_content[metrics][campaigns]" type="number" min="0"
+                           value="{{ $conversion['metrics']['campaigns'] ?? '' }}" placeholder="Automático do sistema">
+                </div>
+            </div>
+
+            <div class="actions" style="margin-top:1rem;">
+                <button class="btn btn-primary" type="submit">Salvar configuração</button>
             </div>
         </div>
     </form>

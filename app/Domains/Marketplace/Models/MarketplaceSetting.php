@@ -12,6 +12,8 @@ class MarketplaceSetting extends Model
         'favicon',
         'hero_image',
         'hero_video',
+        'demo_video_url',
+        'og_image',
         'title',
         'subtitle',
         'description',
@@ -37,6 +39,7 @@ class MarketplaceSetting extends Model
         'seo_title',
         'seo_description',
         'seo_keywords',
+        'conversion_content',
     ];
 
     protected function casts(): array
@@ -49,6 +52,7 @@ class MarketplaceSetting extends Model
             'linkedin_enabled' => 'boolean',
             'tiktok_enabled' => 'boolean',
             'twitter_enabled' => 'boolean',
+            'conversion_content' => 'array',
         ];
     }
 
@@ -143,5 +147,40 @@ class MarketplaceSetting extends Model
         }
 
         return $links;
+    }
+
+    public function demoVideoEmbedUrl(): ?string
+    {
+        $url = trim((string) ($this->demo_video_url ?: ''));
+        if ($url === '') {
+            return null;
+        }
+
+        if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]+)/', $url, $m)) {
+            return 'https://www.youtube.com/embed/'.$m[1].'?rel=0&autoplay=1';
+        }
+        if (preg_match('/vimeo\.com\/(\d+)/', $url, $m)) {
+            return 'https://player.vimeo.com/video/'.$m[1].'?autoplay=1';
+        }
+        if (str_ends_with(strtolower(parse_url($url, PHP_URL_PATH) ?: ''), '.mp4') || str_contains($url, '.mp4')) {
+            return $url;
+        }
+
+        return $url;
+    }
+
+    public function demoVideoIsMp4(): bool
+    {
+        $url = (string) ($this->demo_video_url ?: '');
+
+        return str_contains(strtolower($url), '.mp4');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function conversionOverrides(): array
+    {
+        return is_array($this->conversion_content) ? $this->conversion_content : [];
     }
 }

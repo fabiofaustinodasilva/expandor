@@ -35,21 +35,16 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
 
         $this->get(route('marketplace.home'))
             ->assertOk()
-            ->assertSee('Venda mais', false)
-            ->assertSee('Organize seu comercial', false)
-            ->assertSee('Escale sua empresa', false)
-            ->assertSee('CRM + Pipeline + WhatsApp', false)
-            ->assertSee('Teste grátis', false)
+            ->assertSee('Transforme sua equipe de vendas externas', false)
+            ->assertSee('Começar teste grátis', false)
             ->assertSee('Solicitar demonstração', false)
             ->assertSee('Pipeline', false)
-            ->assertSee('Inteligência Comercial', false)
             ->assertSee('Posso testar sem cartão?', false)
             ->assertSee('Ana Ribeiro', false)
             ->assertSee('Carla Souza', false)
-            ->assertSee('Pronto para vender com mais clareza?', false)
             ->assertSee('id="faq"', false)
             ->assertSee('id="clientes"', false)
-            ->assertSee('/images/marketplace/hero-saas.svg', false);
+            ->assertSee('/images/marketplace/screens/dashboard.svg', false);
     }
 
     public function test_default_hero_features_faq_and_testimonials_appear(): void
@@ -64,7 +59,7 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
             fn ($section) => $section->type === MarketplaceSectionType::Hero
         );
         $this->assertNotNull($hero);
-        $this->assertStringContainsString('Venda mais', (string) $hero->title);
+        $this->assertStringContainsString('Transforme sua equipe de vendas externas', (string) $hero->title);
 
         $features = $page['sections']->first(
             fn ($section) => $section->type === MarketplaceSectionType::Features
@@ -108,7 +103,6 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
             ->assertSee('CTA CMS', false)
             ->assertSee('Cliente CMS 801', false)
             ->assertSee('Pergunta CMS 801?', false)
-            ->assertDontSee('Venda mais.', false)
             ->assertDontSee('Ana Ribeiro', false);
     }
 
@@ -132,7 +126,7 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
             ->get(route('platform.marketplace.preview'))
             ->assertOk()
             ->assertSee('Modo preview', false)
-            ->assertSee('Venda mais', false)
+            ->assertSee('Transforme sua equipe de vendas externas', false)
             ->assertSee('Recursos', false)
             ->assertSee('Perguntas frequentes', false)
             ->assertSee('Carla Souza', false);
@@ -162,6 +156,6 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
             ->where('type', MarketplaceSectionType::Hero->value)
             ->first();
         $this->assertNotNull($hero);
-        $this->assertStringContainsString('Venda mais', (string) $hero->title);
+        $this->assertStringContainsString('Transforme sua equipe de vendas externas', (string) $hero->title);
     }
 }

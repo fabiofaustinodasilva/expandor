@@ -5,8 +5,12 @@ namespace App\Domains\Marketplace\Enums;
 enum MarketplaceSectionType: string
 {
     case Hero = 'hero';
+    case Showcase = 'showcase';
+    case HowItWorks = 'how_it_works';
+    case BeforeAfter = 'before_after';
     case About = 'about';
     case Features = 'features';
+    case SocialProof = 'social_proof';
     case Video = 'video';
     case Gallery = 'gallery';
     case Testimonials = 'testimonials';
@@ -18,8 +22,12 @@ enum MarketplaceSectionType: string
     {
         return match ($this) {
             self::Hero => 'Hero',
+            self::Showcase => 'Demonstração visual',
+            self::HowItWorks => 'Como funciona',
+            self::BeforeAfter => 'Antes e depois',
             self::About => 'Quem Somos',
             self::Features => 'Recursos',
+            self::SocialProof => 'Prova social',
             self::Video => 'Vídeo',
             self::Gallery => 'Galeria',
             self::Testimonials => 'Depoimentos',

@@ -8,6 +8,7 @@ use App\Domains\Marketplace\Repositories\MarketplaceSettingsRepository;
 use App\Domains\Media\Enums\MediaPurpose;
 use App\Domains\Media\Services\MediaUploadService;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class MarketplaceSettingsService
@@ -40,11 +41,17 @@ class MarketplaceSettingsService
                 'instagram_url', 'facebook_url', 'youtube_url', 'linkedin_url',
                 'tiktok_url', 'twitter_url',
                 'seo_title', 'seo_description', 'seo_keywords',
+                'demo_video_url',
             ] as $field) {
                 if (array_key_exists($field, $data)) {
                     $value = $data[$field];
                     $row->{$field} = is_string($value) ? (trim($value) !== '' ? trim($value) : null) : $value;
                 }
+            }
+
+            if (array_key_exists('conversion_content', $data) && is_array($data['conversion_content'])) {
+                $current = is_array($row->conversion_content) ? $row->conversion_content : [];
+                $row->conversion_content = array_replace_recursive($current, $data['conversion_content']);
             }
 
             foreach ([
@@ -59,6 +66,7 @@ class MarketplaceSettingsService
                 'logo' => MediaPurpose::Logo,
                 'favicon' => MediaPurpose::Favicon,
                 'hero_image' => MediaPurpose::MarketplaceImage,
+                'og_image' => MediaPurpose::MarketplaceImage,
             ];
 
             foreach ($fileMap as $field => $purpose) {
@@ -83,6 +91,7 @@ class MarketplaceSettingsService
 
             $saved = $this->settings->save($row);
             $this->content->forgetPublicCache();
+            Cache::forget('marketplace.public.metrics.v1');
 
             return $saved;
         });

@@ -10,7 +10,10 @@
         $pageTitle = $settings->seo_title ?: ($settings->title ?: $brandName.' — CRM inteligente');
         $pageDescription = $settings->seo_description ?: ($settings->description ?: 'CRM de campo e gestão comercial.');
         $pageKeywords = $settings->seo_keywords ?: 'crm, vendas, saas, expandor';
-        $ogImage = $settings->mediaUrl($settings->hero_image) ?: $settings->mediaUrl($settings->logo) ?: asset($heroFallbackImage ?? '/images/marketplace/hero-saas.svg');
+        $ogImage = $settings->mediaUrl($settings->og_image)
+            ?: $settings->mediaUrl($settings->hero_image)
+            ?: $settings->mediaUrl($settings->logo)
+            ?: asset($heroFallbackImage ?? '/images/marketplace/screens/dashboard.svg');
         $primary = $settings->primary_color ?: '#3B82F6';
         $secondary = $settings->secondary_color ?: '#0F172A';
         $background = $settings->background_color ?: '#0B1220';
@@ -19,6 +22,10 @@
         $navActionItems = $navActions ?? [];
         $footerData = $footer ?? [];
         $heroSecondaryCta = $heroSecondary ?? ['text' => 'Solicitar demonstração', 'url' => '#demo'];
+        $premiumData = $premium ?? [];
+        $metricsData = $metrics ?? [];
+        $demoEmbed = $settings->demoVideoEmbedUrl();
+        $demoIsMp4 = $settings->demoVideoIsMp4();
     @endphp
 
     <title>{{ $pageTitle }}</title>
@@ -683,6 +690,7 @@
             .mkp-section { padding: 3rem 0; }
         }
     </style>
+    @include('marketplace.partials.premium-styles')
 </head>
 <body>
 
@@ -791,6 +799,117 @@
                 </section>
                 @break
 
+            @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Showcase)
+                @php $showcaseItems = $premiumData['showcase'] ?? []; @endphp
+                <section id="produto" class="mkp-section mkp-fade">
+                    <div class="mkp-container">
+                        <div class="mkp-section-head">
+                            @if($section->subtitle)<span class="mkp-eyebrow">{{ $section->subtitle }}</span>@endif
+                            <h2 class="mkp-title">{{ $section->title ?: 'Veja o Expandor funcionando' }}</h2>
+                        </div>
+                        @if(!empty($showcaseItems))
+                            <div class="mkp-carousel" data-mkp-carousel>
+                                <div class="mkp-carousel-track" data-mkp-track>
+                                    @foreach($showcaseItems as $slide)
+                                        <div class="mkp-carousel-slide" data-mkp-slide>
+                                            <img src="{{ str_starts_with($slide['image'], 'http') || str_starts_with($slide['image'], '/') ? $slide['image'] : asset($slide['image']) }}"
+                                                 alt="{{ $slide['title'] ?? 'Expandor' }}" loading="lazy">
+                                            @if(!empty($slide['title']))
+                                                <div class="mkp-carousel-caption">{{ $slide['title'] }}</div>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="mkp-carousel-nav">
+                                    <button type="button" class="mkp-carousel-btn" data-mkp-prev aria-label="Anterior">‹</button>
+                                    <button type="button" class="mkp-carousel-btn" data-mkp-next aria-label="Próximo">›</button>
+                                </div>
+                                <div class="mkp-carousel-dots" data-mkp-dots></div>
+                            </div>
+                        @endif
+                    </div>
+                </section>
+                @break
+
+            @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::HowItWorks)
+                @php $steps = $premiumData['how_it_works'] ?? []; @endphp
+                <section id="como-funciona" class="mkp-section mkp-section-alt mkp-fade">
+                    <div class="mkp-container">
+                        <div class="mkp-section-head">
+                            @if($section->subtitle)<span class="mkp-eyebrow">{{ $section->subtitle }}</span>@endif
+                            <h2 class="mkp-title">{{ $section->title ?: 'Como funciona' }}</h2>
+                        </div>
+                        <div class="mkp-steps">
+                            @foreach($steps as $step)
+                                <article class="mkp-step mkp-fade">
+                                    <div class="mkp-step-num">{{ $step['step'] ?? $loop->iteration }}</div>
+                                    <h3>{{ $step['title'] ?? '' }}</h3>
+                                    <p>{{ $step['description'] ?? '' }}</p>
+                                </article>
+                            @endforeach
+                        </div>
+                    </div>
+                </section>
+                @break
+
+            @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::BeforeAfter)
+                @php
+                    $ba = $premiumData['before_after'] ?? ['before' => [], 'after' => []];
+                @endphp
+                <section class="mkp-section mkp-fade">
+                    <div class="mkp-container">
+                        <div class="mkp-section-head">
+                            @if($section->subtitle)<span class="mkp-eyebrow">{{ $section->subtitle }}</span>@endif
+                            <h2 class="mkp-title">{{ $section->title ?: 'Antes e depois' }}</h2>
+                        </div>
+                        <div class="mkp-ba-grid">
+                            <div class="mkp-ba-card before">
+                                <h3>Antes</h3>
+                                <ul>
+                                    @foreach(($ba['before'] ?? []) as $item)
+                                        <li>❌ {{ $item }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                            <div class="mkp-ba-card after">
+                                <h3>Depois</h3>
+                                <ul>
+                                    @foreach(($ba['after'] ?? []) as $item)
+                                        <li>✅ {{ $item }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                @break
+
+            @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::SocialProof)
+                <section class="mkp-section mkp-section-alt mkp-fade">
+                    <div class="mkp-container">
+                        <div class="mkp-section-head">
+                            @if($section->subtitle)<span class="mkp-eyebrow">{{ $section->subtitle }}</span>@endif
+                            <h2 class="mkp-title">{{ $premiumData['social_proof_title'] ?? $section->title }}</h2>
+                        </div>
+                        <div class="mkp-metrics">
+                            @foreach($metricsData as $metric)
+                                <div class="mkp-metric mkp-fade">
+                                    <strong>{{ number_format((int) ($metric['value'] ?? 0), 0, ',', '.') }}</strong>
+                                    <span>{{ $metric['label'] ?? '' }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                        @if(!empty($premiumData['client_logos']))
+                            <div class="mkp-logos">
+                                @foreach($premiumData['client_logos'] as $logo)
+                                    <img src="{{ $logo['url'] ?? $logo }}" alt="{{ $logo['name'] ?? 'Cliente' }}" loading="lazy">
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </section>
+                @break
+
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::About)
                 <section id="quem-somos" class="mkp-section mkp-section-alt mkp-fade">
                     <div class="mkp-container">
@@ -864,6 +983,7 @@
                         return $url;
                     };
                     $sectionEmbed = $embedFromUrl($section->videoUrl());
+                    $thumb = $section->imageUrl() ?: asset($videoFallbackImage ?? '/images/marketplace/product-preview.svg');
                 @endphp
                 <section id="demonstracao" class="mkp-section mkp-section-alt mkp-fade">
                     <div class="mkp-container">
@@ -871,13 +991,21 @@
                             @if($section->subtitle)
                                 <span class="mkp-eyebrow">{{ $section->subtitle }}</span>
                             @endif
-                            <h2 class="mkp-title">{{ $section->title ?: 'Demonstração' }}</h2>
+                            <h2 class="mkp-title">{{ $section->title ?: 'Vídeo demonstrativo' }}</h2>
                             @if($section->description)
                                 <p class="mkp-subtitle">{{ $section->description }}</p>
                             @endif
                         </div>
 
-                        @if($sectionEmbed)
+                        @if($demoEmbed)
+                            <button type="button" class="mkp-video-thumb" data-mkp-demo-open
+                                    data-src="{{ $demoEmbed }}"
+                                    data-mp4="{{ $demoIsMp4 ? '1' : '0' }}"
+                                    aria-label="Reproduzir demonstração">
+                                <img src="{{ $thumb }}" alt="Demonstração Expandor" loading="lazy">
+                                <div class="mkp-play"><span>▶</span></div>
+                            </button>
+                        @elseif($sectionEmbed)
                             <div class="mkp-video-wrap" data-mkp-video>
                                 <iframe src="{{ $sectionEmbed }}" title="Demonstração" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
                             </div>
@@ -893,17 +1021,13 @@
                                             @if($video->title)
                                                 <h4>{{ $video->title }}</h4>
                                             @endif
-                                            @if($video->caption)
-                                                <p class="mkp-subtitle" style="margin-top:0.35rem;font-size:0.88rem;">{{ $video->caption }}</p>
-                                            @endif
                                         </div>
                                     @endif
                                 @endforeach
                             </div>
                         @else
                             <div class="mkp-hero-media" style="max-width:860px;margin:0 auto;">
-                                <img src="{{ $section->imageUrl() ?: asset($videoFallbackImage ?? '/images/marketplace/product-preview.svg') }}"
-                                     alt="{{ $section->title ?: 'Demonstração' }}" loading="lazy">
+                                <img src="{{ $thumb }}" alt="{{ $section->title ?: 'Demonstração' }}" loading="lazy">
                             </div>
                         @endif
                     </div>
@@ -1116,6 +1240,16 @@
 </footer>
 
 <x-marketplace-whats-app-button :settings="$settings" :context="$whatsappContext ?? null" />
+
+<div class="mkp-modal" id="mkp-demo-modal" role="dialog" aria-modal="true" aria-label="Vídeo demonstrativo">
+    <button type="button" class="mkp-modal-close" id="mkp-demo-close" aria-label="Fechar">×</button>
+    <div class="mkp-modal-dialog">
+        <iframe id="mkp-demo-frame" title="Demonstração Expandor" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+        <video id="mkp-demo-video" controls playsinline></video>
+    </div>
+</div>
+
+@include('marketplace.partials.premium-scripts')
 
 <script>
 (function () {

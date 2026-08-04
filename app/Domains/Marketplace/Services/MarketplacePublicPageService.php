@@ -2,7 +2,9 @@
 
 namespace App\Domains\Marketplace\Services;
 
+use App\Domains\Campaigns\Models\Campaign;
 use App\Domains\Company\Models\Plan;
+use App\Domains\Company\Models\User;
 use App\Domains\Marketplace\Enums\MarketplaceSectionType;
 use App\Domains\Marketplace\Growth\Services\MarketplaceCaseService;
 use App\Domains\Marketplace\Models\MarketplaceFaq;
@@ -12,7 +14,10 @@ use App\Domains\Marketplace\Models\MarketplaceTestimonial;
 use App\Domains\Marketplace\Repositories\MarketplaceContentRepository;
 use App\Domains\Marketplace\Repositories\MarketplaceSettingsRepository;
 use App\Domains\Platform\Support\PlanCatalog;
+use App\Domains\Sales\Properties\Models\Property;
+use App\Domains\Visits\Models\Visit;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class MarketplacePublicPageService
 {
@@ -117,12 +122,15 @@ class MarketplacePublicPageService
             ->orderBy('price')
             ->get();
 
+        $gallery = $this->content->activeMedia('image');
+        $premium = $this->resolvePremium($defaults, $settings, $gallery);
+
         return [
             'settings' => $settings,
             'sections' => $sections->values(),
             'testimonials' => $testimonials->values(),
             'faqs' => $faqs->values(),
-            'gallery' => $this->content->activeMedia('image'),
+            'gallery' => $gallery,
             'videos' => $this->content->activeMedia('video'),
             'plans' => $plans,
             'cases' => $this->cases->active(),
@@ -133,12 +141,81 @@ class MarketplacePublicPageService
             'footer' => $defaults['footer'] ?? [],
             'brand' => $defaults['brand'] ?? 'Expandor',
             'videoFallbackImage' => $defaults['sections']['video']['image'] ?? '/images/marketplace/product-preview.svg',
-            'heroFallbackImage' => $defaults['sections']['hero']['image'] ?? '/images/marketplace/hero-saas.svg',
+            'heroFallbackImage' => $defaults['sections']['hero']['image'] ?? '/images/marketplace/screens/dashboard.svg',
             'heroSecondary' => [
                 'text' => $defaults['sections']['hero']['button_text_secondary'] ?? 'Solicitar demonstração',
                 'url' => $defaults['sections']['hero']['button_url_secondary'] ?? '#demo',
             ],
+            'premium' => $premium,
+            'metrics' => $this->platformMetrics($defaults, $settings),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $defaults
+     * @return array<string, mixed>
+     */
+    protected function resolvePremium(array $defaults, MarketplaceSetting $settings, Collection $gallery): array
+    {
+        $overrides = $settings->conversionOverrides();
+
+        $showcase = $gallery->isNotEmpty()
+            ? $gallery->map(fn ($item) => [
+                'title' => $item->title ?: 'Tela Expandor',
+                'image' => $item->displayUrl(),
+            ])->filter(fn ($row) => filled($row['image']))->values()->all()
+            : ($overrides['showcase'] ?? $defaults['showcase'] ?? []);
+
+        return [
+            'showcase' => $showcase,
+            'how_it_works' => $overrides['how_it_works'] ?? $defaults['how_it_works'] ?? [],
+            'before_after' => $overrides['before_after'] ?? $defaults['before_after'] ?? [
+                'before' => [],
+                'after' => [],
+            ],
+            'social_proof_title' => $overrides['social_proof_title']
+                ?? ($defaults['social_proof']['title'] ?? 'Empresas organizam suas operações comerciais com Expandor'),
+            'client_logos' => $overrides['client_logos'] ?? [],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $defaults
+     * @return list<array{key: string, label: string, value: int}>
+     */
+    protected function platformMetrics(array $defaults, MarketplaceSetting $settings): array
+    {
+        $overrides = $settings->conversionOverrides();
+        $labels = collect($defaults['social_proof']['metrics'] ?? [])
+            ->keyBy('key');
+
+        $counts = Cache::remember('marketplace.public.metrics.v1', now()->addMinutes(5), function () {
+            return [
+                'sellers' => (int) User::query()->withoutGlobalScopes()->count(),
+                'customers' => (int) Property::query()->withoutGlobalScopes()->count(),
+                'visits' => (int) Visit::query()->withoutGlobalScopes()->count(),
+                'campaigns' => (int) Campaign::query()->withoutGlobalScopes()->count(),
+            ];
+        });
+
+        if (isset($overrides['metrics']) && is_array($overrides['metrics'])) {
+            foreach ($overrides['metrics'] as $key => $value) {
+                if (is_numeric($value)) {
+                    $counts[$key] = (int) $value;
+                }
+            }
+        }
+
+        $metrics = [];
+        foreach (['sellers', 'customers', 'visits', 'campaigns'] as $key) {
+            $metrics[] = [
+                'key' => $key,
+                'label' => $labels[$key]['label'] ?? ucfirst($key),
+                'value' => (int) ($counts[$key] ?? 0),
+            ];
+        }
+
+        return $metrics;
     }
 
     /**

@@ -184,7 +184,7 @@ class Sprint802MarketplaceSocialFloatingHotfixTest extends TestCase
 
         $this->get(route('marketplace.home'))
             ->assertOk()
-            ->assertSee('Venda mais', false)
+            ->assertSee('Transforme sua equipe de vendas externas', false)
             ->assertDontSee('class="mkp-whatsapp"', false);
     }
 }
