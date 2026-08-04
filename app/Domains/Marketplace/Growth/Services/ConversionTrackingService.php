@@ -86,6 +86,10 @@ class ConversionTrackingService
             'marketplace.signup_completed',
             'marketplace.lead_created',
             'marketplace.roi_calculated',
+            'marketplace.lead_scored',
+            'marketplace.lead_hot_detected',
+            'marketplace.pipeline_changed',
+            'marketplace.demo_scheduled',
         ];
 
         if (! in_array($event, $allowed, true)) {

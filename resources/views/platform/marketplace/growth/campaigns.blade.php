@@ -46,6 +46,11 @@
                     <input class="form-control" id="campaign" name="campaign" maxlength="180"
                            value="{{ old('campaign') }}" placeholder="crm-brasil">
                 </div>
+                <div class="form-group">
+                    <label for="investment">Investimento (R$)</label>
+                    <input class="form-control" id="investment" name="investment" type="number" min="0" step="0.01"
+                           value="{{ old('investment', 0) }}">
+                </div>
             </div>
 
             <div class="form-group">
@@ -70,6 +75,7 @@
                 <th>Source</th>
                 <th>Medium</th>
                 <th>Campaign</th>
+                <th>Investimento</th>
                 <th>Status</th>
                 <th></th>
             </tr>
@@ -81,6 +87,7 @@
                     <td>{{ $campaign->source ?: '—' }}</td>
                     <td>{{ $campaign->medium ?: '—' }}</td>
                     <td>{{ $campaign->campaign ?: '—' }}</td>
+                    <td>R$ {{ number_format((float) $campaign->investment, 2, ',', '.') }}</td>
                     <td>
                         @if($campaign->active)
                             <span class="badge" style="color:var(--success);">Ativa</span>
@@ -98,7 +105,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6">Nenhuma campanha cadastrada.</td></tr>
+                <tr><td colspan="7">Nenhuma campanha cadastrada.</td></tr>
             @endforelse
             </tbody>
         </table>

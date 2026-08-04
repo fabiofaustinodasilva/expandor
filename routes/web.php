@@ -6,8 +6,10 @@ use App\Http\Controllers\Web\Marketplace\MarketplaceGrowthController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceAnalyticsDashboardController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceCampaignsController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceCasesController;
+use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceIntelligenceController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceLeadsController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceMediaController;
+use App\Http\Controllers\Web\Platform\Marketplace\MarketplacePipelineController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSectionController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSegmentsController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSettingsController;
@@ -216,6 +218,10 @@ Route::middleware([
             Route::get('/campaigns', [MarketplaceCampaignsController::class, 'index'])->name('campaigns.index');
             Route::post('/campaigns', [MarketplaceCampaignsController::class, 'store'])->name('campaigns.store');
             Route::delete('/campaigns/{campaign}', [MarketplaceCampaignsController::class, 'destroy'])->name('campaigns.destroy');
+
+            Route::get('/intelligence', MarketplaceIntelligenceController::class)->name('intelligence');
+            Route::get('/pipeline', [MarketplacePipelineController::class, 'index'])->name('pipeline.index');
+            Route::put('/pipeline/{pipeline}', [MarketplacePipelineController::class, 'update'])->name('pipeline.update');
         });
     });
 

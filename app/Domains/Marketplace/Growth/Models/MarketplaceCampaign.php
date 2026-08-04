@@ -13,6 +13,7 @@ class MarketplaceCampaign extends Model
         'source',
         'medium',
         'campaign',
+        'investment',
         'active',
     ];
 
@@ -20,6 +21,7 @@ class MarketplaceCampaign extends Model
     {
         return [
             'active' => 'boolean',
+            'investment' => 'float',
         ];
     }
 }

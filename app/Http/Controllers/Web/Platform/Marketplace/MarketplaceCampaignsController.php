@@ -29,11 +29,13 @@ class MarketplaceCampaignsController extends Controller
             'source' => ['nullable', 'string', 'max:120'],
             'medium' => ['nullable', 'string', 'max:120'],
             'campaign' => ['nullable', 'string', 'max:180'],
+            'investment' => ['nullable', 'numeric', 'min:0'],
             'active' => ['sometimes', 'boolean'],
         ]);
 
         $campaigns->create(array_merge($validated, [
             'active' => $request->boolean('active', true),
+            'investment' => (float) ($validated['investment'] ?? 0),
         ]));
 
         return back()->with('success', 'Campanha criada.');

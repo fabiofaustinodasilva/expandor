@@ -3,8 +3,12 @@
 namespace App\Domains\Marketplace\Growth\Models;
 
 use App\Domains\Marketplace\Growth\Enums\MarketplaceLeadStatus;
+use App\Domains\Marketplace\Models\MarketplaceEvent;
+use App\Domains\Marketplace\Revenue\Models\MarketplaceLeadScore;
+use App\Domains\Marketplace\Revenue\Models\MarketplaceSalesPipeline;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MarketplaceLead extends Model
 {
@@ -37,6 +41,16 @@ class MarketplaceLead extends Model
 
     public function events(): HasMany
     {
-        return $this->hasMany(\App\Domains\Marketplace\Models\MarketplaceEvent::class, 'lead_id');
+        return $this->hasMany(MarketplaceEvent::class, 'lead_id');
+    }
+
+    public function score(): HasOne
+    {
+        return $this->hasOne(MarketplaceLeadScore::class, 'lead_id');
+    }
+
+    public function pipeline(): HasOne
+    {
+        return $this->hasOne(MarketplaceSalesPipeline::class, 'lead_id');
     }
 }

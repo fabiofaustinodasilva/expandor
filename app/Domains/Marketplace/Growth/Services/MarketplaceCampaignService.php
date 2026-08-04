@@ -28,6 +28,7 @@ class MarketplaceCampaignService
             'source' => $data['source'] ?? null,
             'medium' => $data['medium'] ?? null,
             'campaign' => $data['campaign'] ?? null,
+            'investment' => (float) ($data['investment'] ?? 0),
             'active' => (bool) ($data['active'] ?? true),
         ]);
     }
