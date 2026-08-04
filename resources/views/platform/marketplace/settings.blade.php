@@ -12,7 +12,14 @@
             <h1 class="page-title" style="margin:0;">Configuração do Marketplace</h1>
             <div class="header-meta">Identidade visual, SEO e integrações da landing page pública.</div>
         </div>
-        <a class="btn btn-ghost" href="{{ route('platform.marketplace.preview') }}" target="_blank" rel="noopener">Visualizar preview</a>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <form method="POST" action="{{ route('platform.marketplace.settings.restore') }}"
+                  onsubmit="return confirm('Restaurar o conteúdo padrão do Marketplace? Textos de seções, FAQ e depoimentos serão substituídos. Logos e mídias enviadas serão preservados.');">
+                @csrf
+                <button type="submit" class="btn btn-ghost">Restaurar Conteúdo Padrão</button>
+            </form>
+            <a class="btn btn-ghost" href="{{ route('platform.marketplace.preview') }}" target="_blank" rel="noopener">Visualizar preview</a>
+        </div>
     </div>
 
     <form method="POST" action="{{ route('platform.marketplace.settings.update') }}" enctype="multipart/form-data">

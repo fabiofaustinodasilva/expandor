@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="Expandor product preview">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" rx="28" fill="url(#g)"/>
+  <rect x="48" y="48" width="864" height="444" rx="20" fill="#0B1220" stroke="#334155" stroke-width="2"/>
+  <circle cx="480" cy="270" r="54" fill="#3B82F6" opacity="0.9"/>
+  <polygon points="468,240 468,300 516,270" fill="#0B1220"/>
+  <text x="480" y="370" text-anchor="middle" fill="#94A3B8" font-family="Segoe UI, system-ui, sans-serif" font-size="22">Demonstração do produto</text>
+  <text x="480" y="402" text-anchor="middle" fill="#64748B" font-family="Segoe UI, system-ui, sans-serif" font-size="16">Configure um vídeo no CMS ou solicite uma demo</text>
+</svg>

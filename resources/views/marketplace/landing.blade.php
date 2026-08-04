@@ -6,14 +6,19 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     @php
-        $pageTitle = $settings->seo_title ?: ($settings->title ?: 'Expandor — CRM inteligente');
+        $brandName = $brand ?? 'Expandor';
+        $pageTitle = $settings->seo_title ?: ($settings->title ?: $brandName.' — CRM inteligente');
         $pageDescription = $settings->seo_description ?: ($settings->description ?: 'CRM de campo e gestão comercial.');
         $pageKeywords = $settings->seo_keywords ?: 'crm, vendas, saas, expandor';
-        $ogImage = $settings->mediaUrl($settings->hero_image) ?: $settings->mediaUrl($settings->logo);
+        $ogImage = $settings->mediaUrl($settings->hero_image) ?: $settings->mediaUrl($settings->logo) ?: asset($heroFallbackImage ?? '/images/marketplace/hero-saas.svg');
         $primary = $settings->primary_color ?: '#3B82F6';
         $secondary = $settings->secondary_color ?: '#0F172A';
         $background = $settings->background_color ?: '#0B1220';
         $button = $settings->button_color ?: '#F59E0B';
+        $navItems = $nav ?? [];
+        $navActionItems = $navActions ?? [];
+        $footerData = $footer ?? [];
+        $heroSecondaryCta = $heroSecondary ?? ['text' => 'Solicitar demonstração', 'url' => '#demo'];
     @endphp
 
     <title>{{ $pageTitle }}</title>
@@ -570,16 +575,40 @@
         }
 
         .mkp-footer-inner {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: 1.2fr 1fr auto;
             gap: 1.5rem;
+            align-items: start;
         }
+
+        .mkp-footer-brand {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .mkp-footer-brand .mkp-logo img { height: 32px; }
 
         .mkp-footer-copy {
             color: var(--mkp-muted);
             font-size: 0.85rem;
+        }
+
+        .mkp-footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem 1.15rem;
+        }
+
+        .mkp-footer-links a {
+            color: var(--mkp-muted);
+            font-size: 0.88rem;
+        }
+
+        .mkp-footer-links a:hover { color: var(--mkp-text); }
+
+        @media (max-width: 768px) {
+            .mkp-footer-inner { grid-template-columns: 1fr; }
         }
 
         /* WhatsApp floating */
@@ -667,28 +696,38 @@
     <div class="mkp-container mkp-header-inner">
         <a href="#inicio" class="mkp-logo">
             @if($settings->mediaUrl($settings->logo))
-                <img src="{{ $settings->mediaUrl($settings->logo) }}" alt="{{ $settings->title ?: 'Expandor' }}" loading="lazy">
+                <img src="{{ $settings->mediaUrl($settings->logo) }}" alt="{{ $brandName }}" loading="lazy">
             @else
-                Expandor
+                {{ $brandName }}
             @endif
         </a>
 
         <button type="button" class="mkp-menu-toggle" id="mkp-menu-toggle" aria-expanded="false" aria-controls="mkp-nav">Menu</button>
 
         <nav class="mkp-nav" id="mkp-nav" aria-label="Navegação principal">
-            <a href="#inicio">Início</a>
-            <a href="#quem-somos">Quem Somos</a>
-            <a href="#recursos">Recursos</a>
-            <a href="#demonstracao">Demonstração</a>
-            <a href="#planos">Planos</a>
-            <a href="#depoimentos">Depoimentos</a>
-            <a href="#contato">Contato</a>
+            @foreach($navItems as $item)
+                <a href="{{ $item['href'] }}">{{ $item['label'] }}</a>
+            @endforeach
         </nav>
 
         <div class="mkp-header-actions">
-            <a href="#demo" class="mkp-btn mkp-btn-outline">Solicitar demonstração</a>
-            <a class="mkp-btn mkp-btn-ghost" href="{{ route('login') }}">Entrar</a>
-            <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">Teste grátis</a>
+            @foreach($navActionItems as $action)
+                @php
+                    $actionHref = !empty($action['route'])
+                        ? route($action['href'])
+                        : ($action['href'] ?? '#');
+                    $actionClass = match ($action['style'] ?? 'ghost') {
+                        'primary' => 'mkp-btn mkp-btn-primary',
+                        'outline' => 'mkp-btn mkp-btn-outline',
+                        default => 'mkp-btn mkp-btn-ghost',
+                    };
+                @endphp
+                <a class="{{ $actionClass }}"
+                   href="{{ $actionHref }}"
+                   @if(!empty($action['event'])) data-mkp-event="{{ $action['event'] }}" @endif>
+                    {{ $action['label'] }}
+                </a>
+            @endforeach
         </div>
     </div>
 </header>
@@ -705,7 +744,7 @@
                     $heroTitle = $section->title ?: $settings->title;
                     $heroSubtitle = $section->subtitle ?: $settings->subtitle;
                     $heroDesc = $section->description ?: $settings->description;
-                    $heroImage = $section->imageUrl() ?: $settings->mediaUrl($settings->hero_image);
+                    $heroImage = $section->imageUrl() ?: $settings->mediaUrl($settings->hero_image) ?: asset($heroFallbackImage ?? '/images/marketplace/hero-saas.svg');
                     $heroVideo = $section->videoUrl() ?: ($settings->hero_video ?: null);
                 @endphp
                 <section id="inicio" class="mkp-section mkp-hero mkp-fade" data-mkp-view="marketplace.hero_view">
@@ -714,7 +753,7 @@
                             <div class="mkp-hero-copy">
                                 <div class="mkp-hero-glow" aria-hidden="true"></div>
                                 @if($heroTitle)
-                                    <h1 class="mkp-title">{{ $heroTitle }}</h1>
+                                    <h1 class="mkp-title">{!! nl2br(e($heroTitle)) !!}</h1>
                                 @endif
                                 @if($heroSubtitle)
                                     <p class="mkp-subtitle" style="margin-bottom:1rem;">{{ $heroSubtitle }}</p>
@@ -732,21 +771,21 @@
                                     @else
                                         <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">Teste grátis</a>
                                     @endif
-                                    <a class="mkp-btn mkp-btn-outline" href="{{ route('marketplace.plans') }}">Ver planos</a>
+                                    <a class="mkp-btn mkp-btn-outline" href="{{ $heroSecondaryCta['url'] ?? '#demo' }}">
+                                        {{ $heroSecondaryCta['text'] ?? 'Solicitar demonstração' }}
+                                    </a>
                                     @if($settings->whatsappLink())
                                         <a class="mkp-btn mkp-btn-ghost" href="{{ $settings->whatsappLink() }}" target="_blank" rel="noopener" data-mkp-event="marketplace.whatsapp_clicked">WhatsApp</a>
                                     @endif
                                 </div>
                             </div>
-                            @if($heroVideo || $heroImage)
-                                <div class="mkp-hero-media">
-                                    @if($heroVideo)
-                                        <video src="{{ $heroVideo }}" autoplay muted loop playsinline loading="lazy"></video>
-                                    @elseif($heroImage)
-                                        <img src="{{ $heroImage }}" alt="" loading="lazy">
-                                    @endif
-                                </div>
-                            @endif
+                            <div class="mkp-hero-media">
+                                @if($heroVideo)
+                                    <video src="{{ $heroVideo }}" autoplay muted loop playsinline loading="lazy"></video>
+                                @else
+                                    <img src="{{ $heroImage }}" alt="{{ $brandName }}" loading="lazy">
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -785,13 +824,8 @@
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Features)
                 @php
                     $featureItems = json_decode($section->description ?? '', true);
-                    if (! is_array($featureItems) || empty($featureItems)) {
-                        $featureItems = [
-                            ['title' => 'CRM', 'description' => 'Gerencie seus clientes e oportunidades.'],
-                            ['title' => 'Vendas', 'description' => 'Acompanhe todo processo comercial.'],
-                            ['title' => 'Equipe', 'description' => 'Controle usuários e permissões.'],
-                            ['title' => 'Dashboard', 'description' => 'Tenha visão completa do negócio.'],
-                        ];
+                    if (! is_array($featureItems)) {
+                        $featureItems = [];
                     }
                 @endphp
                 <section id="recursos" class="mkp-section mkp-fade" data-mkp-view="marketplace.feature_view">
@@ -866,6 +900,11 @@
                                     @endif
                                 @endforeach
                             </div>
+                        @else
+                            <div class="mkp-hero-media" style="max-width:860px;margin:0 auto;">
+                                <img src="{{ $section->imageUrl() ?: asset($videoFallbackImage ?? '/images/marketplace/product-preview.svg') }}"
+                                     alt="{{ $section->title ?: 'Demonstração' }}" loading="lazy">
+                            </div>
                         @endif
                     </div>
                 </section>
@@ -896,43 +935,41 @@
                 @break
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Testimonials)
-                @if($testimonials->isNotEmpty())
-                    <section id="depoimentos" class="mkp-section mkp-section-alt mkp-fade">
-                        <div class="mkp-container">
-                            <div class="mkp-section-head">
-                                @if($section->subtitle)
-                                    <span class="mkp-eyebrow">{{ $section->subtitle }}</span>
-                                @endif
-                                <h2 class="mkp-title">{{ $section->title ?: 'Depoimentos' }}</h2>
-                            </div>
-                            <div class="mkp-testimonials-grid">
-                                @foreach($testimonials as $t)
-                                    <blockquote class="mkp-testimonial mkp-fade">
-                                        <div class="mkp-testimonial-header">
-                                            @if($t->avatarUrl())
-                                                <img class="mkp-avatar" src="{{ $t->avatarUrl() }}" alt="{{ $t->name }}" loading="lazy">
-                                            @else
-                                                <div class="mkp-avatar mkp-avatar-placeholder">{{ mb_substr($t->name, 0, 1) }}</div>
-                                            @endif
-                                            <div>
-                                                <strong>{{ $t->name }}</strong>
-                                                @if($t->company)
-                                                    <div class="mkp-subtitle" style="font-size:0.82rem;">{{ $t->company }}</div>
-                                                @endif
-                                                @if($t->rating)
-                                                    <div class="mkp-stars" aria-label="{{ $t->rating }} estrelas">
-                                                        @for($s = 0; $s < $t->rating; $s++)★@endfor
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <p class="mkp-testimonial-text">"{{ $t->text }}"</p>
-                                    </blockquote>
-                                @endforeach
-                            </div>
+                <section id="clientes" class="mkp-section mkp-section-alt mkp-fade">
+                    <div class="mkp-container">
+                        <div class="mkp-section-head">
+                            @if($section->subtitle)
+                                <span class="mkp-eyebrow">{{ $section->subtitle }}</span>
+                            @endif
+                            <h2 class="mkp-title">{{ $section->title ?: 'Clientes' }}</h2>
                         </div>
-                    </section>
-                @endif
+                        <div class="mkp-testimonials-grid">
+                            @foreach($testimonials as $t)
+                                <blockquote class="mkp-testimonial mkp-fade">
+                                    <div class="mkp-testimonial-header">
+                                        @if($t->avatarUrl())
+                                            <img class="mkp-avatar" src="{{ $t->avatarUrl() }}" alt="{{ $t->name }}" loading="lazy">
+                                        @else
+                                            <div class="mkp-avatar mkp-avatar-placeholder">{{ mb_substr($t->name, 0, 1) }}</div>
+                                        @endif
+                                        <div>
+                                            <strong>{{ $t->name }}</strong>
+                                            @if($t->company)
+                                                <div class="mkp-subtitle" style="font-size:0.82rem;">{{ $t->company }}</div>
+                                            @endif
+                                            @if($t->rating)
+                                                <div class="mkp-stars" aria-label="{{ $t->rating }} estrelas">
+                                                    @for($s = 0; $s < $t->rating; $s++)★@endfor
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <p class="mkp-testimonial-text">"{{ $t->text }}"</p>
+                                </blockquote>
+                            @endforeach
+                        </div>
+                    </div>
+                </section>
                 @break
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Plans)
@@ -1003,26 +1040,24 @@
                 @break
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Faq)
-                @if($faqs->isNotEmpty())
-                    <section class="mkp-section mkp-section-alt mkp-fade">
-                        <div class="mkp-container">
-                            <div class="mkp-section-head">
-                                @if($section->subtitle)
-                                    <span class="mkp-eyebrow">{{ $section->subtitle }}</span>
-                                @endif
-                                <h2 class="mkp-title">{{ $section->title ?: 'Perguntas frequentes' }}</h2>
-                            </div>
-                            <div class="mkp-faq-list">
-                                @foreach($faqs as $faq)
-                                    <div class="mkp-faq-item">
-                                        <button type="button" class="mkp-faq-q" aria-expanded="false">{{ $faq->question }}</button>
-                                        <div class="mkp-faq-a">{{ $faq->answer }}</div>
-                                    </div>
-                                @endforeach
-                            </div>
+                <section id="faq" class="mkp-section mkp-section-alt mkp-fade">
+                    <div class="mkp-container">
+                        <div class="mkp-section-head">
+                            @if($section->subtitle)
+                                <span class="mkp-eyebrow">{{ $section->subtitle }}</span>
+                            @endif
+                            <h2 class="mkp-title">{{ $section->title ?: 'Perguntas frequentes' }}</h2>
                         </div>
-                    </section>
-                @endif
+                        <div class="mkp-faq-list">
+                            @foreach($faqs as $faq)
+                                <div class="mkp-faq-item">
+                                    <button type="button" class="mkp-faq-q" aria-expanded="false">{{ $faq->question }}</button>
+                                    <div class="mkp-faq-a">{{ $faq->answer }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </section>
                 @break
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Cta)
@@ -1056,9 +1091,26 @@
 
 <footer class="mkp-footer">
     <div class="mkp-container mkp-footer-inner">
-        <div class="mkp-footer-copy">
-            &copy; {{ date('Y') }} {{ $settings->title ?: 'Expandor' }}. Todos os direitos reservados.
+        <div class="mkp-footer-brand">
+            <a href="#inicio" class="mkp-logo">
+                @if($settings->mediaUrl($settings->logo))
+                    <img src="{{ $settings->mediaUrl($settings->logo) }}" alt="{{ $brandName }}" loading="lazy">
+                @else
+                    {{ $brandName }}
+                @endif
+            </a>
+            <div class="mkp-footer-copy">
+                &copy; {{ date('Y') }} {{ $settings->title ?: $brandName }}. {{ $footerData['rights'] ?? 'Todos os direitos reservados.' }}
+            </div>
         </div>
+        <nav class="mkp-footer-links" aria-label="Rodapé">
+            @foreach(($footerData['links'] ?? []) as $link)
+                @php
+                    $footerHref = !empty($link['route']) ? route($link['href']) : ($link['href'] ?? '#');
+                @endphp
+                <a href="{{ $footerHref }}">{{ $link['label'] }}</a>
+            @endforeach
+        </nav>
         <x-marketplace-social-links :settings="$settings" />
     </div>
 </footer>

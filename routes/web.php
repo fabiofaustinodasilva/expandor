@@ -193,6 +193,7 @@ Route::middleware([
         Route::prefix('marketplace')->name('marketplace.')->group(function (): void {
             Route::get('/settings', [MarketplaceSettingsController::class, 'edit'])->name('settings.edit');
             Route::put('/settings', [MarketplaceSettingsController::class, 'update'])->name('settings.update');
+            Route::post('/settings/restore-defaults', [MarketplaceSettingsController::class, 'restoreDefaults'])->name('settings.restore');
             Route::get('/preview', [MarketplaceSettingsController::class, 'preview'])->name('preview');
 
             Route::get('/sections', [MarketplaceSectionController::class, 'index'])->name('sections.index');

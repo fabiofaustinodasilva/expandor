@@ -3,8 +3,12 @@
 namespace App\Domains\Marketplace\Services;
 
 use App\Domains\Company\Models\Plan;
+use App\Domains\Marketplace\Enums\MarketplaceSectionType;
 use App\Domains\Marketplace\Growth\Services\MarketplaceCaseService;
+use App\Domains\Marketplace\Models\MarketplaceFaq;
+use App\Domains\Marketplace\Models\MarketplaceSection;
 use App\Domains\Marketplace\Models\MarketplaceSetting;
+use App\Domains\Marketplace\Models\MarketplaceTestimonial;
 use App\Domains\Marketplace\Repositories\MarketplaceContentRepository;
 use App\Domains\Marketplace\Repositories\MarketplaceSettingsRepository;
 use App\Domains\Platform\Support\PlanCatalog;
@@ -19,17 +23,26 @@ class MarketplacePublicPageService
     ) {}
 
     /**
+     * Monta a landing pública.
+     * Fluxo: defaults (config) → CMS sobrescreve → payload nunca vazio.
+     *
      * @return array{
      *   settings: MarketplaceSetting,
-     *   sections: Collection,
-     *   testimonials: Collection,
-     *   faqs: Collection,
+     *   sections: Collection<int, MarketplaceSection>,
+     *   testimonials: Collection<int, MarketplaceTestimonial>,
+     *   faqs: Collection<int, MarketplaceFaq>,
      *   gallery: Collection,
      *   videos: Collection,
      *   plans: Collection,
      *   cases: Collection,
      *   featureLabels: array<string, string>,
-     *   whatsappContext: string|null
+     *   whatsappContext: string|null,
+     *   nav: array<int, array{label: string, href: string}>,
+     *   navActions: array<int, array<string, mixed>>,
+     *   footer: array<string, mixed>,
+     *   brand: string,
+     *   videoFallbackImage: string,
+     *   heroFallbackImage: string
      * }
      */
     public function assemble(bool $bypassCache = false): array
@@ -40,21 +53,63 @@ class MarketplacePublicPageService
     }
 
     /**
-     * @return array{
-     *   settings: MarketplaceSetting,
-     *   sections: Collection,
-     *   testimonials: Collection,
-     *   faqs: Collection,
-     *   gallery: Collection,
-     *   videos: Collection,
-     *   plans: Collection,
-     *   cases: Collection,
-     *   featureLabels: array<string, string>,
-     *   whatsappContext: string|null
-     * }
+     * @return array<string, mixed>
      */
     protected function build(): array
     {
+        $defaults = config('marketplace_defaults', []);
+        $settings = $this->overlaySettings($this->settings->current(), $defaults['settings'] ?? []);
+
+        $allSections = $this->content->allSections()
+            ->filter(fn (MarketplaceSection $section) => $section->type instanceof MarketplaceSectionType);
+
+        $cmsSections = $allSections
+            ->where('active', true)
+            ->values()
+            ->keyBy(fn (MarketplaceSection $section) => $section->type->value);
+
+        $configuredTypes = $allSections
+            ->map(fn (MarketplaceSection $section) => $section->type->value)
+            ->unique()
+            ->values()
+            ->all();
+
+        $sections = collect();
+        foreach (($defaults['section_order'] ?? []) as $type) {
+            if ($cmsSections->has($type)) {
+                $section = $cmsSections->get($type);
+                if ($type === MarketplaceSectionType::Features->value) {
+                    $section = $this->ensureFeaturesPayload($section, $defaults);
+                }
+                $sections->push($section);
+                continue;
+            }
+
+            // Tipo já cadastrado no CMS e inativo: respeita a escolha do admin (não reintroduz default).
+            // CTA é exceção: a landing comercial nunca fica sem chamada final.
+            if (in_array($type, $configuredTypes, true) && $type !== MarketplaceSectionType::Cta->value) {
+                continue;
+            }
+
+            $sections->push($this->makeDefaultSection($type, $defaults));
+        }
+
+        foreach ($cmsSections as $type => $section) {
+            if (! in_array($type, $defaults['section_order'] ?? [], true)) {
+                $sections->push($section);
+            }
+        }
+
+        $cmsTestimonials = $this->content->activeTestimonials();
+        $testimonials = $cmsTestimonials->isNotEmpty() || MarketplaceTestimonial::query()->exists()
+            ? $cmsTestimonials
+            : $this->defaultTestimonials($defaults);
+
+        $cmsFaqs = $this->content->activeFaqs();
+        $faqs = $cmsFaqs->isNotEmpty() || MarketplaceFaq::query()->exists()
+            ? $cmsFaqs
+            : $this->defaultFaqs($defaults);
+
         $plans = Plan::query()
             ->where('status', Plan::STATUS_ACTIVE)
             ->orderByDesc('is_featured')
@@ -63,16 +118,105 @@ class MarketplacePublicPageService
             ->get();
 
         return [
-            'settings' => $this->settings->current(),
-            'sections' => $this->content->activeSections(),
-            'testimonials' => $this->content->activeTestimonials(),
-            'faqs' => $this->content->activeFaqs(),
+            'settings' => $settings,
+            'sections' => $sections->values(),
+            'testimonials' => $testimonials->values(),
+            'faqs' => $faqs->values(),
             'gallery' => $this->content->activeMedia('image'),
             'videos' => $this->content->activeMedia('video'),
             'plans' => $plans,
             'cases' => $this->cases->active(),
             'featureLabels' => PlanCatalog::featureLabels(),
             'whatsappContext' => 'Origem: Marketplace',
+            'nav' => $defaults['nav'] ?? [],
+            'navActions' => $defaults['nav_actions'] ?? [],
+            'footer' => $defaults['footer'] ?? [],
+            'brand' => $defaults['brand'] ?? 'Expandor',
+            'videoFallbackImage' => $defaults['sections']['video']['image'] ?? '/images/marketplace/product-preview.svg',
+            'heroFallbackImage' => $defaults['sections']['hero']['image'] ?? '/images/marketplace/hero-saas.svg',
+            'heroSecondary' => [
+                'text' => $defaults['sections']['hero']['button_text_secondary'] ?? 'Solicitar demonstração',
+                'url' => $defaults['sections']['hero']['button_url_secondary'] ?? '#demo',
+            ],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $defaultSettings
+     */
+    protected function overlaySettings(MarketplaceSetting $settings, array $defaultSettings): MarketplaceSetting
+    {
+        foreach ($defaultSettings as $key => $value) {
+            $current = $settings->getAttribute($key);
+            if ($current === null || $current === '') {
+                $settings->setAttribute($key, $value);
+            }
+        }
+
+        return $settings;
+    }
+
+    /**
+     * @param  array<string, mixed>  $defaults
+     */
+    protected function makeDefaultSection(string $type, array $defaults): MarketplaceSection
+    {
+        $row = $defaults['sections'][$type] ?? [];
+        $description = $row['description'] ?? null;
+
+        if ($type === MarketplaceSectionType::Features->value) {
+            $description = json_encode($row['features'] ?? [], JSON_UNESCAPED_UNICODE);
+        }
+
+        return MarketplaceSection::make([
+            'type' => $type,
+            'title' => $row['title'] ?? null,
+            'subtitle' => $row['subtitle'] ?? null,
+            'description' => $description,
+            'image' => $row['image'] ?? null,
+            'video' => $row['video'] ?? null,
+            'button_text' => $row['button_text'] ?? null,
+            'button_url' => $row['button_url'] ?? null,
+            'order' => $row['order'] ?? 0,
+            'active' => true,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $defaults
+     */
+    protected function ensureFeaturesPayload(MarketplaceSection $section, array $defaults): MarketplaceSection
+    {
+        $items = json_decode((string) $section->description, true);
+        if (is_array($items) && $items !== []) {
+            return $section;
+        }
+
+        $section->description = json_encode(
+            $defaults['sections']['features']['features'] ?? [],
+            JSON_UNESCAPED_UNICODE
+        );
+
+        return $section;
+    }
+
+    /**
+     * @param  array<string, mixed>  $defaults
+     * @return Collection<int, MarketplaceTestimonial>
+     */
+    protected function defaultTestimonials(array $defaults): Collection
+    {
+        return collect($defaults['testimonials'] ?? [])
+            ->map(fn (array $row) => MarketplaceTestimonial::make($row));
+    }
+
+    /**
+     * @param  array<string, mixed>  $defaults
+     * @return Collection<int, MarketplaceFaq>
+     */
+    protected function defaultFaqs(array $defaults): Collection
+    {
+        return collect($defaults['faqs'] ?? [])
+            ->map(fn (array $row) => MarketplaceFaq::make($row));
     }
 }

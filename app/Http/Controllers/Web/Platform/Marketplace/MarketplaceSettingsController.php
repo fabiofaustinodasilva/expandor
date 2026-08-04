@@ -7,6 +7,7 @@ use App\Domains\Marketplace\Requests\UpdateMarketplaceSettingsRequest;
 use App\Domains\Marketplace\Services\MarketplacePublicPageService;
 use App\Domains\Marketplace\Services\MarketplaceSettingsService;
 use App\Http\Controllers\Controller;
+use Database\Seeders\MarketplaceDefaultSeeder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -42,6 +43,17 @@ class MarketplaceSettingsController extends Controller
         return redirect()
             ->route('platform.marketplace.settings.edit')
             ->with('success', 'Configuração do Marketplace salva.');
+    }
+
+    public function restoreDefaults(): RedirectResponse
+    {
+        $this->authorize('marketplace.manage');
+
+        (new MarketplaceDefaultSeeder)->run(force: true);
+
+        return redirect()
+            ->route('platform.marketplace.settings.edit')
+            ->with('success', 'Conteúdo padrão do Marketplace restaurado.');
     }
 
     public function preview(MarketplacePublicPageService $page): View

@@ -18,17 +18,19 @@ class MarketplaceSettingsRepository
                 return $row;
             }
 
+            $defaults = config('marketplace_defaults.settings', []);
+
             return MarketplaceSetting::query()->create([
-                'title' => 'Transforme sua empresa em uma operação inteligente',
-                'subtitle' => 'Controle clientes, vendas, equipes e processos em um único sistema.',
-                'description' => 'Expandor — CRM de campo e gestão comercial para equipes que vendem com inteligência.',
-                'primary_color' => '#3B82F6',
-                'secondary_color' => '#0F172A',
-                'background_color' => '#0B1220',
-                'button_color' => '#F59E0B',
-                'seo_title' => 'Expandor — CRM inteligente para vendas',
-                'seo_description' => 'Controle clientes, vendas, equipes e processos em um único sistema. Teste grátis.',
-                'seo_keywords' => 'crm, vendas, saas, expandor, gestão comercial',
+                'title' => $defaults['title'] ?? 'Expandor — CRM inteligente para vendas',
+                'subtitle' => $defaults['subtitle'] ?? 'CRM + Pipeline + WhatsApp + Equipe + Gestão Comercial em uma única plataforma.',
+                'description' => $defaults['description'] ?? 'Expandor — CRM de campo e gestão comercial.',
+                'primary_color' => $defaults['primary_color'] ?? '#3B82F6',
+                'secondary_color' => $defaults['secondary_color'] ?? '#0F172A',
+                'background_color' => $defaults['background_color'] ?? '#0B1220',
+                'button_color' => $defaults['button_color'] ?? '#F59E0B',
+                'seo_title' => $defaults['seo_title'] ?? 'Expandor — CRM inteligente para vendas',
+                'seo_description' => $defaults['seo_description'] ?? 'Teste grátis o Expandor.',
+                'seo_keywords' => $defaults['seo_keywords'] ?? 'crm, vendas, saas, expandor',
             ]);
         });
     }
