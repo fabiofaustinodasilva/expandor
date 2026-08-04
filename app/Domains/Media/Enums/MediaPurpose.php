@@ -10,6 +10,7 @@ enum MediaPurpose: string
     case LoginImage = 'login_image';
     case ProfilePhoto = 'photo';
     case ProductImage = 'product_image';
+    case MarketplaceImage = 'marketplace_image';
 
     public function allowsSvg(): bool
     {
@@ -28,7 +29,12 @@ enum MediaPurpose: string
 
     public function shouldThumbnail(): bool
     {
-        return in_array($this, [self::ProfilePhoto, self::ProductImage, self::Logo], true);
+        return in_array($this, [
+            self::ProfilePhoto,
+            self::ProductImage,
+            self::Logo,
+            self::MarketplaceImage,
+        ], true);
     }
 
     public function thumbnailMaxEdge(): int
@@ -37,6 +43,7 @@ enum MediaPurpose: string
             self::ProfilePhoto => 256,
             self::ProductImage => 320,
             self::Logo => 480,
+            self::MarketplaceImage => 960,
             default => 256,
         };
     }

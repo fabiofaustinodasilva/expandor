@@ -84,6 +84,27 @@ class MediaUploadService
     }
 
     /**
+     * Mídias do Marketplace CMS — path: platform/marketplace/...
+     */
+    public function storeMarketplace(
+        UploadedFile $file,
+        MediaPurpose $purpose = MediaPurpose::MarketplaceImage,
+        ?string $replacePath = null,
+        ?string $replaceThumbPath = null,
+        string $field = 'file',
+    ): MediaUploadResult {
+        return $this->persistToDirectory(
+            $file,
+            'platform/marketplace',
+            $purpose,
+            $replacePath,
+            $replaceThumbPath,
+            $field,
+            ['scope' => 'marketplace'],
+        );
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     protected function persistToDirectory(

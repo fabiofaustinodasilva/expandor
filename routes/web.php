@@ -1,6 +1,10 @@
 <?php
 
+use App\Http\Controllers\Web\Marketplace\MarketplaceAnalyticsController;
 use App\Http\Controllers\Web\Marketplace\MarketplaceController;
+use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceMediaController;
+use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSectionController;
+use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSettingsController;
 use App\Http\Controllers\Web\Onboarding\SaasOnboardingController;
 use App\Http\Controllers\Web\Onboarding\SetupWizardController;
 use App\Http\Controllers\Web\Onboarding\TourController;
@@ -66,8 +70,13 @@ use App\Http\Controllers\Web\Visits\VisitController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [MarketplaceController::class, 'home'])->name('marketplace.home');
+Route::get('/marketplace', [MarketplaceController::class, 'home'])->name('marketplace.landing');
 Route::get('/planos', [MarketplaceController::class, 'plans'])->name('marketplace.plans');
 Route::get('/assinar', [MarketplaceController::class, 'subscribe'])->name('marketplace.subscribe');
+Route::get('/sitemap.xml', [MarketplaceController::class, 'sitemap'])->name('marketplace.sitemap');
+Route::post('/marketplace/events', [MarketplaceAnalyticsController::class, 'store'])
+    ->middleware('throttle:60,1')
+    ->name('marketplace.events.store');
 Route::get('/assinar/aguardando', [CheckoutController::class, 'waiting'])->name('checkout.waiting');
 Route::get('/assinar/status/{uuid}', [CheckoutController::class, 'status'])->name('checkout.status');
 
@@ -155,6 +164,29 @@ Route::middleware([
         Route::post('/companies/{company}/health', [HealthScoreController::class, 'recalculate'])->name('health.recalculate');
         Route::get('/branding', [PlatformBrandingController::class, 'edit'])->name('branding.edit');
         Route::put('/branding', [PlatformBrandingController::class, 'update'])->name('branding.update');
+
+        Route::prefix('marketplace')->name('marketplace.')->group(function (): void {
+            Route::get('/settings', [MarketplaceSettingsController::class, 'edit'])->name('settings.edit');
+            Route::put('/settings', [MarketplaceSettingsController::class, 'update'])->name('settings.update');
+            Route::get('/preview', [MarketplaceSettingsController::class, 'preview'])->name('preview');
+
+            Route::get('/sections', [MarketplaceSectionController::class, 'index'])->name('sections.index');
+            Route::get('/sections/create', [MarketplaceSectionController::class, 'create'])->name('sections.create');
+            Route::post('/sections', [MarketplaceSectionController::class, 'store'])->name('sections.store');
+            Route::post('/sections/reorder', [MarketplaceSectionController::class, 'reorder'])->name('sections.reorder');
+            Route::get('/sections/{section}/edit', [MarketplaceSectionController::class, 'edit'])->name('sections.edit');
+            Route::put('/sections/{section}', [MarketplaceSectionController::class, 'update'])->name('sections.update');
+            Route::delete('/sections/{section}', [MarketplaceSectionController::class, 'destroy'])->name('sections.destroy');
+            Route::post('/sections/{section}/toggle', [MarketplaceSectionController::class, 'toggle'])->name('sections.toggle');
+
+            Route::get('/media', [MarketplaceMediaController::class, 'index'])->name('media.index');
+            Route::post('/media', [MarketplaceMediaController::class, 'store'])->name('media.store');
+            Route::post('/media/testimonials', [MarketplaceMediaController::class, 'storeTestimonial'])->name('media.testimonials.store');
+            Route::delete('/media/testimonials/{testimonial}', [MarketplaceMediaController::class, 'destroyTestimonial'])->name('media.testimonials.destroy');
+            Route::post('/media/faqs', [MarketplaceMediaController::class, 'storeFaq'])->name('media.faqs.store');
+            Route::delete('/media/faqs/{faq}', [MarketplaceMediaController::class, 'destroyFaq'])->name('media.faqs.destroy');
+            Route::delete('/media/{medium}', [MarketplaceMediaController::class, 'destroy'])->name('media.destroy');
+        });
     });
 
     Route::get('/dashboard', DashboardController::class)->name('dashboard');

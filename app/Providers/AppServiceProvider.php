@@ -37,6 +37,7 @@ use App\Domains\Onboarding\Listeners\RecordSaasOnboardingAudit;
 use App\Domains\Onboarding\Policies\OnboardingPolicy;
 use App\Domains\Onboarding\Services\OnboardingService;
 use App\Domains\Onboarding\Services\SaasOnboardingService;
+use App\Domains\Marketplace\Policies\MarketplacePolicy;
 use App\Domains\Platform\Listeners\SyncActivationEventsFromOnboarding;
 use App\Domains\Platform\Policies\PlatformPolicy;
 use App\Domains\Sales\Properties\Models\Address;
@@ -131,6 +132,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('platform.manageFeatureFlags', [PlatformPolicy::class, 'manageFeatureFlags']);
         Gate::define('platform.viewHealth', [PlatformPolicy::class, 'viewHealth']);
         Gate::define('platform.manageBranding', [PlatformPolicy::class, 'manageBranding']);
+        Gate::define('marketplace.manage', [MarketplacePolicy::class, 'manage']);
         Gate::define('privacy.view', [PrivacyPolicy::class, 'view']);
         Gate::define('privacy.manage', [PrivacyPolicy::class, 'manage']);
 

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Web\Marketplace;
 
 use App\Domains\Company\Models\Plan;
+use App\Domains\Marketplace\Services\MarketplaceAnalyticsService;
+use App\Domains\Marketplace\Services\MarketplacePublicPageService;
 use App\Domains\Payments\Services\CheckoutService;
 use App\Domains\Platform\Support\PlanCatalog;
 use App\Http\Controllers\Controller;
@@ -14,39 +16,35 @@ class MarketplaceController extends Controller
 {
     public function __construct(
         protected CheckoutService $checkout,
+        protected MarketplacePublicPageService $landing,
+        protected MarketplaceAnalyticsService $analytics,
     ) {}
 
     public function home(): View
     {
-        $featured = Plan::query()
-            ->where('status', Plan::STATUS_ACTIVE)
-            ->where(function ($query): void {
-                $query->where('is_featured', true)
-                    ->orWhere('price', '>', 0);
-            })
-            ->orderByDesc('is_featured')
-            ->orderBy('display_order')
-            ->orderBy('price')
-            ->limit(3)
-            ->get();
+        $data = $this->landing->assemble();
+        $this->analytics->record(MarketplaceAnalyticsService::PAGE_VIEW);
 
-        return view('marketplace.home', [
-            'featuredPlans' => $featured,
-            'featureLabels' => PlanCatalog::featureLabels(),
-        ]);
+        return view('marketplace.landing', array_merge($data, [
+            'preview' => false,
+        ]));
     }
 
     public function plans(): View
     {
         $plans = Plan::query()
             ->where('status', Plan::STATUS_ACTIVE)
+            ->orderByDesc('is_featured')
             ->orderBy('display_order')
             ->orderBy('price')
             ->get();
 
+        $page = $this->landing->assemble();
+
         return view('marketplace.plans', [
             'plans' => $plans,
             'featureLabels' => PlanCatalog::featureLabels(),
+            'settings' => $page['settings'],
         ]);
     }
 
@@ -62,6 +60,10 @@ class MarketplaceController extends Controller
                 ->first();
 
             if ($plan !== null) {
+                $this->analytics->record(MarketplaceAnalyticsService::PLAN_CLICKED, $request, [
+                    'plan_id' => $plan->id,
+                ]);
+
                 return redirect()->route('checkout.create', ['plan_id' => $plan->id]);
             }
 
@@ -76,5 +78,26 @@ class MarketplaceController extends Controller
             'plans' => $plans,
             'featureLabels' => PlanCatalog::featureLabels(),
         ]);
+    }
+
+    public function sitemap(): \Illuminate\Http\Response
+    {
+        $urls = [
+            url('/'),
+            route('marketplace.plans'),
+            route('signup.create'),
+            route('login'),
+        ];
+
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'
+            .'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+
+        foreach ($urls as $loc) {
+            $xml .= '<url><loc>'.e($loc).'</loc><changefreq>weekly</changefreq></url>';
+        }
+
+        $xml .= '</urlset>';
+
+        return response($xml, 200, ['Content-Type' => 'application/xml']);
     }
 }

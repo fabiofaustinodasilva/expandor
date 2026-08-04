@@ -8,6 +8,7 @@ enum MediaCategory: string
     case Profiles = 'profiles';
     case Products = 'products';
     case Platform = 'platform';
+    case Marketplace = 'marketplace';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum MediaCategory: string
             self::Profiles => 'Perfis',
             self::Products => 'Produtos',
             self::Platform => 'Plataforma',
+            self::Marketplace => 'Marketplace',
         };
     }
 }

@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             OnboardingSeeder::class,
             FeatureFlagSeeder::class,
+            MarketplaceCmsSeeder::class,
         ]);
     }
 }

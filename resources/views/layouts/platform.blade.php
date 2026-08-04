@@ -162,6 +162,13 @@
                 @can('platform.manageBranding')
                     <a class="nav-link {{ request()->routeIs('platform.branding.*') ? 'active' : '' }}" href="{{ route('platform.branding.edit') }}">Branding</a>
                 @endcan
+                @can('marketplace.manage')
+                    <div class="nav-label" style="margin-top:0.85rem;">Marketplace</div>
+                    <a class="nav-link {{ request()->routeIs('platform.marketplace.settings.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.settings.edit') }}">Configuração</a>
+                    <a class="nav-link {{ request()->routeIs('platform.marketplace.sections.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.sections.index') }}">Seções</a>
+                    <a class="nav-link {{ request()->routeIs('platform.marketplace.media.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.media.index') }}">Mídias</a>
+                    <a class="nav-link {{ request()->routeIs('platform.marketplace.preview') ? 'active' : '' }}" href="{{ route('platform.marketplace.preview') }}" target="_blank" rel="noopener">Visualizar Marketplace</a>
+                @endcan
                 @can('platform.manageFeatureFlags')
                     <a class="nav-link {{ request()->routeIs('platform.flags.*') ? 'active' : '' }}" href="{{ route('platform.flags.index') }}">Feature Flags</a>
                 @endcan
