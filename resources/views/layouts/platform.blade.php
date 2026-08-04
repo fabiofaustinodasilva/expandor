@@ -225,6 +225,7 @@
         </main>
     </div>
 </div>
+@include('partials.rc-ux-polish')
 @stack('scripts')
 </body>
 </html>

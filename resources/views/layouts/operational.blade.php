@@ -257,6 +257,7 @@
 
 <div id="op-toast" class="op-toast" role="status"></div>
 <script>if (window.lucide) { window.lucide.createIcons(); }</script>
+@include('partials.rc-ux-polish')
 @stack('scripts')
 @if($brand->customCss)<style>{!! $brand->customCss !!}</style>@endif
 </body>

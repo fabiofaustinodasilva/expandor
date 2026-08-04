@@ -327,5 +327,6 @@
 @if($brand->customCss)
     <style>{!! $brand->customCss !!}</style>
 @endif
+@include('partials.rc-ux-polish')
 </body>
 </html>

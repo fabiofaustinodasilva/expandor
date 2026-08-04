@@ -78,5 +78,12 @@
     @endif
     @yield('content')
 </div>
+@include('partials.rc-ux-polish')
+<style>
+    @media (max-width: 768px) {
+        .topnav { flex-direction: column; align-items: flex-start; }
+        .wrap { padding: 1.25rem 1rem; }
+    }
+</style>
 </body>
 </html>

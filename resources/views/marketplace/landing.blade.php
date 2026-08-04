@@ -625,10 +625,32 @@
             border-color: var(--mkp-primary);
         }
 
+        .mkp-menu-toggle {
+            display: none;
+            background: transparent;
+            border: 1px solid var(--mkp-border);
+            color: var(--mkp-text);
+            border-radius: 0.55rem;
+            padding: 0.45rem 0.65rem;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
         @media (max-width: 768px) {
             .mkp-hero-grid,
             .mkp-about-grid { grid-template-columns: 1fr; }
-            .mkp-nav { display: none; }
+            .mkp-menu-toggle { display: inline-flex; align-items: center; }
+            .mkp-nav {
+                display: none;
+                width: 100%;
+                flex-direction: column;
+                gap: 0.35rem;
+                padding: 0.75rem 0 0;
+            }
+            .mkp-nav.is-open { display: flex; }
+            .mkp-header-inner { flex-wrap: wrap; }
+            .mkp-header-actions { width: 100%; justify-content: stretch; }
+            .mkp-header-actions .mkp-btn { flex: 1; text-align: center; font-size: 0.82rem; padding: 0.55rem 0.65rem; }
             .mkp-section { padding: 3rem 0; }
         }
     </style>
@@ -645,13 +667,15 @@
     <div class="mkp-container mkp-header-inner">
         <a href="#inicio" class="mkp-logo">
             @if($settings->mediaUrl($settings->logo))
-                <img src="{{ $settings->mediaUrl($settings->logo) }}" alt="{{ $settings->title ?: 'Expandor' }}">
+                <img src="{{ $settings->mediaUrl($settings->logo) }}" alt="{{ $settings->title ?: 'Expandor' }}" loading="lazy">
             @else
                 Expandor
             @endif
         </a>
 
-        <nav class="mkp-nav" aria-label="Navegação principal">
+        <button type="button" class="mkp-menu-toggle" id="mkp-menu-toggle" aria-expanded="false" aria-controls="mkp-nav">Menu</button>
+
+        <nav class="mkp-nav" id="mkp-nav" aria-label="Navegação principal">
             <a href="#inicio">Início</a>
             <a href="#quem-somos">Quem Somos</a>
             <a href="#recursos">Recursos</a>
@@ -1043,6 +1067,21 @@
 
 <script>
 (function () {
+    var menuToggle = document.getElementById('mkp-menu-toggle');
+    var nav = document.getElementById('mkp-nav');
+    if (menuToggle && nav) {
+        menuToggle.addEventListener('click', function () {
+            var open = nav.classList.toggle('is-open');
+            menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        nav.querySelectorAll('a').forEach(function (link) {
+            link.addEventListener('click', function () {
+                nav.classList.remove('is-open');
+                menuToggle.setAttribute('aria-expanded', 'false');
+            });
+        });
+    }
+
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
     const eventsUrl = @json(route('marketplace.events.store'));
     let lastEventAt = 0;

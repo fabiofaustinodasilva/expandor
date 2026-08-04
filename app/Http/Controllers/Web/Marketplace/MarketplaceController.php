@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\Marketplace;
 use App\Domains\Company\Models\Plan;
 use App\Domains\Marketplace\Services\MarketplaceAnalyticsService;
 use App\Domains\Marketplace\Services\MarketplacePublicPageService;
+use App\Domains\Marketplace\Services\MarketplaceSettingsService;
 use App\Domains\Payments\Services\CheckoutService;
 use App\Domains\Platform\Support\PlanCatalog;
 use App\Http\Controllers\Controller;
@@ -18,6 +19,7 @@ class MarketplaceController extends Controller
         protected CheckoutService $checkout,
         protected MarketplacePublicPageService $landing,
         protected MarketplaceAnalyticsService $analytics,
+        protected MarketplaceSettingsService $settings,
     ) {}
 
     public function home(): View
@@ -39,12 +41,10 @@ class MarketplaceController extends Controller
             ->orderBy('price')
             ->get();
 
-        $page = $this->landing->assemble();
-
         return view('marketplace.plans', [
             'plans' => $plans,
             'featureLabels' => PlanCatalog::featureLabels(),
-            'settings' => $page['settings'],
+            'settings' => $this->settings->current(),
         ]);
     }
 
