@@ -403,6 +403,12 @@
             border-bottom: 1px solid var(--border, #2A3142);
         }
         .shell .sidebar .brand { display: none; }
+        .shell.is-nav-open .sidebar .brand {
+            display: flex;
+            min-height: 2.75rem;
+            padding: 0.35rem 0.65rem 0.85rem;
+            margin-bottom: 0.25rem;
+        }
         .content { padding: 1rem; }
         .header { padding: 0.85rem 1rem; }
         .btn { white-space: normal; }

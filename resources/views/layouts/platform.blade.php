@@ -32,13 +32,37 @@
             width: 260px;
             background: rgba(23, 26, 34, 0.95);
             border-right: 1px solid var(--border);
-            padding: 1.25rem 1rem;
+            padding: 1.1rem 0.85rem 1.25rem;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 0.85rem;
         }
-        .brand { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.02em; }
-        .brand span { color: var(--accent); }
+        .brand {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 3.4rem;
+            padding: 0.55rem 0.75rem 1.05rem;
+            margin: 0 0.15rem;
+            border-bottom: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+        }
+        .brand-mark {
+            font-size: 1.02rem;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            line-height: 1.1;
+            color: var(--text);
+            text-transform: uppercase;
+        }
+        .brand-sub {
+            margin-top: 0.4rem;
+            font-size: 0.66rem;
+            font-weight: 650;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--muted);
+            line-height: 1.2;
+        }
         .nav-group { display: flex; flex-direction: column; gap: 0.35rem; }
         .nav-label {
             font-size: 0.7rem;
@@ -142,12 +166,10 @@
 @endphp
 <div class="shell" id="platform-shell">
     <aside class="sidebar" id="platform-sidebar">
-        <div class="brand">
-            @php $platformBrand = app(\App\Domains\Platform\Services\PlatformBrandingService::class)->payload(); @endphp
-            @if($platformBrand->logoMark())
-                <img src="{{ $platformBrand->logoMark() }}" alt="{{ $platformBrand->name() }}" style="height:28px; max-width:120px; object-fit:contain; vertical-align:middle; margin-right:.4rem;">
-            @endif
-            {{ strtoupper($platformBrand->name()) }} <span>Admin</span>
+        @php $platformBrand = app(\App\Domains\Platform\Services\PlatformBrandingService::class)->payload(); @endphp
+        <div class="brand" aria-label="{{ $platformBrand->name() }}">
+            <div class="brand-mark">{{ $platformBrand->name() }}</div>
+            <div class="brand-sub">Painel administrativo</div>
         </div>
 
         @include('layouts.partials.platform-nav')
