@@ -49,7 +49,12 @@ class CreateCheckoutAction
         $buyerDocument = (string) ($data['buyer_document'] ?? '');
 
         // Bloqueia antes de criar checkout/pagamento/empresa parcial.
-        $this->integrity->assertCheckoutIdentityAvailable($buyerEmail, $buyerDocument);
+        $this->integrity->assertRegistrationIdentityAvailable(
+            $buyerEmail,
+            $buyerDocument,
+            'buyer_email',
+            'buyer_document',
+        );
 
         $data['buyer_email'] = $buyerEmail;
         $data['buyer_document'] = $buyerDocument;

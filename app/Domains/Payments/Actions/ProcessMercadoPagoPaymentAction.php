@@ -13,10 +13,12 @@ use App\Domains\Payments\Repositories\PaymentRepository;
 use App\Domains\Payments\Services\InvoiceService;
 use App\Domains\Payments\Services\PaymentService;
 use App\Domains\Payments\Services\SubscriptionService;
+use App\Domains\Security\Services\RegistrationIntegrityService;
 use App\Domains\Security\Services\SecurityService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Throwable;
 
@@ -157,6 +159,36 @@ class ProcessMercadoPagoPaymentAction
 
                 if ($customer === null) {
                     throw new RuntimeException('Customer not found for checkout.');
+                }
+
+                // Blindagem: não provisionar se e-mail/documento já existirem (legado/race).
+                try {
+                    app(RegistrationIntegrityService::class)
+                        ->assertRegistrationIdentityAvailable(
+                            (string) $checkout->buyer_email,
+                            $checkout->buyer_document,
+                            'buyer_email',
+                            'buyer_document',
+                        );
+                } catch (ValidationException $e) {
+                    $errors = $e->errors();
+                    $message = $errors['buyer_email'][0]
+                        ?? $errors['buyer_document'][0]
+                        ?? RegistrationIntegrityService::DUPLICATE_GENERIC_MESSAGE;
+
+                    Log::warning('mercadopago.payment.identity_conflict', [
+                        'payment_id' => $paymentId,
+                        'external_reference' => $externalReference !== '' ? $externalReference : null,
+                        'message' => $message,
+                    ]);
+
+                    return [
+                        'status' => 'approved',
+                        'provisioned' => false,
+                        'company_id' => null,
+                        'checkout_uuid' => $checkout->uuid,
+                        'message' => $message,
+                    ];
                 }
 
                 $checkout->forceFill([

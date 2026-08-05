@@ -60,27 +60,25 @@ class ProvisionTrialCompanyAction
 
         $email = strtolower(trim($data['admin_email']));
 
-        $emailTaken = User::query()
-            ->withoutGlobalScopes()
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->exists();
-
-        if ($emailTaken) {
-            throw ValidationException::withMessages([
-                'admin_email' => [\App\Domains\Security\Services\RegistrationIntegrityService::EMAIL_TAKEN_MESSAGE],
-            ]);
-        }
+        /** @var \App\Domains\Security\Services\RegistrationIntegrityService $integrity */
+        $integrity = app(\App\Domains\Security\Services\RegistrationIntegrityService::class);
+        $integrity->assertRegistrationIdentityAvailable(
+            $email,
+            $data['document'] ?? null,
+            'admin_email',
+            'document',
+        );
 
         $adminRole = Role::query()->where('slug', Role::ADMINISTRATOR)->firstOrFail();
         $segment = CompanySegment::tryFrom((string) $data['segment'])?->value
             ?? CompanySegment::OTHER->value;
         $withDemo = (bool) ($data['with_demo_data'] ?? true);
 
-        $result = DB::transaction(function () use ($data, $plan, $trialDays, $adminRole, $email, $segment) {
+        $result = DB::transaction(function () use ($data, $plan, $trialDays, $adminRole, $email, $segment, $integrity) {
             $company = Company::query()->create([
                 'name' => $data['company_name'],
                 'legal_name' => $data['company_name'],
-                'document' => $data['document'] ?? null,
+                'document' => $integrity->normalizeDocument($data['document'] ?? null) ?? ($data['document'] ?? null),
                 'email' => $email,
                 'phone' => $data['admin_whatsapp'],
                 'whatsapp' => $data['admin_whatsapp'],

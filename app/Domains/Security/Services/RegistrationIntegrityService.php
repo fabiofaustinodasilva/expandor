@@ -7,11 +7,11 @@ use App\Domains\Company\Models\User;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Regras de unicidade para cadastro SaaS multiempresa.
+ * Blindagem de unicidade SaaS — validar SEMPRE antes de checkout/pagamento/empresa/usuário.
  */
 class RegistrationIntegrityService
 {
-    public const EMAIL_TAKEN_MESSAGE = 'Este e-mail já possui uma conta cadastrada no Expandor. Utilize outro e-mail administrativo ou acesse sua conta existente.';
+    public const EMAIL_TAKEN_MESSAGE = 'Este e-mail já possui uma conta cadastrada no Expandor. Utilize outro e-mail administrativo ou faça login.';
 
     public const DUPLICATE_GENERIC_MESSAGE = 'Já existe um cadastro utilizando estas informações.';
 
@@ -33,22 +33,27 @@ class RegistrationIntegrityService
         return $digits !== null && $digits !== '' ? $digits : null;
     }
 
-    public function emailExists(string $email): bool
+    public function emailExists(string $email, ?int $ignoreUserId = null): bool
     {
         $email = $this->normalizeEmail($email);
 
-        return User::query()
+        $query = User::query()
             ->withoutGlobalScopes()
-            ->whereRaw('LOWER(email) = ?', [$email])
-            ->exists();
+            ->whereRaw('LOWER(email) = ?', [$email]);
+
+        if ($ignoreUserId !== null) {
+            $query->where('id', '!=', $ignoreUserId);
+        }
+
+        return $query->exists();
     }
 
     /**
      * @throws ValidationException
      */
-    public function assertEmailAvailable(string $email, string $field = 'buyer_email'): void
+    public function assertEmailAvailable(string $email, string $field = 'buyer_email', ?int $ignoreUserId = null): void
     {
-        if ($this->emailExists($email)) {
+        if ($this->emailExists($email, $ignoreUserId)) {
             throw ValidationException::withMessages([
                 $field => [self::EMAIL_TAKEN_MESSAGE],
             ]);
@@ -84,13 +89,13 @@ class RegistrationIntegrityService
     /**
      * @throws ValidationException
      */
-    public function assertCompanyDocumentAvailable(?string $document, string $field = 'buyer_document'): void
+    public function assertCompanyDocumentAvailable(?string $document, string $field = 'buyer_document', ?int $ignoreCompanyId = null): void
     {
         if ($document === null || trim($document) === '') {
             return;
         }
 
-        if ($this->companyDocumentExists($document)) {
+        if ($this->companyDocumentExists($document, $ignoreCompanyId)) {
             throw ValidationException::withMessages([
                 $field => [self::DOCUMENT_TAKEN_MESSAGE],
             ]);
@@ -98,13 +103,29 @@ class RegistrationIntegrityService
     }
 
     /**
-     * Valida pré-checkout: e-mail e documento.
+     * Ordem obrigatória: 1) e-mail 2) CPF/CNPJ.
+     *
+     * @throws ValidationException
+     */
+    public function assertRegistrationIdentityAvailable(
+        string $email,
+        ?string $document = null,
+        string $emailField = 'buyer_email',
+        string $documentField = 'buyer_document',
+        ?int $ignoreUserId = null,
+        ?int $ignoreCompanyId = null,
+    ): void {
+        $this->assertEmailAvailable($email, $emailField, $ignoreUserId);
+        $this->assertCompanyDocumentAvailable($document, $documentField, $ignoreCompanyId);
+    }
+
+    /**
+     * Alias de checkout público.
      *
      * @throws ValidationException
      */
     public function assertCheckoutIdentityAvailable(string $email, ?string $document = null): void
     {
-        $this->assertEmailAvailable($email, 'buyer_email');
-        $this->assertCompanyDocumentAvailable($document, 'buyer_document');
+        $this->assertRegistrationIdentityAvailable($email, $document, 'buyer_email', 'buyer_document');
     }
 }

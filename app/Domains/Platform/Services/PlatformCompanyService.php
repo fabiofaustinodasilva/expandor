@@ -169,11 +169,24 @@ class PlatformCompanyService
 
         $adminRole = Role::query()->where('slug', Role::ADMINISTRATOR)->firstOrFail();
 
-        $result = DB::transaction(function () use ($data, $plan, $adminRole) {
+        /** @var \App\Domains\Security\Services\RegistrationIntegrityService $integrity */
+        $integrity = app(\App\Domains\Security\Services\RegistrationIntegrityService::class);
+        $email = $integrity->normalizeEmail((string) $data['admin_email']);
+        $document = $data['document'] ?? null;
+
+        // Obrigatório ANTES de criar empresa/usuário.
+        $integrity->assertRegistrationIdentityAvailable(
+            $email,
+            $document,
+            'admin_email',
+            'document',
+        );
+
+        $result = DB::transaction(function () use ($data, $plan, $adminRole, $email, $document, $integrity) {
             $company = Company::query()->create([
                 'name' => $data['company_name'],
                 'legal_name' => $data['legal_name'] ?? null,
-                'document' => $data['document'] ?? null,
+                'document' => $integrity->normalizeDocument($document) ?? $document,
                 'email' => $data['company_email'] ?? null,
                 'phone' => $data['company_phone'] ?? null,
                 'status' => Company::STATUS_ACTIVE,
@@ -194,19 +207,6 @@ class PlatformCompanyService
             $this->tenant->set($company);
 
             try {
-                $email = strtolower(trim((string) $data['admin_email']));
-
-                $emailTaken = User::query()
-                    ->withoutGlobalScopes()
-                    ->whereRaw('LOWER(email) = ?', [$email])
-                    ->exists();
-
-                if ($emailTaken) {
-                    throw ValidationException::withMessages([
-                        'admin_email' => [\App\Domains\Security\Services\RegistrationIntegrityService::EMAIL_TAKEN_MESSAGE],
-                    ]);
-                }
-
                 $administrator = User::query()->withoutGlobalScopes()->create([
                     'company_id' => $company->id,
                     'role_id' => $adminRole->id,

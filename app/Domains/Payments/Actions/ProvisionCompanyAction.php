@@ -39,8 +39,12 @@ class ProvisionCompanyAction
         $document = $this->integrity->normalizeDocument($checkout->buyer_document) ?? $checkout->buyer_document;
 
         // Rede de segurança (webhook/race): não duplicar usuário/empresa.
-        $this->integrity->assertEmailAvailable($email, 'buyer_email');
-        $this->integrity->assertCompanyDocumentAvailable($document, 'buyer_document');
+        $this->integrity->assertRegistrationIdentityAvailable(
+            $email,
+            $document,
+            'buyer_email',
+            'buyer_document',
+        );
 
         try {
             return DB::transaction(function () use ($checkout, $customer, $adminRole, $plainPassword, $email, $document) {

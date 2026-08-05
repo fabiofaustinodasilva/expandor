@@ -3,8 +3,10 @@
 namespace App\Domains\Platform\Requests;
 
 use App\Domains\Company\Models\Plan;
+use App\Domains\Security\Services\RegistrationIntegrityService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StorePlatformCompanyRequest extends FormRequest
 {
@@ -48,5 +50,38 @@ class StorePlatformCompanyRequest extends FormRequest
             'admin_email' => 'e-mail do administrador',
             'admin_password' => 'senha do administrador',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            try {
+                app(RegistrationIntegrityService::class)->assertRegistrationIdentityAvailable(
+                    (string) $this->input('admin_email'),
+                    $this->input('document'),
+                    'admin_email',
+                    'document',
+                );
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                foreach ($e->errors() as $field => $messages) {
+                    foreach ($messages as $message) {
+                        $validator->errors()->add($field, $message);
+                    }
+                }
+            }
+        });
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('admin_email')) {
+            $this->merge([
+                'admin_email' => strtolower(trim((string) $this->input('admin_email'))),
+            ]);
+        }
     }
 }

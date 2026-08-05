@@ -3,9 +3,11 @@
 namespace App\Domains\Acquisition\Requests;
 
 use App\Domains\Company\Enums\CompanySegment;
+use App\Domains\Security\Services\RegistrationIntegrityService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Validator;
 
 class StartTrialRequest extends FormRequest
 {
@@ -51,6 +53,30 @@ class StartTrialRequest extends FormRequest
             'terms_accepted.accepted' => 'Aceite os termos de uso para criar a conta.',
             'website.max' => 'Não foi possível concluir o cadastro.',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            try {
+                app(RegistrationIntegrityService::class)->assertRegistrationIdentityAvailable(
+                    (string) $this->input('admin_email'),
+                    $this->input('document'),
+                    'admin_email',
+                    'document',
+                );
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                foreach ($e->errors() as $field => $messages) {
+                    foreach ($messages as $message) {
+                        $validator->errors()->add($field, $message);
+                    }
+                }
+            }
+        });
     }
 
     protected function prepareForValidation(): void

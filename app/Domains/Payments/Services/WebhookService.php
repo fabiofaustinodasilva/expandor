@@ -294,6 +294,30 @@ class WebhookService
             throw new RuntimeException('Customer not found for checkout.');
         }
 
+        // Blindagem: não provisionar se e-mail/documento já existirem.
+        try {
+            app(\App\Domains\Security\Services\RegistrationIntegrityService::class)
+                ->assertRegistrationIdentityAvailable(
+                    (string) $checkout->buyer_email,
+                    $checkout->buyer_document,
+                    'buyer_email',
+                    'buyer_document',
+                );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = $e->errors();
+            $message = $errors['buyer_email'][0]
+                ?? $errors['buyer_document'][0]
+                ?? \App\Domains\Security\Services\RegistrationIntegrityService::DUPLICATE_GENERIC_MESSAGE;
+
+            Log::warning('payments.webhook.identity_conflict', [
+                'gateway' => $gateway,
+                'checkout_uuid' => $checkout->uuid,
+                'message' => $message,
+            ]);
+
+            return false;
+        }
+
         $checkout->forceFill([
             'status' => CheckoutStatus::Paid,
             'paid_at' => now(),

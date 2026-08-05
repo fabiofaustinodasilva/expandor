@@ -38,11 +38,17 @@ class UserService
             ]);
         }
 
+        $email = app(\App\Domains\Security\Services\RegistrationIntegrityService::class)
+            ->normalizeEmail((string) $data['email']);
+
+        app(\App\Domains\Security\Services\RegistrationIntegrityService::class)
+            ->assertEmailAvailable($email, 'email');
+
         $user = User::query()->create([
             'company_id' => $company->id,
             'role_id' => $data['role_id'],
             'name' => $data['name'],
-            'email' => $data['email'],
+            'email' => $email,
             'phone' => $data['phone'] ?? null,
             'password' => Hash::make($data['password']),
             'status' => $data['status'] ?? User::STATUS_ACTIVE,
@@ -79,10 +85,16 @@ class UserService
             'status' => $user->status,
         ];
 
+        $email = app(\App\Domains\Security\Services\RegistrationIntegrityService::class)
+            ->normalizeEmail((string) $data['email']);
+
+        app(\App\Domains\Security\Services\RegistrationIntegrityService::class)
+            ->assertEmailAvailable($email, 'email', $user->id);
+
         $payload = [
             'role_id' => $data['role_id'],
             'name' => $data['name'],
-            'email' => $data['email'],
+            'email' => $email,
             'phone' => $data['phone'] ?? null,
             'status' => $data['status'] ?? $user->status,
         ];
