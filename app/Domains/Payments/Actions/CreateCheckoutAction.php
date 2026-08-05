@@ -12,6 +12,7 @@ use App\Domains\Payments\Models\Payment;
 use App\Domains\Payments\Models\PaymentGatewayTransaction;
 use App\Domains\Payments\Providers\ProviderFactory;
 use App\Domains\Payments\Repositories\PaymentRepository;
+use App\Domains\Security\Services\RegistrationIntegrityService;
 use App\Domains\Security\Services\SecurityService;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -22,6 +23,7 @@ class CreateCheckoutAction
         protected ProviderFactory $providers,
         protected PaymentRepository $repository,
         protected SecurityService $security,
+        protected RegistrationIntegrityService $integrity,
     ) {}
 
     /**
@@ -42,6 +44,15 @@ class CreateCheckoutAction
                 'plan_id' => ['O plano gratuito não requer checkout pago.'],
             ]);
         }
+
+        $buyerEmail = $this->integrity->normalizeEmail((string) $data['buyer_email']);
+        $buyerDocument = (string) ($data['buyer_document'] ?? '');
+
+        // Bloqueia antes de criar checkout/pagamento/empresa parcial.
+        $this->integrity->assertCheckoutIdentityAvailable($buyerEmail, $buyerDocument);
+
+        $data['buyer_email'] = $buyerEmail;
+        $data['buyer_document'] = $buyerDocument;
 
         $provider = $this->providers->make();
         $uuid = (string) Str::uuid();

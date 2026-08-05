@@ -67,7 +67,7 @@ class ProvisionTrialCompanyAction
 
         if ($emailTaken) {
             throw ValidationException::withMessages([
-                'admin_email' => ['Este e-mail já possui uma conta. Faça login ou use outro e-mail.'],
+                'admin_email' => [\App\Domains\Security\Services\RegistrationIntegrityService::EMAIL_TAKEN_MESSAGE],
             ]);
         }
 

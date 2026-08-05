@@ -194,15 +194,16 @@ class PlatformCompanyService
             $this->tenant->set($company);
 
             try {
+                $email = strtolower(trim((string) $data['admin_email']));
+
                 $emailTaken = User::query()
                     ->withoutGlobalScopes()
-                    ->where('company_id', $company->id)
-                    ->where('email', $data['admin_email'])
+                    ->whereRaw('LOWER(email) = ?', [$email])
                     ->exists();
 
                 if ($emailTaken) {
                     throw ValidationException::withMessages([
-                        'admin_email' => ['Este e-mail já está em uso nesta empresa.'],
+                        'admin_email' => [\App\Domains\Security\Services\RegistrationIntegrityService::EMAIL_TAKEN_MESSAGE],
                     ]);
                 }
 
@@ -210,7 +211,7 @@ class PlatformCompanyService
                     'company_id' => $company->id,
                     'role_id' => $adminRole->id,
                     'name' => $data['admin_name'],
-                    'email' => $data['admin_email'],
+                    'email' => $email,
                     'phone' => $data['admin_phone'] ?? null,
                     'password' => Hash::make($data['admin_password']),
                     'status' => User::STATUS_ACTIVE,

@@ -21,7 +21,8 @@ class AuthController extends Controller
             'company_id' => ['nullable', 'integer'],
         ]);
 
-        $query = User::query()->withoutGlobalScopes()->where('email', $credentials['email']);
+        $query = User::query()->withoutGlobalScopes()
+            ->whereRaw('LOWER(email) = ?', [strtolower(trim($credentials['email']))]);
 
         if (! empty($credentials['company_id'])) {
             $query->where('company_id', $credentials['company_id']);

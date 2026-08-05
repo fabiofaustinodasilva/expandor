@@ -17,7 +17,7 @@ class CompanyFactory extends Factory
         return [
             'name' => fake()->company(),
             'legal_name' => fake()->company().' LTDA',
-            'document' => fake()->numerify('##.###.###/####-##'),
+            'document' => fake()->unique()->numerify('##############'),
             'email' => fake()->unique()->companyEmail(),
             'phone' => fake()->numerify('(##) ####-####'),
             'status' => Company::STATUS_ACTIVE,

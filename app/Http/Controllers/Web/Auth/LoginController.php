@@ -36,7 +36,7 @@ class LoginController extends Controller
         /** @var User|null $user */
         $user = User::query()
             ->withoutGlobalScopes()
-            ->where('email', $credentials['email'])
+            ->whereRaw('LOWER(email) = ?', [strtolower(trim($credentials['email']))])
             ->first();
 
         if ($user === null || ! Hash::check($credentials['password'], $user->password)) {
