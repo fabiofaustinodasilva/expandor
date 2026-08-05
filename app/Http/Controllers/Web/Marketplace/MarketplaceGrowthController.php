@@ -38,7 +38,7 @@ class MarketplaceGrowthController extends Controller
             'segmentPage' => $page,
             'cases' => $cases->active()->where('segment', $page->slug)->values(),
             'preview' => false,
-            'whatsappContext' => 'Origem: Marketplace · Segmento '.($page->title),
+            'whatsappContext' => 'Origem: Site Expandor · Segmento '.($page->title),
         ]));
     }
 

@@ -135,10 +135,10 @@ class MarketplacePublicPageService
             'plans' => $plans,
             'cases' => $this->cases->active(),
             'featureLabels' => PlanCatalog::featureLabels(),
-            'whatsappContext' => 'Origem: Marketplace',
+            'whatsappContext' => 'Origem: Site Expandor',
             'nav' => $defaults['nav'] ?? [],
             'navActions' => $defaults['nav_actions'] ?? [],
-            'footer' => $defaults['footer'] ?? [],
+            'footer' => $premium['footer'] ?? ($defaults['footer'] ?? []),
             'brand' => $defaults['brand'] ?? 'Expandor',
             'videoFallbackImage' => $defaults['sections']['video']['image'] ?? '/images/marketplace/product-preview.svg',
             'heroFallbackImage' => $defaults['sections']['hero']['image'] ?? '/images/marketplace/screens/dashboard.svg',
@@ -148,6 +148,9 @@ class MarketplacePublicPageService
             ],
             'premium' => $premium,
             'metrics' => $this->platformMetrics($defaults, $settings),
+            'ui' => $premium['ui'] ?? ($defaults['ui'] ?? []),
+            'demoForm' => $premium['demo_form'] ?? ($defaults['demo_form'] ?? []),
+            'tracking' => $settings->conversionOverrides()['tracking'] ?? [],
         ];
     }
 
@@ -173,9 +176,14 @@ class MarketplacePublicPageService
                 'before' => [],
                 'after' => [],
             ],
+            'benefits' => $overrides['benefits'] ?? $defaults['benefits'] ?? [],
+            'segments' => $overrides['segments'] ?? $defaults['segments'] ?? [],
             'social_proof_title' => $overrides['social_proof_title']
-                ?? ($defaults['social_proof']['title'] ?? 'Empresas organizam suas operações comerciais com Expandor'),
+                ?? ($defaults['social_proof']['title'] ?? 'Empresas organizam suas equipes de campo com Expandor'),
             'client_logos' => $overrides['client_logos'] ?? [],
+            'ui' => array_merge($defaults['ui'] ?? [], $overrides['ui'] ?? []),
+            'demo_form' => array_merge($defaults['demo_form'] ?? [], $overrides['demo_form'] ?? []),
+            'footer' => array_replace_recursive($defaults['footer'] ?? [], $overrides['footer'] ?? []),
         ];
     }
 

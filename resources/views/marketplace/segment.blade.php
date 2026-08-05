@@ -144,9 +144,9 @@
         </a>
 
         <div class="mkp-header-actions">
-            <a class="mkp-btn mkp-btn-ghost" href="{{ route('marketplace.home') }}">← Marketplace</a>
+            <a class="mkp-btn mkp-btn-ghost" href="{{ route('marketplace.home') }}">← Início</a>
             <a href="#demo" class="mkp-btn mkp-btn-outline">{{ $ctaText }}</a>
-            <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">Teste grátis</a>
+            <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">Começar teste grátis</a>
         </div>
     </div>
 </header>
@@ -206,7 +206,7 @@
     <div class="mkp-container mkp-footer-inner">
         <div class="mkp-footer-copy">
             &copy; {{ date('Y') }} {{ $settings->title ?: 'Expandor' }}.
-            <a href="{{ route('marketplace.home') }}" style="color:var(--mkp-primary);">Voltar ao marketplace</a>
+            <a href="{{ route('marketplace.home') }}" style="color:var(--mkp-primary);">Voltar ao início</a>
         </div>
         <x-marketplace-social-links :settings="$settings" />
     </div>

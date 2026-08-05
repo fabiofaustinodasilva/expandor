@@ -24,6 +24,7 @@
         $heroSecondaryCta = $heroSecondary ?? ['text' => 'Solicitar demonstração', 'url' => '#demo'];
         $premiumData = $premium ?? [];
         $metricsData = $metrics ?? [];
+        $uiCopy = $ui ?? ($premiumData['ui'] ?? []);
         $demoEmbed = $settings->demoVideoEmbedUrl();
         $demoIsMp4 = $settings->demoVideoIsMp4();
     @endphp
@@ -49,6 +50,18 @@
 
     @if($settings->mediaUrl($settings->favicon))
         <link rel="icon" href="{{ $settings->mediaUrl($settings->favicon) }}">
+    @endif
+
+    @php $trackingCodes = $tracking ?? []; @endphp
+    @if(!empty($trackingCodes['google_tag_manager']))
+        <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','{{ $trackingCodes['google_tag_manager'] }}');</script>
+    @endif
+    @if(!empty($trackingCodes['google_analytics']))
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $trackingCodes['google_analytics'] }}"></script>
+        <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ $trackingCodes['google_analytics'] }}');</script>
+    @endif
+    @if(!empty($trackingCodes['meta_pixel']))
+        <script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','{{ $trackingCodes['meta_pixel'] }}');fbq('track','PageView');</script>
     @endif
 
     <style>
@@ -696,7 +709,7 @@
 
 @if(!empty($preview))
     <div class="mkp-preview-banner">
-        Modo preview — alterações já salvas no CMS
+        Modo preview — {{ $uiCopy['preview_banner'] ?? 'alterações já salvas' }}
     </div>
 @endif
 
@@ -710,7 +723,7 @@
             @endif
         </a>
 
-        <button type="button" class="mkp-menu-toggle" id="mkp-menu-toggle" aria-expanded="false" aria-controls="mkp-nav">Menu</button>
+        <button type="button" class="mkp-menu-toggle" id="mkp-menu-toggle" aria-expanded="false" aria-controls="mkp-nav">{{ $uiCopy['menu'] ?? 'Menu' }}</button>
 
         <nav class="mkp-nav" id="mkp-nav" aria-label="Navegação principal">
             @foreach($navItems as $item)
@@ -777,10 +790,10 @@
                                             {{ $section->button_text }}
                                         </a>
                                     @else
-                                        <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">Teste grátis</a>
+                                        <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $uiCopy['start_free_trial'] ?? 'Começar teste grátis' }}</a>
                                     @endif
                                     <a class="mkp-btn mkp-btn-outline" href="{{ $heroSecondaryCta['url'] ?? '#demo' }}">
-                                        {{ $heroSecondaryCta['text'] ?? 'Solicitar demonstração' }}
+                                        {{ $heroSecondaryCta['text'] ?? ($uiCopy['request_demo'] ?? 'Solicitar demonstração') }}
                                     </a>
                                     @if($settings->whatsappLink())
                                         <a class="mkp-btn mkp-btn-ghost" href="{{ $settings->whatsappLink() }}" target="_blank" rel="noopener" data-mkp-event="marketplace.whatsapp_clicked">WhatsApp</a>
@@ -864,7 +877,7 @@
                         </div>
                         <div class="mkp-ba-grid">
                             <div class="mkp-ba-card before">
-                                <h3>Antes</h3>
+                                <h3>{{ $uiCopy['before_label'] ?? 'Antes' }}</h3>
                                 <ul>
                                     @foreach(($ba['before'] ?? []) as $item)
                                         <li>❌ {{ $item }}</li>
@@ -872,7 +885,7 @@
                                 </ul>
                             </div>
                             <div class="mkp-ba-card after">
-                                <h3>Depois</h3>
+                                <h3>{{ $uiCopy['after_label'] ?? 'Depois' }}</h3>
                                 <ul>
                                     @foreach(($ba['after'] ?? []) as $item)
                                         <li>✅ {{ $item }}</li>
@@ -906,6 +919,48 @@
                                 @endforeach
                             </div>
                         @endif
+                    </div>
+                </section>
+                @break
+
+            @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Benefits)
+                @php $benefitItems = $premiumData['benefits'] ?? []; @endphp
+                <section id="beneficios" class="mkp-section mkp-fade">
+                    <div class="mkp-container">
+                        <div class="mkp-section-head">
+                            @if($section->subtitle)<span class="mkp-eyebrow">{{ $section->subtitle }}</span>@endif
+                            <h2 class="mkp-title">{{ $section->title }}</h2>
+                        </div>
+                        <div class="mkp-features-grid">
+                            @foreach($benefitItems as $benefit)
+                                <article class="mkp-feature-card mkp-fade">
+                                    <h3>{{ is_array($benefit) ? ($benefit['title'] ?? '') : $benefit }}</h3>
+                                    @if(is_array($benefit) && !empty($benefit['description']))
+                                        <p>{{ $benefit['description'] }}</p>
+                                    @endif
+                                </article>
+                            @endforeach
+                        </div>
+                    </div>
+                </section>
+                @break
+
+            @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Segments)
+                @php $segmentItems = $premiumData['segments'] ?? []; @endphp
+                <section id="segmentos" class="mkp-section mkp-section-alt mkp-fade">
+                    <div class="mkp-container">
+                        <div class="mkp-section-head">
+                            @if($section->subtitle)<span class="mkp-eyebrow">{{ $section->subtitle }}</span>@endif
+                            <h2 class="mkp-title">{{ $section->title }}</h2>
+                        </div>
+                        <div class="mkp-features-grid">
+                            @foreach($segmentItems as $segmentItem)
+                                <article class="mkp-feature-card mkp-fade">
+                                    <h3>{{ $segmentItem['title'] ?? '' }}</h3>
+                                    <p>{{ $segmentItem['description'] ?? '' }}</p>
+                                </article>
+                            @endforeach
+                        </div>
                     </div>
                 </section>
                 @break
@@ -1120,15 +1175,15 @@
                                     @endphp
                                     <article class="mkp-plan {{ $plan->is_featured ? 'mkp-plan-featured' : '' }} mkp-fade">
                                         @if($plan->is_featured)
-                                            <span class="mkp-badge">Recomendado</span>
+                                            <span class="mkp-badge">{{ $uiCopy['recommended'] ?? 'Recomendado' }}</span>
                                         @endif
                                         <h3 style="margin:0;">{{ $plan->name }}</h3>
                                         <div class="mkp-plan-price">
                                             @if((float) $plan->price <= 0)
-                                                Grátis
+                                                {{ $uiCopy['free'] ?? 'Grátis' }}
                                             @else
                                                 R$ {{ number_format((float) $plan->price, 2, ',', '.') }}
-                                                <small>/mês</small>
+                                                <small>{{ $uiCopy['per_month'] ?? '/mês' }}</small>
                                             @endif
                                         </div>
                                         @if($plan->description)
@@ -1152,7 +1207,7 @@
                                             <a class="mkp-btn mkp-btn-outline"
                                                href="{{ route('signup.create') }}"
                                                data-mkp-event="marketplace.signup_started">
-                                                Começar teste
+                                                {{ $uiCopy['start_free_trial'] ?? 'Começar teste grátis' }}
                                             </a>
                                         @endif
                                     </article>
@@ -1191,7 +1246,7 @@
                             @if($section->subtitle)
                                 <span class="mkp-eyebrow">{{ $section->subtitle }}</span>
                             @endif
-                            <h2 class="mkp-title">{{ $section->title ?: 'Pronto para começar?' }}</h2>
+                            <h2 class="mkp-title">{{ $section->title }}</h2>
                             @if($section->description)
                                 <p class="mkp-subtitle" style="margin-bottom:1.5rem;">{{ $section->description }}</p>
                             @endif
@@ -1199,9 +1254,9 @@
                                 @if($section->button_text)
                                     <a class="mkp-btn mkp-btn-primary" href="{{ $section->button_url ?: route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $section->button_text }}</a>
                                 @else
-                                    <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">Teste grátis</a>
+                                    <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $uiCopy['start_free_trial'] ?? 'Começar teste grátis' }}</a>
                                 @endif
-                                <a class="mkp-btn mkp-btn-ghost" href="{{ route('login') }}">Já tenho conta</a>
+                                <a class="mkp-btn mkp-btn-ghost" href="{{ route('login') }}">{{ $uiCopy['already_have_account'] ?? 'Já tenho conta' }}</a>
                             </div>
                         </div>
                     </div>
@@ -1220,11 +1275,14 @@
                 @if($settings->mediaUrl($settings->logo))
                     <img src="{{ $settings->mediaUrl($settings->logo) }}" alt="{{ $brandName }}" loading="lazy">
                 @else
-                    {{ $brandName }}
+                    {{ $footerData['title'] ?? ($settings->title ?: $brandName) }}
                 @endif
             </a>
+            @if(!empty($footerData['text']))
+                <p class="mkp-footer-copy" style="margin:0;">{{ $footerData['text'] }}</p>
+            @endif
             <div class="mkp-footer-copy">
-                &copy; {{ date('Y') }} {{ $settings->title ?: $brandName }}. {{ $footerData['rights'] ?? 'Todos os direitos reservados.' }}
+                &copy; {{ date('Y') }} {{ $footerData['title'] ?? ($settings->title ?: $brandName) }}. {{ $footerData['rights'] ?? 'Todos os direitos reservados.' }}
             </div>
         </div>
         <nav class="mkp-footer-links" aria-label="Rodapé">

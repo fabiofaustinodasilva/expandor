@@ -50,6 +50,10 @@ class UpdateMarketplaceSettingsRequest extends FormRequest
             'conversion_content.before_after.before' => ['nullable', 'array'],
             'conversion_content.before_after.after' => ['nullable', 'array'],
             'conversion_content.metrics' => ['nullable', 'array'],
+            'conversion_content.benefits' => ['nullable', 'array'],
+            'conversion_content.segments' => ['nullable', 'array'],
+            'conversion_content.footer' => ['nullable', 'array'],
+            'conversion_content.tracking' => ['nullable', 'array'],
             'hero_video' => ['nullable', 'string', 'max:500'],
             'logo' => ['nullable', 'file', 'max:5120'],
             'favicon' => ['nullable', 'file', 'max:1024'],
@@ -104,6 +108,39 @@ class UpdateMarketplaceSettingsRequest extends FormRequest
                     $conversion['how_it_works'] = $steps;
                 }
                 unset($conversion['how_it_works_text']);
+            }
+            if (array_key_exists('benefits_text', $conversion) && is_string($conversion['benefits_text'])) {
+                if (trim($conversion['benefits_text']) !== '') {
+                    $conversion['benefits'] = array_values(array_filter(array_map(
+                        'trim',
+                        preg_split('/\r\n|\r|\n/', $conversion['benefits_text']) ?: []
+                    )));
+                }
+                unset($conversion['benefits_text']);
+            }
+            if (array_key_exists('segments_text', $conversion) && is_string($conversion['segments_text'])) {
+                if (trim($conversion['segments_text']) !== '') {
+                    $segments = [];
+                    foreach (preg_split('/\r\n|\r|\n/', $conversion['segments_text']) ?: [] as $line) {
+                        $line = trim($line);
+                        if ($line === '') {
+                            continue;
+                        }
+                        $parts = array_map('trim', explode('|', $line, 2));
+                        $segments[] = [
+                            'title' => $parts[0] ?? '',
+                            'description' => $parts[1] ?? '',
+                        ];
+                    }
+                    $conversion['segments'] = $segments;
+                }
+                unset($conversion['segments_text']);
+            }
+            if (isset($conversion['footer']) && is_array($conversion['footer'])) {
+                $conversion['footer'] = array_filter($conversion['footer'], fn ($v) => $v !== null && $v !== '');
+            }
+            if (isset($conversion['tracking']) && is_array($conversion['tracking'])) {
+                $conversion['tracking'] = array_filter($conversion['tracking'], fn ($v) => $v !== null && $v !== '');
             }
             if (isset($conversion['metrics']) && is_array($conversion['metrics'])) {
                 $conversion['metrics'] = array_filter(

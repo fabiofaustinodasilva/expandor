@@ -1,8 +1,9 @@
 <?php
 
 /**
- * Conteúdo padrão do Marketplace público (Sprint 8.0.3 — Premium Conversion).
- * CMS personaliza; defaults garantem landing completa sem cadastro.
+ * Conteúdo padrão público do Expandor (Sprint 8.1).
+ * Linguagem de resultados para vendas porta a porta — sem jargão técnico.
+ * O CMS sobrescreve estes valores; a landing não deve hardcodar textos.
  */
 return [
 
@@ -10,26 +11,50 @@ return [
 
     'settings' => [
         'title' => 'Expandor',
-        'subtitle' => 'Controle clientes, vendedores, campanhas, visitas, mapas e resultados em tempo real em uma única plataforma.',
-        'description' => 'O Expandor ajuda empresas com equipes externas a vender mais e controlar toda a operação comercial.',
+        'subtitle' => 'Organize sua equipe de vendas porta a porta e acompanhe resultados em tempo real.',
+        'description' => 'Controle visitas, clientes, campanhas e vendedores em um só lugar — feito para quem vende na rua.',
         'primary_color' => '#3B82F6',
         'secondary_color' => '#0F172A',
         'background_color' => '#0B1220',
         'button_color' => '#F59E0B',
-        'whatsapp_message' => 'Olá! Quero saber mais sobre o Expandor.',
-        'seo_title' => 'Expandor - Plataforma inteligente para vendas externas',
-        'seo_description' => 'Gerencie vendedores, clientes, campanhas e resultados com inteligência.',
-        'seo_keywords' => 'crm, vendas externas, campo, campanhas, mapa, expandor, gestão comercial',
+        'whatsapp_message' => 'Olá! Quero conhecer o Expandor para minha equipe de vendas.',
+        'seo_title' => 'Expandor — Sistema para vendas porta a porta',
+        'seo_description' => 'Organize vendedores, visitas e clientes. Mais vendas, menos planilhas. Feito para equipes de campo.',
+        'seo_keywords' => 'vendas porta a porta, equipe de vendas, visitas, campanhas, internet, telecom, energia solar',
+    ],
+
+    'ui' => [
+        'menu' => 'Menu',
+        'login' => 'Entrar',
+        'already_have_account' => 'Já tenho conta',
+        'recommended' => 'Recomendado',
+        'free' => 'Grátis',
+        'per_month' => '/mês',
+        'subscribe_now' => 'Assinar agora',
+        'start_free_trial' => 'Começar teste grátis',
+        'request_demo' => 'Solicitar demonstração',
+        'before_label' => 'Antes',
+        'after_label' => 'Depois',
+        'carousel_prev' => 'Anterior',
+        'carousel_next' => 'Próximo',
+        'play_demo' => 'Ver demonstração',
+        'preview_banner' => 'Modo preview — alterações já salvas',
+        'back_home' => 'Voltar ao início',
+        'challenge' => 'Desafio',
+        'solution' => 'Solução',
+        'result' => 'Resultado',
+        'success_stories' => 'Histórias de quem já usa',
+        'success_stories_subtitle' => 'Empresas que organizaram a operação de campo com o Expandor.',
     ],
 
     'nav' => [
         ['label' => 'Início', 'href' => '#inicio'],
-        ['label' => 'Produto', 'href' => '#produto'],
         ['label' => 'Como funciona', 'href' => '#como-funciona'],
+        ['label' => 'Benefícios', 'href' => '#beneficios'],
+        ['label' => 'Para quem é', 'href' => '#segmentos'],
         ['label' => 'Recursos', 'href' => '#recursos'],
         ['label' => 'Planos', 'href' => '#planos'],
-        ['label' => 'Clientes', 'href' => '#clientes'],
-        ['label' => 'FAQ', 'href' => '#faq'],
+        ['label' => 'Dúvidas', 'href' => '#faq'],
     ],
 
     'nav_actions' => [
@@ -54,14 +79,14 @@ return [
     ],
 
     'footer' => [
+        'text' => 'Sistema de vendas porta a porta para empresas que querem mais controle e mais resultado.',
+        'rights' => 'Todos os direitos reservados.',
         'links' => [
             ['label' => 'Início', 'href' => '#inicio'],
-            ['label' => 'Produto', 'href' => '#produto'],
             ['label' => 'Planos', 'href' => '#planos'],
-            ['label' => 'FAQ', 'href' => '#faq'],
+            ['label' => 'Dúvidas', 'href' => '#faq'],
             ['label' => 'Começar teste grátis', 'href' => 'signup.create', 'route' => true],
         ],
-        'rights' => 'Todos os direitos reservados.',
     ],
 
     'section_order' => [
@@ -69,6 +94,8 @@ return [
         'showcase',
         'how_it_works',
         'before_after',
+        'benefits',
+        'segments',
         'about',
         'features',
         'social_proof',
@@ -81,9 +108,9 @@ return [
 
     'sections' => [
         'hero' => [
-            'title' => 'Transforme sua equipe de vendas externas em uma operação inteligente',
-            'subtitle' => 'Controle clientes, vendedores, campanhas, visitas, mapas e resultados em tempo real em uma única plataforma.',
-            'description' => 'O Expandor ajuda empresas com equipes externas a vender mais e controlar toda a operação.',
+            'title' => 'Organize sua equipe de vendas porta a porta e venda mais',
+            'subtitle' => 'Controle visitas, clientes e vendedores no mapa — tudo em um único lugar.',
+            'description' => 'Nunca mais perca um cliente. Agende retornos, acompanhe metas e veja resultados em tempo real.',
             'button_text' => 'Começar teste grátis',
             'button_url' => '/cadastro',
             'button_text_secondary' => 'Solicitar demonstração',
@@ -93,124 +120,161 @@ return [
             'order' => 1,
         ],
         'showcase' => [
-            'title' => 'Veja o Expandor funcionando',
-            'subtitle' => 'Telas reais da operação comercial',
+            'title' => 'Veja o Expandor em ação',
+            'subtitle' => 'Telas da operação de campo',
             'description' => null,
             'order' => 2,
         ],
         'how_it_works' => [
             'title' => 'Como funciona',
-            'subtitle' => 'Do time ao resultado em seis passos',
+            'subtitle' => 'Do time ao resultado, em passos simples',
             'description' => null,
             'order' => 3,
         ],
         'before_after' => [
-            'title' => 'Da operação caótica ao controle total',
-            'subtitle' => 'O que muda com o Expandor',
+            'title' => 'Menos bagunça. Mais resultado.',
+            'subtitle' => 'O que muda no dia a dia da sua equipe',
             'description' => null,
             'order' => 4,
         ],
-        'about' => [
-            'title' => 'Quem Somos',
-            'subtitle' => 'Feito para operação comercial real',
-            'description' => 'O Expandor nasceu para unir CRM, território, visitas, pipeline e comissões em uma experiência SaaS clara — do primeiro cliente ao time em escala.',
-            'order' => 99,
-        ],
-        'features' => [
-            'title' => 'Recursos',
-            'subtitle' => 'Tudo que sua operação precisa',
+        'benefits' => [
+            'title' => 'O que sua empresa ganha',
+            'subtitle' => 'Mais vendas. Mais organização. Mais controle.',
             'description' => null,
-            'features' => [
-                ['title' => 'CRM', 'description' => 'Centralize clientes, histórico e próximos passos em um só lugar.'],
-                ['title' => 'Pipeline', 'description' => 'Acompanhe cada negócio do lead ao fechamento com clareza.'],
-                ['title' => 'Agenda', 'description' => 'Organize visitas, follow-ups e compromissos da equipe.'],
-                ['title' => 'WhatsApp', 'description' => 'Aproxime conversas comerciais do fluxo de trabalho do time.'],
-                ['title' => 'Clientes', 'description' => 'Gerencie carteira, relacionamento e oportunidades com contexto.'],
-                ['title' => 'Dashboard', 'description' => 'Tenha visão executiva de funil, metas e desempenho.'],
-                ['title' => 'Equipe', 'description' => 'Controle usuários, papéis e permissões com segurança.'],
-                ['title' => 'Metas', 'description' => 'Defina objetivos e acompanhe o progresso comercial.'],
-                ['title' => 'Mapa', 'description' => 'Visualize campanhas e vendedores no território.'],
-                ['title' => 'Comissões', 'description' => 'Acompanhe resultados e ranking da equipe.'],
-            ],
             'order' => 5,
         ],
-        'social_proof' => [
-            'title' => 'Empresas organizam suas operações comerciais com Expandor',
-            'subtitle' => 'Números da plataforma',
+        'segments' => [
+            'title' => 'Feito para quem vende porta a porta',
+            'subtitle' => 'Internet, telecom, energia solar e muito mais',
             'description' => null,
             'order' => 6,
         ],
-        'video' => [
-            'title' => 'Vídeo demonstrativo',
-            'subtitle' => 'Veja o sistema em ação',
-            'description' => 'Uma visão rápida da jornada comercial no Expandor.',
-            'image' => '/images/marketplace/product-preview.svg',
-            'video' => null,
+        'about' => [
+            'title' => 'Sobre o Expandor',
+            'subtitle' => 'Pensado para a rua',
+            'description' => 'O Expandor nasceu para equipes que vendem fora do escritório: visitas, território, clientes e metas no mesmo fluxo.',
+            'order' => 99,
+        ],
+        'features' => [
+            'title' => 'Tudo que sua operação precisa',
+            'subtitle' => 'Um lugar só para a equipe de campo',
+            'description' => null,
+            'features' => [
+                ['title' => 'Equipe organizada', 'description' => 'Cadastre vendedores e acompanhe o trabalho de cada um.', 'icon' => 'users'],
+                ['title' => 'Visitas sob controle', 'description' => 'Registre cada visita e nunca perca um retorno.', 'icon' => 'map-pin'],
+                ['title' => 'Clientes em dia', 'description' => 'Histórico completo de cada cliente na ponta dos dedos.', 'icon' => 'users'],
+                ['title' => 'Mapa inteligente', 'description' => 'Veja onde sua equipe está e o que está acontecendo.', 'icon' => 'map'],
+                ['title' => 'Campanhas claras', 'description' => 'Monte campanhas por região, meta e período.', 'icon' => 'flag'],
+                ['title' => 'Agenda simples', 'description' => 'Organize o dia dos vendedores sem planilha.', 'icon' => 'calendar'],
+                ['title' => 'Metas visíveis', 'description' => 'Acompanhe metas e resultados em tempo real.', 'icon' => 'target'],
+                ['title' => 'Resultados na tela', 'description' => 'Dashboards claros para quem precisa decidir rápido.', 'icon' => 'chart'],
+            ],
             'order' => 7,
         ],
-        'testimonials' => [
-            'title' => 'Clientes',
-            'subtitle' => 'Quem já opera com Expandor',
+        'social_proof' => [
+            'title' => 'Empresas organizam suas equipes de campo com Expandor',
+            'subtitle' => 'Números da operação',
             'description' => null,
             'order' => 8,
         ],
-        'plans' => [
-            'title' => 'Planos',
-            'subtitle' => 'Escolha o ritmo certo para crescer',
-            'description' => 'Comece o teste grátis e evolua conforme sua operação escala.',
+        'video' => [
+            'title' => 'Veja como funciona na prática',
+            'subtitle' => 'Uma visão rápida do dia a dia no Expandor',
+            'description' => 'Do cadastro da equipe ao acompanhamento das visitas.',
+            'image' => '/images/marketplace/product-preview.svg',
+            'video' => null,
             'order' => 9,
         ],
-        'faq' => [
-            'title' => 'Perguntas frequentes',
-            'subtitle' => 'Respostas objetivas antes de começar',
+        'testimonials' => [
+            'title' => 'Quem já usa recomenda',
+            'subtitle' => 'Depoimentos de gestores de equipes de campo',
             'description' => null,
             'order' => 10,
         ],
+        'plans' => [
+            'title' => 'Escolha o plano ideal',
+            'subtitle' => 'Comece pequeno e cresça com a sua equipe',
+            'description' => 'Teste grátis e evolua conforme sua operação aumenta.',
+            'order' => 11,
+        ],
+        'faq' => [
+            'title' => 'Dúvidas frequentes',
+            'subtitle' => 'Respostas rápidas antes de começar',
+            'description' => null,
+            'order' => 12,
+        ],
         'cta' => [
-            'title' => 'Pronto para transformar sua operação de campo?',
-            'subtitle' => 'Comece o teste grátis em minutos.',
-            'description' => 'Sem cartão para explorar. Configure sua empresa e leve o time para um processo comercial único.',
+            'title' => 'Pronto para organizar sua equipe de vendas?',
+            'subtitle' => 'Comece agora e veja o resultado no campo.',
+            'description' => 'Menos papel, menos planilhas, menos WhatsApp solto — mais visitas e mais clientes.',
             'button_text' => 'Começar teste grátis',
             'button_url' => '/cadastro',
-            'order' => 11,
+            'order' => 13,
         ],
     ],
 
     'showcase' => [
-        ['title' => 'Dashboard principal', 'image' => '/images/marketplace/screens/dashboard.svg'],
+        ['title' => 'Painel principal', 'image' => '/images/marketplace/screens/dashboard.svg'],
         ['title' => 'Mapa de campanhas', 'image' => '/images/marketplace/screens/map.svg'],
         ['title' => 'Agenda dos vendedores', 'image' => '/images/marketplace/screens/agenda.svg'],
-        ['title' => 'CRM de clientes', 'image' => '/images/marketplace/screens/crm.svg'],
-        ['title' => 'Pipeline comercial', 'image' => '/images/marketplace/screens/pipeline.svg'],
-        ['title' => 'Comissão dos vendedores', 'image' => '/images/marketplace/screens/commissions.svg'],
+        ['title' => 'Clientes', 'image' => '/images/marketplace/screens/crm.svg'],
+        ['title' => 'Acompanhamento comercial', 'image' => '/images/marketplace/screens/pipeline.svg'],
+        ['title' => 'Comissões', 'image' => '/images/marketplace/screens/commissions.svg'],
         ['title' => 'Ranking da equipe', 'image' => '/images/marketplace/screens/ranking.svg'],
-        ['title' => 'Dashboard de conversão', 'image' => '/images/marketplace/screens/conversion.svg'],
+        ['title' => 'Resultados', 'image' => '/images/marketplace/screens/conversion.svg'],
     ],
 
     'how_it_works' => [
-        ['step' => 1, 'title' => 'Cadastre sua equipe', 'description' => 'Convide vendedores e gestores com papéis e permissões claros.'],
-        ['step' => 2, 'title' => 'Crie campanhas', 'description' => 'Monte campanhas por território, meta e período.'],
-        ['step' => 3, 'title' => 'Acompanhe vendedores no mapa', 'description' => 'Veja onde a equipe está e o que está em andamento.'],
-        ['step' => 4, 'title' => 'Controle visitas e clientes', 'description' => 'Registre visitas, follow-ups e histórico no CRM.'],
-        ['step' => 5, 'title' => 'Analise resultados', 'description' => 'Dashboards, funil e indicadores em tempo real.'],
-        ['step' => 6, 'title' => 'Aumente vendas', 'description' => 'Priorize o que gera resultado e escale com processo.'],
+        ['step' => 1, 'title' => 'Cadastre sua equipe', 'description' => 'Inclua vendedores e gestores em minutos.', 'icon' => 'users'],
+        ['step' => 2, 'title' => 'Crie campanhas', 'description' => 'Defina região, meta e período.', 'icon' => 'flag'],
+        ['step' => 3, 'title' => 'Acompanhe no mapa', 'description' => 'Veja vendedores e visitas no território.', 'icon' => 'map'],
+        ['step' => 4, 'title' => 'Controle visitas e clientes', 'description' => 'Registre cada atendimento e retorno.', 'icon' => 'map-pin'],
+        ['step' => 5, 'title' => 'Analise resultados', 'description' => 'Metas, ranking e indicadores claros.', 'icon' => 'chart'],
+        ['step' => 6, 'title' => 'Aumente as vendas', 'description' => 'Mais organização, mais produtividade, mais resultado.', 'icon' => 'trending'],
     ],
 
     'before_after' => [
         'before' => [
             'Vendedores sem acompanhamento',
-            'Informações espalhadas',
+            'Informações espalhadas em papel e WhatsApp',
             'Dificuldade para medir resultados',
+            'Clientes esquecidos e retornos perdidos',
         ],
         'after' => [
-            'Equipe organizada',
-            'Mapa inteligente',
+            'Equipe organizada e visível',
+            'Mapa inteligente da operação',
             'Indicadores em tempo real',
+            'Clientes e visitas sob controle',
         ],
     ],
 
+    'benefits' => [
+        'Mais vendas com a mesma equipe',
+        'Mais organização no dia a dia',
+        'Mais produtividade no campo',
+        'Mais controle para o gestor',
+        'Mais clientes acompanhados',
+        'Mais visitas concluídas',
+        'Mais resultados mensuráveis',
+        'Menos papel e planilhas',
+        'Menos WhatsApp desorganizado',
+        'Menos perda de clientes',
+    ],
+
+    'segments' => [
+        ['title' => 'Internet e provedores', 'description' => 'Equipes que vendem e instalam na casa do cliente.'],
+        ['title' => 'Telecom e telefonia', 'description' => 'Representantes e times de rua com meta diária.'],
+        ['title' => 'Energia solar', 'description' => 'Visitas técnicas e comerciais no mesmo fluxo.'],
+        ['title' => 'Representantes comerciais', 'description' => 'Carteira, rota e retorno sob controle.'],
+        ['title' => 'Distribuidoras', 'description' => 'Campanhas por região e acompanhamento de equipe.'],
+        ['title' => 'Construção', 'description' => 'Visitas a obras e clientes com histórico claro.'],
+        ['title' => 'Purificadores e água', 'description' => 'Porta a porta com agenda e retornos.'],
+        ['title' => 'TV e entretenimento', 'description' => 'Vendas externas com metas e ranking.'],
+        ['title' => 'Qualquer venda porta a porta', 'description' => 'Se sua equipe vende na rua, o Expandor foi feito para você.'],
+    ],
+
     'social_proof' => [
-        'title' => 'Empresas organizam suas operações comerciais com Expandor',
+        'title' => 'Empresas organizam suas equipes de campo com Expandor',
         'metrics' => [
             ['key' => 'sellers', 'label' => 'Vendedores gerenciados'],
             ['key' => 'customers', 'label' => 'Clientes cadastrados'],
@@ -222,24 +286,24 @@ return [
     'testimonials' => [
         [
             'name' => 'Ana Ribeiro',
-            'company' => 'Campo Norte',
-            'text' => 'Em uma semana organizamos o funil e a equipe passou a seguir o mesmo processo. O mapa e a agenda mudaram nossa rotina.',
+            'company' => 'Provedor Campo Norte',
+            'text' => 'Em uma semana a equipe passou a registrar visitas e retornos. Paramos de perder cliente no WhatsApp.',
             'rating' => 5,
             'active' => true,
             'order' => 1,
         ],
         [
             'name' => 'Lucas Mendes',
-            'company' => 'VendaMais',
-            'text' => 'Mapa, visitas e comissões no mesmo lugar — finalmente paramos de improvisar planilhas e WhatsApp solto.',
+            'company' => 'Solar Atlas',
+            'text' => 'Mapa e agenda no mesmo lugar. Hoje sei onde cada vendedor está e o que falta fechar.',
             'rating' => 5,
             'active' => true,
             'order' => 2,
         ],
         [
             'name' => 'Carla Souza',
-            'company' => 'Atlas Comercial',
-            'text' => 'O pipeline ficou visível para toda a gestão. Hoje sabemos onde está cada negócio e o que precisa de atenção.',
+            'company' => 'Telecom Rede+',
+            'text' => 'Metas e ranking claros. A produtividade da equipe subiu e o gestor finalmente enxerga o campo.',
             'rating' => 5,
             'active' => true,
             'order' => 3,
@@ -249,27 +313,44 @@ return [
     'faqs' => [
         [
             'question' => 'Posso testar sem cartão?',
-            'answer' => 'Sim. O teste grátis permite explorar o workspace antes de assinar um plano pago.',
+            'answer' => 'Sim. Você pode experimentar o Expandor com a sua equipe antes de escolher um plano.',
             'order' => 1,
             'active' => true,
         ],
         [
-            'question' => 'O Expandor serve para equipes de campo?',
-            'answer' => 'Sim. O produto foi pensado para operação comercial com território, visitas, agenda e acompanhamento em tempo real.',
+            'question' => 'Serve para equipe de vendas porta a porta?',
+            'answer' => 'Sim. O Expandor foi feito para empresas que vendem na rua: visitas, mapa, clientes e metas.',
             'order' => 2,
             'active' => true,
         ],
         [
-            'question' => 'Como funciona a assinatura?',
-            'answer' => 'Escolha um plano, conclua o checkout e o workspace é provisionado automaticamente após a confirmação.',
+            'question' => 'Funciona para internet, telecom e energia solar?',
+            'answer' => 'Sim. Também atende representantes, distribuidoras, construção, purificadores, TV e telefonia.',
             'order' => 3,
             'active' => true,
         ],
         [
-            'question' => 'Posso personalizar a landing do Marketplace?',
-            'answer' => 'Sim. O CMS da plataforma permite ajustar textos, imagens, FAQ, vídeo e prova social. Sem configuração, a landing já vem completa.',
+            'question' => 'Como peço uma demonstração?',
+            'answer' => 'Use o botão Solicitar demonstração na página e nossa equipe entra em contato.',
             'order' => 4,
             'active' => true,
+        ],
+    ],
+
+    'demo_form' => [
+        'title' => 'Solicitar demonstração',
+        'subtitle' => 'Conte um pouco sobre sua operação de campo. Retornamos em breve.',
+        'submit' => 'Solicitar demonstração',
+        'segments' => [
+            'Internet / Provedor',
+            'Telecom / Telefonia',
+            'Energia solar',
+            'Representantes comerciais',
+            'Distribuidora',
+            'Construção',
+            'Purificadores',
+            'TV',
+            'Outro (vendas porta a porta)',
         ],
     ],
 ];

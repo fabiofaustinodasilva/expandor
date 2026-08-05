@@ -34,7 +34,7 @@ class Sprint802MarketplaceSocialFloatingHotfixTest extends TestCase
         ]);
         Cache::forget(MarketplaceSettingsRepository::CACHE_KEY);
 
-        $encoded = rawurlencode('Olá! Gostaria de conhecer o Expandor. Origem: Marketplace');
+        $encoded = rawurlencode('Olá! Gostaria de conhecer o Expandor. Origem: Site Expandor');
 
         $this->get(route('marketplace.home'))
             ->assertOk()
@@ -146,7 +146,7 @@ class Sprint802MarketplaceSocialFloatingHotfixTest extends TestCase
         $this->get(route('marketplace.home'))
             ->assertOk()
             ->assertSee('wa.me/5562888777666', false)
-            ->assertSee(rawurlencode('Quero demo Expandor Origem: Marketplace'), false)
+            ->assertSee(rawurlencode('Quero demo Expandor Origem: Site Expandor'), false)
             ->assertSee('https://instagram.com/expandor802', false)
             ->assertSee('https://facebook.com/expandor802', false)
             ->assertSee('https://tiktok.com/@expandor802', false)
@@ -184,7 +184,7 @@ class Sprint802MarketplaceSocialFloatingHotfixTest extends TestCase
 
         $this->get(route('marketplace.home'))
             ->assertOk()
-            ->assertSee('Transforme sua equipe de vendas externas', false)
+            ->assertSee('Organize sua equipe de vendas porta a porta', false)
             ->assertDontSee('class="mkp-whatsapp"', false);
     }
 }

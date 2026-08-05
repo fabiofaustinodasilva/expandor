@@ -280,66 +280,118 @@
                 ->implode("\n");
             $beforeText = implode("\n", $conversion['before_after']['before'] ?? []);
             $afterText = implode("\n", $conversion['before_after']['after'] ?? []);
+            $benefitsText = implode("\n", $conversion['benefits'] ?? []);
+            $segmentsText = collect($conversion['segments'] ?? [])
+                ->map(fn ($s) => trim(($s['title'] ?? '').(filled($s['description'] ?? null) ? ' | '.$s['description'] : '')))
+                ->filter()
+                ->implode("\n");
         @endphp
 
-        <div class="card" style="margin-top:1rem;">
-            <h2 style="margin-top:0;">Conteúdo de conversão (Premium)</h2>
+        <div class="card" style="margin-top:1rem;" id="landing">
+            <h2 style="margin-top:0;">Landing — textos editáveis</h2>
             <div class="header-meta" style="margin-bottom:1rem;">
-                Personalize prova social, jornada e antes/depois. Deixe em branco para usar o conteúdo padrão.
-                Imagens da plataforma: use <a href="{{ route('platform.marketplace.media.index') }}">Marketplace → Mídia</a> (galeria ativa alimenta o carrossel).
+                Todo texto público pode ser personalizado aqui. Em branco = conteúdo padrão do sistema.
+                Hero principal: use os campos Título / Subtítulo / Descrição acima e as <a href="{{ route('platform.marketplace.sections.index') }}">Seções</a>.
+                Depoimentos e FAQ: <a href="{{ route('platform.marketplace.media.index') }}">Conteúdo & Mídias</a>.
             </div>
 
             <div class="form-group">
                 <label for="social_proof_title">Título da prova social</label>
                 <input class="form-control" id="social_proof_title" name="conversion_content[social_proof_title]" maxlength="255"
                        value="{{ $conversion['social_proof_title'] ?? '' }}"
-                       placeholder="Empresas organizam suas operações comerciais com Expandor">
+                       placeholder="Empresas organizam suas equipes de campo com Expandor">
             </div>
 
             <div class="grid grid-2">
                 <div class="form-group">
                     <label for="before_text">Antes (um item por linha)</label>
-                    <textarea class="form-control" id="before_text" name="conversion_content[before_text]" rows="5"
-                              placeholder="vendedores sem acompanhamento">{{ $beforeText }}</textarea>
+                    <textarea class="form-control" id="before_text" name="conversion_content[before_text]" rows="5">{{ $beforeText }}</textarea>
                 </div>
                 <div class="form-group">
                     <label for="after_text">Depois (um item por linha)</label>
-                    <textarea class="form-control" id="after_text" name="conversion_content[after_text]" rows="5"
-                              placeholder="equipe organizada">{{ $afterText }}</textarea>
+                    <textarea class="form-control" id="after_text" name="conversion_content[after_text]" rows="5">{{ $afterText }}</textarea>
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="how_it_works_text">Como funciona (um passo por linha: Título | Descrição)</label>
-                <textarea class="form-control" id="how_it_works_text" name="conversion_content[how_it_works_text]" rows="7"
-                          placeholder="Cadastre sua equipe | Convide vendedores...">{{ $howLines }}</textarea>
+                <label for="how_it_works_text">Como funciona (Título | Descrição por linha)</label>
+                <textarea class="form-control" id="how_it_works_text" name="conversion_content[how_it_works_text]" rows="7">{{ $howLines }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="benefits_text">Benefícios (um por linha)</label>
+                <textarea class="form-control" id="benefits_text" name="conversion_content[benefits_text]" rows="6">{{ $benefitsText }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="segments_text">Para quem é / Segmentos (Título | Descrição por linha)</label>
+                <textarea class="form-control" id="segments_text" name="conversion_content[segments_text]" rows="8">{{ $segmentsText }}</textarea>
             </div>
 
             <div class="grid grid-2">
                 <div class="form-group">
-                    <label for="metric_sellers">Override métrica — vendedores</label>
-                    <input class="form-control" id="metric_sellers" name="conversion_content[metrics][sellers]" type="number" min="0"
-                           value="{{ $conversion['metrics']['sellers'] ?? '' }}" placeholder="Automático do sistema">
+                    <label for="footer_title">Rodapé — título</label>
+                    <input class="form-control" id="footer_title" name="conversion_content[footer][title]"
+                           value="{{ $conversion['footer']['title'] ?? '' }}">
                 </div>
                 <div class="form-group">
-                    <label for="metric_customers">Override métrica — clientes</label>
-                    <input class="form-control" id="metric_customers" name="conversion_content[metrics][customers]" type="number" min="0"
-                           value="{{ $conversion['metrics']['customers'] ?? '' }}" placeholder="Automático do sistema">
-                </div>
-                <div class="form-group">
-                    <label for="metric_visits">Override métrica — visitas</label>
-                    <input class="form-control" id="metric_visits" name="conversion_content[metrics][visits]" type="number" min="0"
-                           value="{{ $conversion['metrics']['visits'] ?? '' }}" placeholder="Automático do sistema">
-                </div>
-                <div class="form-group">
-                    <label for="metric_campaigns">Override métrica — campanhas</label>
-                    <input class="form-control" id="metric_campaigns" name="conversion_content[metrics][campaigns]" type="number" min="0"
-                           value="{{ $conversion['metrics']['campaigns'] ?? '' }}" placeholder="Automático do sistema">
+                    <label for="footer_rights">Rodapé — copyright</label>
+                    <input class="form-control" id="footer_rights" name="conversion_content[footer][rights]"
+                           value="{{ $conversion['footer']['rights'] ?? '' }}">
                 </div>
             </div>
+            <div class="form-group">
+                <label for="footer_text">Rodapé — texto</label>
+                <textarea class="form-control" id="footer_text" name="conversion_content[footer][text]" rows="2">{{ $conversion['footer']['text'] ?? '' }}</textarea>
+            </div>
 
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label for="metric_sellers">Override — vendedores</label>
+                    <input class="form-control" id="metric_sellers" name="conversion_content[metrics][sellers]" type="number" min="0"
+                           value="{{ $conversion['metrics']['sellers'] ?? '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="metric_customers">Override — clientes</label>
+                    <input class="form-control" id="metric_customers" name="conversion_content[metrics][customers]" type="number" min="0"
+                           value="{{ $conversion['metrics']['customers'] ?? '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="metric_visits">Override — visitas</label>
+                    <input class="form-control" id="metric_visits" name="conversion_content[metrics][visits]" type="number" min="0"
+                           value="{{ $conversion['metrics']['visits'] ?? '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="metric_campaigns">Override — campanhas</label>
+                    <input class="form-control" id="metric_campaigns" name="conversion_content[metrics][campaigns]" type="number" min="0"
+                           value="{{ $conversion['metrics']['campaigns'] ?? '' }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:1rem;" id="integracoes">
+            <h2 style="margin-top:0;">Integrações de marketing</h2>
+            <div class="header-meta" style="margin-bottom:1rem;">Meta Pixel, Google Analytics e Tag Manager (IDs). Mercado Pago tem tela própria no menu.</div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label for="meta_pixel">Meta Pixel ID</label>
+                    <input class="form-control" id="meta_pixel" name="conversion_content[tracking][meta_pixel]"
+                           value="{{ $conversion['tracking']['meta_pixel'] ?? '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="ga_id">Google Analytics ID</label>
+                    <input class="form-control" id="ga_id" name="conversion_content[tracking][google_analytics]"
+                           value="{{ $conversion['tracking']['google_analytics'] ?? '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="gtm_id">Google Tag Manager ID</label>
+                    <input class="form-control" id="gtm_id" name="conversion_content[tracking][google_tag_manager]"
+                           value="{{ $conversion['tracking']['google_tag_manager'] ?? '' }}">
+                </div>
+            </div>
             <div class="actions" style="margin-top:1rem;">
                 <button class="btn btn-primary" type="submit">Salvar configuração</button>
+                <a class="btn btn-ghost" href="{{ route('platform.marketplace.mercadopago.edit') }}">Abrir Mercado Pago</a>
             </div>
         </div>
     </form>

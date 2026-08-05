@@ -13,6 +13,7 @@ use App\Http\Controllers\Web\Platform\Marketplace\MarketplacePipelineController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSectionController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSegmentsController;
 use App\Http\Controllers\Web\Platform\Marketplace\MarketplaceSettingsController;
+use App\Http\Controllers\Web\Platform\Marketplace\MercadoPagoSettingsController;
 use App\Http\Controllers\Web\Onboarding\SaasOnboardingController;
 use App\Http\Controllers\Web\Onboarding\SetupWizardController;
 use App\Http\Controllers\Web\Onboarding\TourController;
@@ -195,6 +196,9 @@ Route::middleware([
             Route::put('/settings', [MarketplaceSettingsController::class, 'update'])->name('settings.update');
             Route::post('/settings/restore-defaults', [MarketplaceSettingsController::class, 'restoreDefaults'])->name('settings.restore');
             Route::get('/preview', [MarketplaceSettingsController::class, 'preview'])->name('preview');
+            Route::get('/mercadopago', [MercadoPagoSettingsController::class, 'edit'])->name('mercadopago.edit');
+            Route::put('/mercadopago', [MercadoPagoSettingsController::class, 'update'])->name('mercadopago.update');
+            Route::post('/mercadopago/test', [MercadoPagoSettingsController::class, 'testConnection'])->name('mercadopago.test');
 
             Route::get('/sections', [MarketplaceSectionController::class, 'index'])->name('sections.index');
             Route::get('/sections/create', [MarketplaceSectionController::class, 'create'])->name('sections.create');

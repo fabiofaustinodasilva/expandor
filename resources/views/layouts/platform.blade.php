@@ -164,10 +164,13 @@
                     <a class="nav-link {{ request()->routeIs('platform.branding.*') ? 'active' : '' }}" href="{{ route('platform.branding.edit') }}">Branding</a>
                 @endcan
                 @can('marketplace.manage')
-                    <div class="nav-label" style="margin-top:0.85rem;">Marketplace</div>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.settings.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.settings.edit') }}">Configuração</a>
+                    <div class="nav-label" style="margin-top:0.85rem;">Site público</div>
+                    <a class="nav-link {{ request()->routeIs('platform.marketplace.settings.*') && !request()->routeIs('platform.marketplace.mercadopago*') ? 'active' : '' }}" href="{{ route('platform.marketplace.settings.edit') }}">Geral & Landing</a>
                     <a class="nav-link {{ request()->routeIs('platform.marketplace.sections.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.sections.index') }}">Seções</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.media.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.media.index') }}">Mídias</a>
+                    <a class="nav-link {{ request()->routeIs('platform.marketplace.media.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.media.index') }}">Conteúdo & Mídias</a>
+                    <a class="nav-link {{ request()->routeIs('platform.marketplace.mercadopago*') ? 'active' : '' }}" href="{{ route('platform.marketplace.mercadopago.edit') }}">Mercado Pago</a>
+                    <a class="nav-link {{ request()->routeIs('platform.marketplace.preview') ? 'active' : '' }}" href="{{ route('platform.marketplace.preview') }}" target="_blank" rel="noopener">Visualizar site</a>
+                    <div class="nav-label" style="margin-top:0.85rem;">Crescimento</div>
                     <a class="nav-link {{ request()->routeIs('platform.marketplace.leads.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.leads.index') }}">Leads</a>
                     <a class="nav-link {{ request()->routeIs('platform.marketplace.analytics') ? 'active' : '' }}" href="{{ route('platform.marketplace.analytics') }}">Analytics</a>
                     <a class="nav-link {{ request()->routeIs('platform.marketplace.intelligence') ? 'active' : '' }}" href="{{ route('platform.marketplace.intelligence') }}">Intelligence</a>
@@ -175,7 +178,6 @@
                     <a class="nav-link {{ request()->routeIs('platform.marketplace.segments.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.segments.index') }}">Segmentos</a>
                     <a class="nav-link {{ request()->routeIs('platform.marketplace.cases.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.cases.index') }}">Cases</a>
                     <a class="nav-link {{ request()->routeIs('platform.marketplace.campaigns.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.campaigns.index') }}">Campanhas</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.preview') ? 'active' : '' }}" href="{{ route('platform.marketplace.preview') }}" target="_blank" rel="noopener">Visualizar Marketplace</a>
                 @endcan
                 @can('platform.manageFeatureFlags')
                     <a class="nav-link {{ request()->routeIs('platform.flags.*') ? 'active' : '' }}" href="{{ route('platform.flags.index') }}">Feature Flags</a>

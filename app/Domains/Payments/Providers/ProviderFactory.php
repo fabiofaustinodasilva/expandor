@@ -27,7 +27,19 @@ class ProviderFactory
 
     protected function makeMercadoPago(): MercadoPagoProvider
     {
-        return new MercadoPagoProvider((array) config('payments.providers.mercadopago', []));
+        $fallback = (array) config('payments.providers.mercadopago', []);
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('payment_gateway_settings')) {
+            $db = \App\Domains\Payments\Models\PaymentGatewaySetting::query()
+                ->where('provider', \App\Domains\Payments\Models\PaymentGatewaySetting::PROVIDER_MERCADOPAGO)
+                ->first();
+
+            if ($db !== null) {
+                $fallback = $db->toProviderConfig($fallback);
+            }
+        }
+
+        return new MercadoPagoProvider($fallback);
     }
 
     protected function makeStripe(): StripeProvider

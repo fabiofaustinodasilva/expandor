@@ -8,6 +8,8 @@ enum MarketplaceSectionType: string
     case Showcase = 'showcase';
     case HowItWorks = 'how_it_works';
     case BeforeAfter = 'before_after';
+    case Benefits = 'benefits';
+    case Segments = 'segments';
     case About = 'about';
     case Features = 'features';
     case SocialProof = 'social_proof';
@@ -25,7 +27,9 @@ enum MarketplaceSectionType: string
             self::Showcase => 'Demonstração visual',
             self::HowItWorks => 'Como funciona',
             self::BeforeAfter => 'Antes e depois',
-            self::About => 'Quem Somos',
+            self::Benefits => 'Benefícios',
+            self::Segments => 'Para quem é',
+            self::About => 'Sobre',
             self::Features => 'Recursos',
             self::SocialProof => 'Prova social',
             self::Video => 'Vídeo',

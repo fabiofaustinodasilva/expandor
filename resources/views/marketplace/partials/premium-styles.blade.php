@@ -96,5 +96,12 @@
 
     @media (max-width: 768px) {
         .mkp-ba-grid { grid-template-columns: 1fr; }
+        .mkp-steps { grid-template-columns: 1fr 1fr; }
+        .mkp-metrics { grid-template-columns: 1fr 1fr; }
+        .mkp-carousel-slide { padding: 0.65rem; }
+    }
+    @media (max-width: 480px) {
+        .mkp-steps, .mkp-metrics { grid-template-columns: 1fr; }
+        .mkp-play span { width: 56px; height: 56px; font-size: 1.2rem; }
     }
 </style>
