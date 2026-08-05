@@ -9,10 +9,15 @@
         :root {
             --bg: #0F1117;
             --bg-elevated: #171A22;
+            --bg-soft: #1E2330;
             --border: #2A3142;
             --text: #F3F5F9;
             --muted: #9AA3B5;
             --accent: #3B82F6;
+            --accent-2: #EF4444;
+            --success: #22C55E;
+            --button-text: #fff;
+            --primary: #3B82F6;
         }
         * { box-sizing: border-box; }
         body {
@@ -24,53 +29,29 @@
         }
         a { color: var(--accent); }
         .wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
-        .card {
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 1.25rem;
-        }
         .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
         .muted { color: var(--muted); }
-        label { display:block; margin-bottom:0.35rem; color:var(--muted); font-size:0.9rem; }
-        input, select {
-            width: 100%;
-            margin-bottom: 1rem;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 0.65rem;
-            padding: 0.75rem 0.85rem;
-        }
-        button, .btn {
-            display: inline-flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            border: 0;
-            border-radius: 0.65rem;
-            padding: 0.8rem 1rem;
-            background: var(--accent);
-            color: white;
-            font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-        }
         .error { color: #fca5a5; margin-bottom: 1rem; }
-        .topnav { display:flex; justify-content:space-between; gap:1rem; margin-bottom:1.5rem; }
+        .topnav { display:flex; justify-content:space-between; gap:1rem; margin-bottom:1.5rem; align-items:center; }
+        .topnav a { text-decoration: none; color: var(--muted); font-weight: 600; }
+        .topnav a:hover { color: var(--text); }
+        .guest-btn-row { display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; }
+        .guest-btn-row .btn { width: auto; }
+        .wrap form .btn,
+        .wrap form button[type="submit"] { width: 100%; }
     </style>
 </head>
 <body>
 <div class="wrap">
     <div class="topnav">
         <strong><a href="{{ route('marketplace.home') }}" style="color:inherit; text-decoration:none;">{{ config('app.name') }}</a></strong>
-        <div style="display:flex; gap:1rem; align-items:center;">
+        <div class="guest-btn-row">
             <a href="{{ route('marketplace.plans') }}">Planos</a>
-            <a href="{{ route('login') }}">Já tenho conta</a>
+            <a class="btn btn-ghost" href="{{ route('login') }}" style="width:auto;">Já tenho conta</a>
         </div>
     </div>
     @if($errors->any())
-        <div class="error">
+        <div class="alert alert-error" role="alert">
             @foreach($errors->all() as $error)
                 <div>{{ $error }}</div>
             @endforeach
@@ -80,9 +61,10 @@
 </div>
 @include('partials.rc-ux-polish')
 <style>
-    @media (max-width: 768px) {
+    @media (max-width: 900px) {
         .topnav { flex-direction: column; align-items: flex-start; }
         .wrap { padding: 1.25rem 1rem; }
+        .guest-btn-row { width: 100%; }
     }
 </style>
 </body>

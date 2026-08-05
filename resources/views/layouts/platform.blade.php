@@ -73,60 +73,12 @@
         .header-user { text-align: right; }
         .header-user strong { display: block; }
         .content { padding: 1.5rem; }
-        .card {
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 1.25rem;
-        }
-        .page-title { font-size: 1.6rem; font-weight: 700; }
         .grid { display: grid; gap: 1rem; }
         .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .table { width: 100%; border-collapse: collapse; }
-        .table th, .table td {
-            text-align: left;
-            padding: 0.75rem 0.5rem;
-            border-bottom: 1px solid var(--border);
-            vertical-align: top;
-        }
-        .table th { color: var(--muted); font-size: 0.8rem; font-weight: 600; }
-        .badge {
-            display: inline-block;
-            padding: 0.2rem 0.55rem;
-            border-radius: 999px;
-            background: var(--bg-soft);
-            font-size: 0.75rem;
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.35rem;
-            border: 0;
-            border-radius: 0.65rem;
-            padding: 0.65rem 1rem;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .btn-primary { background: var(--accent); color: #111; }
-        .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
-        .form-control, .form-group input, .form-group select, .form-group textarea {
-            width: 100%;
-            background: var(--bg-soft);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 0.65rem;
-            padding: 0.7rem 0.85rem;
-        }
-        .form-group label { display: block; margin-bottom: 0.35rem; color: var(--muted); font-size: 0.9rem; }
-        .actions { display: flex; gap: 0.75rem; align-items: center; }
-        .alert { padding: 0.85rem 1rem; border-radius: 0.75rem; margin-bottom: 1rem; }
-        .alert-success { background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.35); }
-        .alert-error { background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); }
+        .nav-link { transition: background var(--ds-transition, .18s ease), color var(--ds-transition, .18s ease); }
         @media (max-width: 900px) {
             .shell { flex-direction: column; }
-            .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid var(--border); }
-            .grid-2 { grid-template-columns: 1fr; }
+            .sidebar { width: 100%; border-right: 0; }
         }
     </style>
 </head>
@@ -134,8 +86,8 @@
 @php
     $authUser = auth()->user();
 @endphp
-<div class="shell">
-    <aside class="sidebar">
+<div class="shell" id="platform-shell">
+    <aside class="sidebar" id="platform-sidebar">
         <div class="brand">
             @php $platformBrand = app(\App\Domains\Platform\Services\PlatformBrandingService::class)->payload(); @endphp
             @if($platformBrand->logoMark())
@@ -144,7 +96,7 @@
             {{ strtoupper($platformBrand->name()) }} <span>Platform</span>
         </div>
 
-        <nav>
+        <nav aria-label="Menu da plataforma">
             <div class="nav-group">
                 <div class="nav-label">Plataforma</div>
                 <a class="nav-link {{ request()->routeIs('platform.dashboard') ? 'active' : '' }}" href="{{ route('platform.dashboard') }}">Dashboard</a>
@@ -192,8 +144,9 @@
     <div class="main">
         <header class="header">
             <div>
-                <div class="header-meta">Administração SaaS</div>
-                <strong>Proprietário da plataforma</strong>
+                <button type="button" class="shell-nav-toggle" aria-expanded="false" aria-controls="platform-sidebar">Menu</button>
+                <div class="header-meta" style="margin-top:0.35rem;">Administração</div>
+                <strong>Painel da plataforma</strong>
             </div>
             <div class="header-user">
                 <strong>{{ $authUser?->name }}</strong>

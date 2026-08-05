@@ -6,8 +6,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     @php
+        $uiCopy = $ui ?? config('marketplace_defaults.ui', []);
         $pageTitle = $segmentPage->title.' — '.($settings->title ?: 'Expandor');
-        $pageDescription = $segmentPage->description ?: ($settings->seo_description ?: 'CRM de campo e gestão comercial.');
+        $pageDescription = $segmentPage->description
+            ?: ($settings->seo_description ?: (config('marketplace_defaults.settings.seo_description') ?: 'Organize vendedores, visitas e clientes.'));
         $primary = $settings->primary_color ?: '#3B82F6';
         $secondary = $settings->secondary_color ?: '#0F172A';
         $background = $settings->background_color ?: '#0B1220';
@@ -16,7 +18,7 @@
         $heroVideo = $segmentPage->hero_video ?: $settings->hero_video;
         $featureItems = $segmentPage->features ?: [];
         $ctaUrl = $segmentPage->cta_url ?: '#demo';
-        $ctaText = $segmentPage->cta_text ?: 'Solicitar demonstração';
+        $ctaText = $segmentPage->cta_text ?: ($uiCopy['request_demo'] ?? 'Solicitar demonstração');
     @endphp
 
     <title>{{ $pageTitle }}</title>
@@ -146,7 +148,7 @@
         <div class="mkp-header-actions">
             <a class="mkp-btn mkp-btn-ghost" href="{{ route('marketplace.home') }}">← Início</a>
             <a href="#demo" class="mkp-btn mkp-btn-outline">{{ $ctaText }}</a>
-            <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">Começar teste grátis</a>
+            <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $uiCopy['start_free_trial'] ?? 'Começar teste grátis' }}</a>
         </div>
     </div>
 </header>
@@ -173,7 +175,7 @@
                         @if($heroVideo)
                             <video src="{{ $heroVideo }}" autoplay muted loop playsinline loading="lazy"></video>
                         @else
-                            <img src="{{ $heroImage }}" alt="" loading="lazy">
+                            <img src="{{ $heroImage }}" alt="{{ $segmentPage->title ?: 'Expandor' }}" loading="lazy">
                         @endif
                     </div>
                 @endif

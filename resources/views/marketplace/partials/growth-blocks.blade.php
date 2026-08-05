@@ -4,7 +4,7 @@
 @endphp
 
 <style>
-            .mkp-growth-section { padding: 4rem 0; }
+            .mkp-demo-section { padding: 4rem 0; }
             .mkp-form-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -27,12 +27,20 @@
                 background: rgba(15, 23, 42, 0.55);
                 color: var(--mkp-text);
                 font: inherit;
+                transition: border-color 0.18s ease, box-shadow 0.18s ease;
             }
             .mkp-field input:focus,
             .mkp-field select:focus,
             .mkp-field textarea:focus {
                 outline: none;
                 border-color: color-mix(in srgb, var(--mkp-primary) 55%, transparent);
+                box-shadow: 0 0 0 3px color-mix(in srgb, var(--mkp-primary) 18%, transparent);
+            }
+            .mkp-field input:focus-visible,
+            .mkp-field select:focus-visible,
+            .mkp-field textarea:focus-visible {
+                outline: 2px solid color-mix(in srgb, var(--mkp-button) 70%, transparent);
+                outline-offset: 2px;
             }
             .mkp-alert-success {
                 padding: 0.85rem 1rem;
@@ -85,7 +93,7 @@
             }
 </style>
 
-<section id="demo" class="mkp-section mkp-growth-section mkp-section-alt mkp-fade">
+<section id="demo" class="mkp-section mkp-demo-section mkp-section-alt mkp-fade">
     <div class="mkp-container">
         <div class="mkp-section-head">
             <h2 class="mkp-title">{{ $formCopy['title'] ?? ($uiCopy['request_demo'] ?? 'Solicitar demonstração') }}</h2>
@@ -96,7 +104,7 @@
             <div class="mkp-alert-success">{{ session('success') }}</div>
         @endif
 
-        <form method="POST" action="{{ route('marketplace.leads.store') }}" class="mkp-roi-card" style="max-width:720px;margin:0 auto;background:var(--mkp-surface);border:1px solid var(--mkp-border);border-radius:var(--mkp-radius);padding:2rem;">
+        <form method="POST" action="{{ route('marketplace.leads.store') }}" class="mkp-demo-card" style="max-width:720px;margin:0 auto;background:var(--mkp-surface);border:1px solid var(--mkp-border);border-radius:var(--mkp-radius);padding:2rem;">
             @csrf
             <div class="mkp-form-grid">
                 <div class="mkp-field">
@@ -151,7 +159,7 @@
 </section>
 
 @if(isset($cases) && $cases->isNotEmpty())
-    <section class="mkp-section mkp-growth-section mkp-section-alt mkp-fade">
+    <section class="mkp-section mkp-demo-section mkp-section-alt mkp-fade">
         <div class="mkp-container">
             <div class="mkp-section-head">
                 <h2 class="mkp-title">{{ $uiCopy['success_stories'] ?? 'Histórias de quem já usa' }}</h2>

@@ -54,15 +54,8 @@
         .app-content { padding: 1rem; max-width: 720px; margin: 0 auto; }
         .page-title { margin: 0 0 0.35rem; font-size: 1.35rem; }
         .page-sub { color: var(--muted); margin: 0 0 1rem; font-size: 0.9rem; }
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 1rem;
-            margin-bottom: 0.85rem;
-        }
-        .card-link { display: block; transition: border-color .15s ease; }
-        .card-link:active, .card-link:hover { border-color: var(--accent); }
+        .card { margin-bottom: 0.85rem; }
+        .card-link { display: block; }
         .stats {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -87,46 +80,8 @@
         }
         .badge-success { background: rgba(34,197,94,.15); color: var(--success); }
         .badge-warning { background: rgba(245,158,11,.15); color: var(--warning); }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.35rem;
-            width: 100%;
-            border: 0;
-            border-radius: 0.85rem;
-            padding: 0.85rem 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-        .btn-primary { background: var(--accent); color: var(--button-text); }
-        .btn-ghost {
-            background: transparent;
-            color: var(--muted);
-            border: 1px solid var(--border);
-        }
-        .btn-danger { background: var(--danger); color: #fff; }
+        .btn { width: 100%; padding: 0.85rem 1rem; font-size: 1rem; border-radius: 0.85rem; }
         .btn-row { display: grid; gap: 0.55rem; margin-top: 0.85rem; }
-        .form-group { margin-bottom: 0.85rem; }
-        .form-group label { display: block; margin-bottom: 0.35rem; color: var(--muted); font-size: 0.85rem; }
-        .form-control {
-            width: 100%;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 0.75rem;
-            padding: 0.8rem 0.9rem;
-            font-size: 1rem;
-        }
-        .alert {
-            padding: 0.8rem 0.95rem;
-            border-radius: 0.85rem;
-            margin-bottom: 0.85rem;
-            border: 1px solid var(--border);
-        }
-        .alert-success { background: rgba(34,197,94,.12); color: var(--success); }
-        .alert-error { background: rgba(239,68,68,.12); color: #fca5a5; }
         .list-title { font-weight: 700; margin-bottom: 0.2rem; }
         .list-meta { color: var(--muted); font-size: 0.85rem; }
         .bottom-nav {
@@ -206,11 +161,12 @@
     @yield('content')
 </main>
 
-<nav class="bottom-nav">
+<nav class="bottom-nav" aria-label="Navegação do app de campo">
     <a class="{{ request()->routeIs('sales-app.dashboard') ? 'active' : '' }}" href="{{ route('sales-app.dashboard') }}">Início</a>
     <a class="{{ request()->routeIs('sales-app.campaigns.*') ? 'active' : '' }}" href="{{ route('sales-app.campaigns.index') }}">Campanhas</a>
     <a class="{{ request()->routeIs('sales-app.follow-ups.*') ? 'active' : '' }}" href="{{ route('sales-app.follow-ups.index') }}">Retornos</a>
     <a class="{{ request()->routeIs('sales-app.training.*') ? 'active' : '' }}" href="{{ route('sales-app.training.index') }}">Academia</a>
 </nav>
+@include('partials.rc-ux-polish')
 </body>
 </html>

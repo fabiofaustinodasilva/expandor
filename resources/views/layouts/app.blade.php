@@ -76,89 +76,27 @@
         .header-user { text-align: right; }
         .header-user strong { display: block; }
         .content { padding: 1.5rem; }
-        .card {
-            background: var(--bg-elevated);
-            border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 1.25rem;
-            color: var(--text);
-        }
         .grid { display: grid; gap: 1rem; }
         .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .stat-label { color: var(--muted); font-size: 0.85rem; margin-bottom: 0.35rem; }
         .stat-value { font-size: 1.4rem; font-weight: 700; }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.4rem;
-            border: 0;
-            border-radius: 0.65rem;
-            padding: 0.65rem 1rem;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .btn-primary { background: var(--accent); color: var(--button-text); }
-        .btn-danger { background: var(--accent-2); color: var(--button-text); }
-        .btn-ghost {
-            background: transparent;
-            color: var(--muted);
-            border: 1px solid var(--border);
-        }
-        .table { width: 100%; border-collapse: collapse; }
-        .table th, .table td {
-            text-align: left;
-            padding: 0.85rem 0.6rem;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.95rem;
-        }
-        .table th { color: var(--muted); font-weight: 600; }
-        .badge {
-            display: inline-block;
-            padding: 0.2rem 0.55rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            background: var(--bg-soft);
-            color: var(--text);
-        }
-        .badge-success { background: rgba(34, 197, 94, 0.15); color: var(--success); }
-        .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
-        .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--accent-2); }
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.35rem; color: var(--muted); font-size: 0.9rem; }
-        .form-control {
-            width: 100%;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 0.65rem;
-            padding: 0.7rem 0.85rem;
-        }
-        .alert {
-            padding: 0.85rem 1rem;
-            border-radius: 0.75rem;
-            margin-bottom: 1rem;
-            border: 1px solid var(--border);
-        }
-        .alert-success { background: rgba(34, 197, 94, 0.12); color: var(--success); }
-        .alert-error { background: rgba(239, 68, 68, 0.12); color: #fca5a5; }
-        .page-title { margin: 0 0 1rem; font-size: 1.5rem; }
-        .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
         .shortcut {
             display: block;
             padding: 1rem;
-            border-radius: 0.85rem;
+            border-radius: var(--ds-radius, 0.85rem);
             border: 1px dashed var(--border);
             color: var(--muted);
             background: rgba(30, 35, 48, 0.4);
+            transition: border-color 0.18s ease, background 0.18s ease;
         }
-        @media (max-width: 960px) {
+        .shortcut:hover { border-color: var(--accent); background: rgba(30, 35, 48, 0.55); }
+        .nav-link { transition: background 0.18s ease, color 0.18s ease; }
+        @media (max-width: 900px) {
             .shell { flex-direction: column; }
-            .sidebar { width: 100%; border-right: 0; border-bottom: 1px solid var(--border); }
-            .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
-            .header { flex-direction: column; align-items: flex-start; }
+            .sidebar { width: 100%; border-right: 0; }
+            .header { flex-wrap: wrap; }
         }
     </style>
 </head>
@@ -177,8 +115,8 @@
         </form>
     </div>
 @endif
-<div class="shell">
-    <aside class="sidebar">
+<div class="shell" id="app-shell">
+    <aside class="sidebar" id="app-sidebar">
         <div class="brand" style="display:flex; align-items:center; gap:0.65rem;">
             @if($brand->logoUrl)
                 <img src="{{ $brand->logoUrl }}" alt="{{ $brand->displayName }}" style="height:28px; max-width:120px; object-fit:contain;">
@@ -186,7 +124,7 @@
             <span>{{ $brand->displayName }}</span>
         </div>
 
-        <nav>
+        <nav aria-label="Menu principal">
             <div class="nav-group">
                 <div class="nav-label">Principal</div>
                 @if($authUser?->hasPermission('sales_app.access'))
@@ -251,10 +189,10 @@
                     <a class="nav-link {{ request()->routeIs('crm.*') ? 'active' : '' }}" href="{{ route('crm.dashboard') }}">CRM Comercial</a>
                 @endif
                 @if($authUser?->hasPermission('commissions.manage'))
-                    <a class="nav-link {{ request()->routeIs('commissions.index') ? 'active' : '' }}" href="{{ route('commissions.index') }}">💰 Comissões</a>
-                    <a class="nav-link {{ request()->routeIs('commissions.products.*') ? 'active' : '' }}" href="{{ route('commissions.products.index') }}">📦 Produtos / Estoque</a>
+                    <a class="nav-link {{ request()->routeIs('commissions.index') ? 'active' : '' }}" href="{{ route('commissions.index') }}">Comissões</a>
+                    <a class="nav-link {{ request()->routeIs('commissions.products.*') ? 'active' : '' }}" href="{{ route('commissions.products.index') }}">Produtos / Estoque</a>
                 @elseif($authUser?->hasPermission('commissions.view_self'))
-                    <a class="nav-link {{ request()->routeIs('commissions.index') ? 'active' : '' }}" href="{{ route('commissions.index') }}">💰 Minha comissão</a>
+                    <a class="nav-link {{ request()->routeIs('commissions.index') ? 'active' : '' }}" href="{{ route('commissions.index') }}">Minha comissão</a>
                 @endif
                 @if($authUser?->hasPermission('campaigns.view'))
                     <a class="nav-link {{ request()->routeIs('campaigns.*') ? 'active' : '' }}" href="{{ route('campaigns.index') }}">Campanhas</a>
@@ -292,7 +230,8 @@
         @include('onboarding.partials.saas-onboarding-banner')
         <header class="header">
             <div>
-                <div class="header-meta">Empresa atual</div>
+                <button type="button" class="shell-nav-toggle" aria-expanded="false" aria-controls="app-sidebar">Menu</button>
+                <div class="header-meta" style="margin-top:0.35rem;">Empresa atual</div>
                 <strong>{{ $company?->name ?? '—' }}</strong>
             </div>
             <div class="header-user">

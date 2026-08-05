@@ -80,8 +80,8 @@
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         .empty-friendly { text-align: center; padding: 2rem 1rem; }
         .empty-friendly p { color: var(--muted); margin: .5rem 0 1.25rem; }
-        .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; border: 0; border-radius: .75rem; padding: .7rem 1rem; font-weight: 700; cursor: pointer; text-decoration: none; color: inherit; }
-        .btn-primary { background: var(--primary); color: var(--button-text); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; border: 1px solid transparent; border-radius: .75rem; padding: .7rem 1rem; font-weight: 700; cursor: pointer; text-decoration: none; color: inherit; transition: .18s ease; }
+        .btn-primary { background: var(--primary, var(--accent)); color: var(--button-text); }
         .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
         .table { width: 100%; border-collapse: collapse; }
         .table th, .table td { padding: .7rem .5rem; border-bottom: 1px solid var(--border); text-align: left; font-size: .92rem; }

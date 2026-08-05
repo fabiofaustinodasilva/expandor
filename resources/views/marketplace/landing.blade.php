@@ -7,9 +7,11 @@
 
     @php
         $brandName = $brand ?? 'Expandor';
-        $pageTitle = $settings->seo_title ?: ($settings->title ?: $brandName.' — CRM inteligente');
-        $pageDescription = $settings->seo_description ?: ($settings->description ?: 'CRM de campo e gestão comercial.');
-        $pageKeywords = $settings->seo_keywords ?: 'crm, vendas, saas, expandor';
+        $defaults = config('marketplace_defaults.settings', []);
+        $uiDefaults = config('marketplace_defaults.ui', []);
+        $pageTitle = $settings->seo_title ?: ($settings->title ?: ($defaults['seo_title'] ?? ($brandName.' — Sistema para vendas porta a porta')));
+        $pageDescription = $settings->seo_description ?: ($settings->description ?: ($defaults['seo_description'] ?? 'Organize vendedores, visitas e clientes. Mais vendas, menos planilhas.'));
+        $pageKeywords = $settings->seo_keywords ?: ($defaults['seo_keywords'] ?? 'vendas porta a porta, equipe de vendas, visitas, campanhas');
         $ogImage = $settings->mediaUrl($settings->og_image)
             ?: $settings->mediaUrl($settings->hero_image)
             ?: $settings->mediaUrl($settings->logo)
@@ -21,10 +23,10 @@
         $navItems = $nav ?? [];
         $navActionItems = $navActions ?? [];
         $footerData = $footer ?? [];
-        $heroSecondaryCta = $heroSecondary ?? ['text' => 'Solicitar demonstração', 'url' => '#demo'];
+        $heroSecondaryCta = $heroSecondary ?? ['text' => ($uiDefaults['request_demo'] ?? 'Solicitar demonstração'), 'url' => '#demo'];
         $premiumData = $premium ?? [];
         $metricsData = $metrics ?? [];
-        $uiCopy = $ui ?? ($premiumData['ui'] ?? []);
+        $uiCopy = $ui ?? ($premiumData['ui'] ?? $uiDefaults);
         $demoEmbed = $settings->demoVideoEmbedUrl();
         $demoIsMp4 = $settings->demoVideoIsMp4();
     @endphp
@@ -685,6 +687,19 @@
             font-weight: 700;
         }
 
+        .mkp-btn:focus-visible,
+        .mkp-nav a:focus-visible,
+        .mkp-faq-q:focus-visible,
+        .mkp-carousel-btn:focus-visible,
+        .mkp-carousel-dot:focus-visible {
+            outline: 2px solid color-mix(in srgb, var(--mkp-button) 70%, transparent);
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 1024px) {
+            .mkp-section { padding: 3.5rem 0; }
+        }
+
         @media (max-width: 768px) {
             .mkp-hero-grid,
             .mkp-about-grid { grid-template-columns: 1fr; }
@@ -698,9 +713,27 @@
             }
             .mkp-nav.is-open { display: flex; }
             .mkp-header-inner { flex-wrap: wrap; }
-            .mkp-header-actions { width: 100%; justify-content: stretch; }
-            .mkp-header-actions .mkp-btn { flex: 1; text-align: center; font-size: 0.82rem; padding: 0.55rem 0.65rem; }
+            .mkp-header-actions { width: 100%; justify-content: stretch; flex-wrap: wrap; }
+            .mkp-header-actions .mkp-btn { flex: 1 1 calc(50% - 0.35rem); text-align: center; font-size: 0.82rem; padding: 0.55rem 0.65rem; }
             .mkp-section { padding: 3rem 0; }
+        }
+
+        @media (max-width: 414px) {
+            .mkp-container { padding: 0 1rem; }
+            .mkp-header-actions .mkp-btn { flex: 1 1 100%; }
+            .mkp-hero h1 { font-size: clamp(1.55rem, 8vw, 2rem); }
+        }
+
+        @media (max-width: 360px) {
+            .mkp-section { padding: 2.25rem 0; }
+            .mkp-btn { padding: 0.55rem 0.75rem; font-size: 0.85rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .mkp-fade, .mkp-step, .mkp-ba-card, .mkp-metric, .mkp-carousel-track {
+                transition: none !important;
+                animation: none !important;
+            }
         }
     </style>
     @include('marketplace.partials.premium-styles')
@@ -708,8 +741,8 @@
 <body>
 
 @if(!empty($preview))
-    <div class="mkp-preview-banner">
-        Modo preview — {{ $uiCopy['preview_banner'] ?? 'alterações já salvas' }}
+    <div class="mkp-preview-banner" role="status">
+        {{ $uiCopy['preview_banner'] ?? 'Modo preview — alterações já salvas' }}
     </div>
 @endif
 
@@ -987,7 +1020,7 @@
                             </div>
                             @if($section->imageUrl())
                                 <div class="mkp-about-image">
-                                    <img src="{{ $section->imageUrl() }}" alt="" loading="lazy">
+                                    <img src="{{ $section->imageUrl() }}" alt="{{ $section->title ?: $brandName }}" loading="lazy">
                                 </div>
                             @endif
                         </div>
