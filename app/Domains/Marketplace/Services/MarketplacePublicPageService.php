@@ -86,7 +86,7 @@ class MarketplacePublicPageService
                 if ($type === MarketplaceSectionType::Features->value) {
                     $section = $this->ensureFeaturesPayload($section, $defaults);
                 }
-                $sections->push($section);
+                $sections->push($this->sanitizePublicSection($section, $type, $defaults));
                 continue;
             }
 
@@ -256,6 +256,38 @@ class MarketplacePublicPageService
         }
 
         return $settings;
+    }
+
+    /**
+     * Remove jargão técnico visível ao visitante (CMS antigo), preferindo defaults limpos.
+     *
+     * @param  array<string, mixed>  $defaults
+     */
+    protected function sanitizePublicSection(MarketplaceSection $section, string $type, array $defaults): MarketplaceSection
+    {
+        $fallback = $defaults['sections'][$type] ?? [];
+        foreach (['title', 'subtitle', 'description', 'button_text'] as $field) {
+            $value = (string) ($section->{$field} ?? '');
+            if ($value !== '' && $this->containsTechnicalJargon($value)) {
+                $replacement = $fallback[$field] ?? null;
+                if ($field === 'description' && $type === MarketplaceSectionType::Features->value) {
+                    $replacement = json_encode($fallback['features'] ?? [], JSON_UNESCAPED_UNICODE);
+                }
+                if (is_string($replacement) && $replacement !== '') {
+                    $section->{$field} = $replacement;
+                }
+            }
+        }
+
+        return $section;
+    }
+
+    protected function containsTechnicalJargon(string $text): bool
+    {
+        return (bool) preg_match(
+            '/\b(marketplace|saas|landing|pipeline|growth|revenue|trial|multi[\s-]?tenant|roi)\b|teste\s+gr[aá]tis/iu',
+            $text
+        );
     }
 
     /**

@@ -44,7 +44,7 @@ class MarketplaceSettingsController extends Controller
 
         return redirect()
             ->route('platform.marketplace.settings.edit')
-            ->with('success', 'Configuração do Marketplace salva.');
+            ->with('success', 'Configuração do site salva.');
     }
 
     public function restoreDefaults(): RedirectResponse

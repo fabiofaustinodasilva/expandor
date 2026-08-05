@@ -1,24 +1,24 @@
 @extends('layouts.platform')
 
-@section('title', 'Marketplace — Configuração')
+@section('title', 'Site público — Configuração')
 
 @section('content')
     <div style="margin-bottom:1rem;">
-        <a href="{{ route('platform.dashboard') }}" class="header-meta" style="text-decoration:none;">← Dashboard</a>
+        <a href="{{ route('platform.dashboard') }}" class="header-meta" style="text-decoration:none;">← Painel</a>
     </div>
 
     <div style="display:flex; justify-content:space-between; gap:1rem; margin-bottom:1.1rem; flex-wrap:wrap; align-items:flex-start;">
         <div>
-            <h1 class="page-title" style="margin:0;">Configuração do Marketplace</h1>
-            <div class="header-meta">Identidade visual, SEO e integrações da landing page pública.</div>
+            <h1 class="page-title" style="margin:0;">Site Expandor</h1>
+            <div class="header-meta">Identidade, textos e integrações do site de vendas porta a porta.</div>
         </div>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
             <form method="POST" action="{{ route('platform.marketplace.settings.restore') }}"
-                  onsubmit="return confirm('Restaurar o conteúdo padrão do Marketplace? Textos de seções, FAQ e depoimentos serão substituídos. Logos e mídias enviadas serão preservados.');">
+                  onsubmit="return confirm('Restaurar o conteúdo padrão do site? Textos de seções, FAQ e depoimentos serão substituídos. Logos e mídias enviadas serão preservados.');">
                 @csrf
-                <button type="submit" class="btn btn-ghost">Restaurar Conteúdo Padrão</button>
+                <button type="submit" class="btn btn-ghost">Restaurar conteúdo padrão</button>
             </form>
-            <a class="btn btn-ghost" href="{{ route('platform.marketplace.preview') }}" target="_blank" rel="noopener">Visualizar preview</a>
+            <a class="btn btn-ghost" href="{{ route('platform.marketplace.preview') }}" target="_blank" rel="noopener">Visualizar site</a>
         </div>
     </div>
 
@@ -158,7 +158,7 @@
                             <a class="btn btn-primary" href="{{ $waPreview }}" target="_blank" rel="noopener">Abrir conversa</a>
                         </div>
                     @else
-                        <div class="header-meta">WhatsApp inativo — ative o botão e informe o número para exibir na Landing.</div>
+                        <div class="header-meta">WhatsApp inativo — ative o botão e informe o número para exibir no site.</div>
                     @endif
                 </div>
             </div>
@@ -241,7 +241,7 @@
                             @endforeach
                         </ul>
                     @else
-                        <div class="header-meta">Nenhuma rede ativa. Marque a rede e informe a URL para exibir no rodapé da Landing.</div>
+                        <div class="header-meta">Nenhuma rede ativa. Marque a rede e informe a URL para exibir no rodapé do site.</div>
                     @endif
                 </div>
             </div>
@@ -288,7 +288,7 @@
         @endphp
 
         <div class="card" style="margin-top:1rem;" id="landing">
-            <h2 style="margin-top:0;">Landing — textos editáveis</h2>
+            <h2 style="margin-top:0;">Textos do site (editáveis)</h2>
             <div class="header-meta" style="margin-bottom:1rem;">
                 Todo texto público pode ser personalizado aqui. Em branco = conteúdo padrão do sistema.
                 Hero principal: use os campos Título / Subtítulo / Descrição acima e as <a href="{{ route('platform.marketplace.sections.index') }}">Seções</a>.

@@ -32,7 +32,7 @@ class Sprint803MarketplacePremiumConversionTest extends TestCase
         $this->get(route('marketplace.home'))
             ->assertOk()
             ->assertSee('Organize sua equipe de vendas porta a porta', false)
-            ->assertSee('Começar teste grátis', false)
+            ->assertSee('Começar agora', false)
             ->assertSee('Solicitar demonstração', false)
             ->assertSee('Veja o Expandor em ação', false)
             ->assertSee('Como funciona', false)
@@ -103,7 +103,7 @@ class Sprint803MarketplacePremiumConversionTest extends TestCase
         $this->get(route('marketplace.plans'))
             ->assertOk()
             ->assertSee('Compare os planos Expandor', false)
-            ->assertSee('Começar teste grátis', false);
+            ->assertSee('Começar agora', false);
     }
 
     public function test_admin_can_save_demo_video_and_conversion_content(): void

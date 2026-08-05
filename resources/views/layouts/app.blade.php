@@ -9,7 +9,7 @@
         $brand = $brand ?? \App\Domains\Branding\DTOs\BrandPayload::defaults();
         $themeService = app(\App\Domains\Branding\Services\ThemeService::class);
     @endphp
-    <title>@yield('title', 'Dashboard') — {{ $brand->systemName }}</title>
+    <title>@yield('title', 'Painel') — {{ $brand->systemName }}</title>
     @if($brand->faviconUrl)
         <link rel="icon" href="{{ $brand->faviconUrl }}">
     @endif
@@ -47,20 +47,42 @@
             margin: 0.75rem 0.6rem 0.35rem;
         }
         .nav-link {
-            display: block;
-            padding: 0.7rem 0.85rem;
-            border-radius: 0.65rem;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.55rem 0.75rem;
+            border-radius: 0.55rem;
             color: var(--muted);
-            transition: 0.15s ease;
+            transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+            font-size: 0.9rem;
+            font-weight: 520;
         }
-        .nav-link:hover, .nav-link.active {
-            background: var(--bg-soft);
+        .nav-link:hover { background: var(--bg-soft); color: var(--text); }
+        .nav-link.active {
+            background: color-mix(in srgb, var(--accent) 16%, var(--bg-soft));
             color: var(--text);
+            box-shadow: inset 3px 0 0 var(--accent);
         }
-        .nav-link.disabled {
-            opacity: 0.45;
-            pointer-events: none;
+        .nav-link.disabled { opacity: 0.45; pointer-events: none; }
+        .ent-nav { display: flex; flex-direction: column; gap: 0.35rem; }
+        .nav-section { border-radius: 0.75rem; overflow: hidden; }
+        .nav-section-toggle {
+            width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+            padding: 0.65rem 0.7rem; border: 0; background: transparent; color: var(--text);
+            cursor: pointer; font-weight: 650; font-size: 0.78rem; text-transform: uppercase;
+            letter-spacing: 0.06em; border-radius: 0.65rem;
         }
+        .nav-section-toggle:hover { background: rgba(255,255,255,0.03); }
+        .nav-section-left { display: inline-flex; align-items: center; gap: 0.55rem; }
+        .nav-ico { width: 1.15rem; height: 1.15rem; display: inline-grid; place-items: center; color: var(--muted); }
+        .nav-ico svg { width: 1.05rem; height: 1.05rem; }
+        .nav-chevron {
+            width: 0.45rem; height: 0.45rem; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted);
+            transform: rotate(-45deg); transition: transform 0.18s ease; opacity: 0.7;
+        }
+        .nav-section.is-open .nav-chevron { transform: rotate(45deg); }
+        .nav-section-body { display: none; flex-direction: column; gap: 0.15rem; padding: 0 0.25rem 0.45rem 0.35rem; }
+        .nav-section.is-open .nav-section-body { display: flex; }
         .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
         .header {
             display: flex;
@@ -123,106 +145,7 @@
             @endif
             <span>{{ $brand->displayName }}</span>
         </div>
-
-        <nav aria-label="Menu principal">
-            <div class="nav-group">
-                <div class="nav-label">Principal</div>
-                @if($authUser?->hasPermission('sales_app.access'))
-                    <a class="nav-link {{ request()->routeIs('sales-app.*') ? 'active' : '' }}" href="{{ route('sales-app.dashboard') }}">App Campo</a>
-                @endif
-                <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">Dashboard</a>
-                @if($authUser?->hasPermission('maps.view'))
-                    <a class="nav-link {{ request()->routeIs('map.*') ? 'active' : '' }}" href="{{ route('map.index') }}">Mapa operacional</a>
-                @endif
-            </div>
-
-            <div class="nav-group">
-                <div class="nav-label">Território</div>
-                @if($authUser?->hasPermission('cities.view'))
-                    <a class="nav-link {{ request()->routeIs('cities.*') ? 'active' : '' }}" href="{{ route('cities.index') }}">Cidades</a>
-                @endif
-                @if($authUser?->hasPermission('sectors.view'))
-                    <a class="nav-link {{ request()->routeIs('sectors.*') ? 'active' : '' }}" href="{{ route('sectors.index') }}">Setores</a>
-                @endif
-                @if($authUser?->hasPermission('properties.view'))
-                    <a class="nav-link {{ request()->routeIs('addresses.*') ? 'active' : '' }}" href="{{ route('addresses.index') }}">Endereços</a>
-                    <a class="nav-link {{ request()->routeIs('properties.*', 'residents.*') ? 'active' : '' }}" href="{{ route('properties.index') }}">Clientes / Pontos</a>
-                @endif
-            </div>
-
-            <div class="nav-group">
-                <div class="nav-label">Equipe</div>
-                @if($authUser?->role?->slug === \App\Domains\Company\Models\Role::ADMINISTRATOR)
-                    <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">Usuários</a>
-                @endif
-                @if($authUser?->hasPermission('users.view') || $authUser?->hasPermission('users.manage'))
-                    <a class="nav-link {{ request()->routeIs('operations.team') ? 'active' : '' }}" href="{{ route('operations.team') }}">Central da Equipe</a>
-                @endif
-            </div>
-
-            <div class="nav-group">
-                <div class="nav-label">Sistema</div>
-                @if($authUser?->hasPermission('company.manage') && $company)
-                    <a class="nav-link {{ request()->routeIs('company.show', 'company.edit') ? 'active' : '' }}" href="{{ route('company.show', $company) }}">Empresa</a>
-                @endif
-                @if($authUser?->hasPermission('branding.manage'))
-                    <a class="nav-link {{ request()->routeIs('company.branding.*') ? 'active' : '' }}" href="{{ route('company.branding.edit') }}">Branding</a>
-                @endif
-                @if($authUser?->hasPermission('onboarding.manage') || $authUser?->hasPermission('onboarding.view'))
-                    <a class="nav-link {{ request()->routeIs('setup.*') ? 'active' : '' }}" href="{{ route('setup.show') }}">Setup</a>
-                @endif
-                @if($authUser?->hasPermission('billing.view'))
-                    <a class="nav-link {{ request()->routeIs('company.plan.*') ? 'active' : '' }}" href="{{ route('company.plan.show') }}">Plano e uso</a>
-                    <a class="nav-link {{ request()->routeIs('company.subscription.*') ? 'active' : '' }}" href="{{ route('company.subscription.show') }}">Minha Assinatura</a>
-                @endif
-                @if($authUser?->hasPermission('audit.view'))
-                    <a class="nav-link {{ request()->routeIs('company.audit.*') ? 'active' : '' }}" href="{{ route('company.audit.index') }}">Auditoria</a>
-                @endif
-                @if($authUser?->hasPermission('privacy.view'))
-                    <a class="nav-link {{ request()->routeIs('company.privacy.*') ? 'active' : '' }}" href="{{ route('company.privacy.index') }}">Privacidade</a>
-                @endif
-            </div>
-
-            <div class="nav-group">
-                <div class="nav-label">Operação</div>
-                @if($authUser?->hasPermission('crm.view'))
-                    <a class="nav-link {{ request()->routeIs('crm.*') ? 'active' : '' }}" href="{{ route('crm.dashboard') }}">CRM Comercial</a>
-                @endif
-                @if($authUser?->hasPermission('commissions.manage'))
-                    <a class="nav-link {{ request()->routeIs('commissions.index') ? 'active' : '' }}" href="{{ route('commissions.index') }}">Comissões</a>
-                    <a class="nav-link {{ request()->routeIs('commissions.products.*') ? 'active' : '' }}" href="{{ route('commissions.products.index') }}">Produtos / Estoque</a>
-                @elseif($authUser?->hasPermission('commissions.view_self'))
-                    <a class="nav-link {{ request()->routeIs('commissions.index') ? 'active' : '' }}" href="{{ route('commissions.index') }}">Minha comissão</a>
-                @endif
-                @if($authUser?->hasPermission('campaigns.view'))
-                    <a class="nav-link {{ request()->routeIs('campaigns.*') ? 'active' : '' }}" href="{{ route('campaigns.index') }}">Campanhas</a>
-                @endif
-                @if($authUser?->hasPermission('visits.view'))
-                    <a class="nav-link {{ request()->routeIs('follow-ups.*', 'visits.*', 'campaigns.visits.*') ? 'active' : '' }}" href="{{ route('follow-ups.index') }}">Agenda</a>
-                @endif
-            </div>
-
-            <div class="nav-group">
-                <div class="nav-label">Comunicação</div>
-                @if($authUser?->hasPermission('communication.view'))
-                    <a class="nav-link {{ request()->routeIs('communication.*') ? 'active' : '' }}" href="{{ route('communication.messages.index') }}">WhatsApp</a>
-                @endif
-            </div>
-
-            <div class="nav-group">
-                <div class="nav-label">Inteligência</div>
-                @if($authUser?->hasPermission('ai.access'))
-                    <a class="nav-link {{ request()->routeIs('ai.*') ? 'active' : '' }}" href="{{ route('ai.conversations.index') }}">Expandor AI</a>
-                @endif
-            </div>
-
-            <div class="nav-group">
-                <div class="nav-label">Futuro</div>
-                @if($authUser?->hasPermission('training.manage') || $authUser?->hasPermission('training.view'))
-                    <a class="nav-link {{ request()->routeIs('training.categories.*', 'training.contents.*') ? 'active' : '' }}" href="{{ route('training.categories.index') }}">Academia</a>
-                @endif
-            </div>
-        </nav>
+        @include('layouts.partials.app-nav')
     </aside>
 
     <div class="main">

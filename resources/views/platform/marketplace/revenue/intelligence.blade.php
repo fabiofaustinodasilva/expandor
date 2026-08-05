@@ -1,10 +1,10 @@
 @extends('layouts.platform')
 
-@section('title', 'Marketplace Intelligence')
+@section('title', 'Inteligência comercial')
 
 @section('content')
     <div style="margin-bottom:1rem;">
-        <h1 class="page-title" style="margin:0;">Marketplace Intelligence</h1>
+        <h1 class="page-title" style="margin:0;">Inteligência comercial</h1>
         <div class="header-meta">Conversão, leads quentes e performance de campanhas.</div>
     </div>
 

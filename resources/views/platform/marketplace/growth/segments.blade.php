@@ -1,6 +1,6 @@
 @extends('layouts.platform')
 
-@section('title', 'Marketplace — Segmentos')
+@section('title', 'Site — Segmentos')
 
 @section('content')
     <div style="margin-bottom:1rem;">
@@ -9,7 +9,7 @@
 
     <div style="margin-bottom:1.1rem;">
         <h1 class="page-title" style="margin:0;">Páginas por segmento</h1>
-        <div class="header-meta">Landing pages segmentadas exibidas em /marketplace/{slug}.</div>
+        <div class="header-meta">Páginas por segmento exibidas em /marketplace/{slug}.</div>
     </div>
 
     <div class="card" style="margin-bottom:1rem;">

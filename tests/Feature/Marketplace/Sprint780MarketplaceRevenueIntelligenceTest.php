@@ -180,11 +180,11 @@ class Sprint780MarketplaceRevenueIntelligenceTest extends TestCase
         $this->actingAs($owner)
             ->get(route('platform.marketplace.intelligence'))
             ->assertOk()
-            ->assertSee('Marketplace Intelligence');
+            ->assertSee('Inteligência comercial');
 
         $this->actingAs($owner)
             ->get(route('platform.marketplace.pipeline.index'))
             ->assertOk()
-            ->assertSee('Pipeline');
+            ->assertSee('Funil comercial');
     }
 }

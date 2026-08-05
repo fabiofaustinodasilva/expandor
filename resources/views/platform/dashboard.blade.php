@@ -1,11 +1,11 @@
 @extends('layouts.platform')
 
-@section('title', 'Platform Dashboard')
+@section('title', 'Painel da plataforma')
 
 @section('content')
     <div style="margin-bottom:1rem;">
-        <h1 class="page-title" style="margin:0;">Expandor Platform</h1>
-        <div class="header-meta">Painel exclusivo do proprietário da plataforma</div>
+        <h1 class="page-title" style="margin:0;">Painel Expandor</h1>
+        <div class="header-meta">Visão geral da operação e das empresas clientes</div>
     </div>
 
     @can('platform.manageBranding')
@@ -48,7 +48,7 @@
         </div>
     </div>
 
-    <h2>Receita e SaaS</h2>
+    <h2>Receita e operação</h2>
     <div class="grid grid-2" style="margin-bottom:1rem;">
         <div class="card">
             <div class="header-meta">MRR</div>

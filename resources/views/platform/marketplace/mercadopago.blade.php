@@ -4,7 +4,7 @@
 
 @section('content')
     <div style="margin-bottom:1rem;">
-        <a href="{{ route('platform.marketplace.settings.edit') }}" class="header-meta" style="text-decoration:none;">← Geral & Landing</a>
+        <a href="{{ route('platform.marketplace.settings.edit') }}" class="header-meta" style="text-decoration:none;">← Site público</a>
     </div>
 
     <div style="display:flex; justify-content:space-between; gap:1rem; margin-bottom:1.1rem; flex-wrap:wrap; align-items:flex-start;">

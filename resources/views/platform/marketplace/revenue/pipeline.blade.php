@@ -1,11 +1,11 @@
 @extends('layouts.platform')
 
-@section('title', 'Pipeline Marketplace')
+@section('title', 'Funil comercial')
 
 @section('content')
     <div style="margin-bottom:1rem;">
-        <h1 class="page-title" style="margin:0;">Pipeline comercial</h1>
-        <div class="header-meta">Gestão de estágios dos leads do marketplace.</div>
+        <h1 class="page-title" style="margin:0;">Funil comercial</h1>
+        <div class="header-meta">Gestão de estágios dos Leads do site.</div>
     </div>
 
     <div class="card">

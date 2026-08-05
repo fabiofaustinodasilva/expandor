@@ -33,7 +33,7 @@ class TrialSignupSprint55Test extends TestCase
     {
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Começar teste grátis', false)
+            ->assertSee('Começar agora', false)
             ->assertSee('/cadastro', false);
 
         $this->get(route('signup.create'))

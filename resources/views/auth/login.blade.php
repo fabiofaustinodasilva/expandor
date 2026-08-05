@@ -279,7 +279,7 @@
                 href="{{ route('signup.create') }}"
                 data-trial-link="1"
             >
-                Começar teste grátis
+                Começar agora
             </a>
         </section>
     @endif

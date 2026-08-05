@@ -1,11 +1,11 @@
 @extends('layouts.platform')
 
-@section('title', 'Marketplace — Seções')
+@section('title', 'Site — Seções')
 
 @section('content')
     <div style="display:flex; justify-content:space-between; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
         <div>
-            <h1 class="page-title" style="margin:0;">Seções da Landing</h1>
+            <h1 class="page-title" style="margin:0;">Seções do site</h1>
             <div class="header-meta">Gerencie blocos de conteúdo exibidos na página pública.</div>
         </div>
         <a class="btn btn-primary" href="{{ route('platform.marketplace.sections.create') }}">Nova seção</a>

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Platform') — {{ config('app.name') }}</title>
+    <title>@yield('title', 'Administração') — {{ config('app.name') }}</title>
     <style>
         :root {
             --bg: #0F1117;
@@ -48,16 +48,70 @@
             margin: 0.75rem 0.6rem 0.35rem;
         }
         .nav-link {
-            display: block;
-            padding: 0.7rem 0.85rem;
-            border-radius: 0.65rem;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.55rem 0.75rem;
+            border-radius: 0.55rem;
             color: var(--muted);
-            transition: 0.15s ease;
+            transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+            font-size: 0.9rem;
+            font-weight: 520;
+            position: relative;
         }
-        .nav-link:hover, .nav-link.active {
+        .nav-link:hover {
             background: var(--bg-soft);
             color: var(--text);
         }
+        .nav-link.active {
+            background: color-mix(in srgb, var(--accent) 16%, var(--bg-soft));
+            color: var(--text);
+            box-shadow: inset 3px 0 0 var(--accent);
+        }
+        .ent-nav { display: flex; flex-direction: column; gap: 0.35rem; }
+        .nav-section {
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+        .nav-section-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0.65rem 0.7rem;
+            border: 0;
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            font-weight: 650;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            border-radius: 0.65rem;
+        }
+        .nav-section-toggle:hover { background: rgba(255,255,255,0.03); }
+        .nav-section-left { display: inline-flex; align-items: center; gap: 0.55rem; }
+        .nav-ico {
+            width: 1.15rem; height: 1.15rem; display: inline-grid; place-items: center; color: var(--muted);
+        }
+        .nav-ico svg { width: 1.05rem; height: 1.05rem; }
+        .nav-chevron {
+            width: 0.45rem; height: 0.45rem;
+            border-right: 1.5px solid var(--muted);
+            border-bottom: 1.5px solid var(--muted);
+            transform: rotate(-45deg);
+            transition: transform 0.18s ease;
+            opacity: 0.7;
+        }
+        .nav-section.is-open .nav-chevron { transform: rotate(45deg); }
+        .nav-section-body {
+            display: none;
+            flex-direction: column;
+            gap: 0.15rem;
+            padding: 0 0.25rem 0.45rem 0.35rem;
+        }
+        .nav-section.is-open .nav-section-body { display: flex; }
         .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
         .header {
             display: flex;
@@ -93,52 +147,10 @@
             @if($platformBrand->logoMark())
                 <img src="{{ $platformBrand->logoMark() }}" alt="{{ $platformBrand->name() }}" style="height:28px; max-width:120px; object-fit:contain; vertical-align:middle; margin-right:.4rem;">
             @endif
-            {{ strtoupper($platformBrand->name()) }} <span>Platform</span>
+            {{ strtoupper($platformBrand->name()) }} <span>Admin</span>
         </div>
 
-        <nav aria-label="Menu da plataforma">
-            <div class="nav-group">
-                <div class="nav-label">Plataforma</div>
-                <a class="nav-link {{ request()->routeIs('platform.dashboard') ? 'active' : '' }}" href="{{ route('platform.dashboard') }}">Dashboard</a>
-                <a class="nav-link {{ request()->routeIs('platform.activation.*') ? 'active' : '' }}" href="{{ route('platform.activation.index') }}">SaaS Health</a>
-                <a class="nav-link {{ request()->routeIs('platform.saas.intelligence*') ? 'active' : '' }}" href="{{ route('platform.saas.intelligence') }}">SaaS Intelligence</a>
-                <a class="nav-link {{ request()->routeIs('platform.profile.*') ? 'active' : '' }}" href="{{ route('platform.profile.edit') }}">Meu perfil</a>
-                @can('platform.manageCompanies')
-                    <a class="nav-link {{ request()->routeIs('platform.companies.*') ? 'active' : '' }}" href="{{ route('platform.companies.index') }}">Empresas</a>
-                @endcan
-                @can('platform.managePlans')
-                    <a class="nav-link {{ request()->routeIs('platform.plans.*') ? 'active' : '' }}" href="{{ route('platform.plans.index') }}">Planos</a>
-                @endcan
-                @can('platform.manageCompanies')
-                    <a class="nav-link {{ request()->routeIs('platform.billing.*') ? 'active' : '' }}" href="{{ route('platform.billing.index') }}">Billing</a>
-                @endcan
-                @can('platform.manageBranding')
-                    <a class="nav-link {{ request()->routeIs('platform.branding.*') ? 'active' : '' }}" href="{{ route('platform.branding.edit') }}">Branding</a>
-                @endcan
-                @can('marketplace.manage')
-                    <div class="nav-label" style="margin-top:0.85rem;">Site público</div>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.settings.*') && !request()->routeIs('platform.marketplace.mercadopago*') ? 'active' : '' }}" href="{{ route('platform.marketplace.settings.edit') }}">Geral & Landing</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.sections.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.sections.index') }}">Seções</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.media.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.media.index') }}">Conteúdo & Mídias</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.mercadopago*') ? 'active' : '' }}" href="{{ route('platform.marketplace.mercadopago.edit') }}">Mercado Pago</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.preview') ? 'active' : '' }}" href="{{ route('platform.marketplace.preview') }}" target="_blank" rel="noopener">Visualizar site</a>
-                    <div class="nav-label" style="margin-top:0.85rem;">Crescimento</div>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.leads.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.leads.index') }}">Leads</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.analytics') ? 'active' : '' }}" href="{{ route('platform.marketplace.analytics') }}">Analytics</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.intelligence') ? 'active' : '' }}" href="{{ route('platform.marketplace.intelligence') }}">Intelligence</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.pipeline.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.pipeline.index') }}">Pipeline</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.segments.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.segments.index') }}">Segmentos</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.cases.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.cases.index') }}">Cases</a>
-                    <a class="nav-link {{ request()->routeIs('platform.marketplace.campaigns.*') ? 'active' : '' }}" href="{{ route('platform.marketplace.campaigns.index') }}">Campanhas</a>
-                @endcan
-                @can('platform.manageFeatureFlags')
-                    <a class="nav-link {{ request()->routeIs('platform.flags.*') ? 'active' : '' }}" href="{{ route('platform.flags.index') }}">Feature Flags</a>
-                @endcan
-                @can('platform.viewHealth')
-                    <a class="nav-link {{ request()->routeIs('platform.health.*') ? 'active' : '' }}" href="{{ route('platform.health.index') }}">Health Score</a>
-                @endcan
-            </div>
-        </nav>
+        @include('layouts.partials.platform-nav')
     </aside>
 
     <div class="main">

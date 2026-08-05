@@ -65,10 +65,10 @@
 
     <div class="plans-wrap">
         <h1 style="margin-top:0;">Compare os planos Expandor</h1>
-        <p class="muted">Escolha o ritmo certo para sua operação de campo. Destaque no plano recomendado e comece pelo teste grátis.</p>
+        <p class="muted">Escolha o ritmo certo para sua operação de campo. Comece agora e cresça com a equipe.</p>
 
         <div class="top-actions">
-            <a class="btn" style="background:#F59E0B;color:#111;" href="{{ route('signup.create') }}">Começar teste grátis</a>
+            <a class="btn" style="background:#F59E0B;color:#111;" href="{{ route('signup.create') }}">Começar agora</a>
             <a class="btn btn-ghost" style="width:auto;" href="{{ route('marketplace.home') }}#demo">Solicitar demonstração</a>
             <a class="btn btn-ghost" style="width:auto;" href="{{ route('login') }}">Já tenho conta</a>
         </div>
@@ -125,7 +125,7 @@
                     @if((float) $plan->price > 0)
                         <a class="btn btn-full" href="{{ route('marketplace.subscribe', ['plan_id' => $plan->id]) }}">Assinar {{ $plan->name }}</a>
                     @else
-                        <a class="btn btn-ghost" href="{{ route('signup.create') }}">Começar teste grátis</a>
+                        <a class="btn btn-ghost" href="{{ route('signup.create') }}">Começar agora</a>
                     @endif
                 </div>
             @empty

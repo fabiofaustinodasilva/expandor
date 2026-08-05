@@ -15,20 +15,20 @@ class MarketplaceGrowthSeeder extends Seeder
             $segments = [
                 [
                     'slug' => 'provedor-internet',
-                    'title' => 'CRM para provedores de internet',
-                    'subtitle' => 'Vendas técnicas com previsibilidade',
-                    'description' => 'Organize leads, instalações e renovações com visão por território e equipe de campo.',
+                    'title' => 'Expandor para provedores de internet',
+                    'subtitle' => 'Vendas externas com previsibilidade',
+                    'description' => 'Organize visitas, instalações e renovações com visão por território e equipe de campo.',
                     'features' => [
                         ['title' => 'Território por bairro', 'description' => 'Distribua oportunidades por região e vendedor.'],
-                        ['title' => 'Funil de instalação', 'description' => 'Acompanhe do lead à ativação do cliente.'],
-                        ['title' => 'Metas por equipe', 'description' => 'Dashboards claros para gestores comerciais.'],
+                        ['title' => 'Do lead à ativação', 'description' => 'Acompanhe cada etapa até o cliente ativo.'],
+                        ['title' => 'Metas por equipe', 'description' => 'Resultados claros para gestores comerciais.'],
                     ],
                     'cta_text' => 'Solicitar demonstração',
                     'cta_url' => '#demo',
                 ],
                 [
                     'slug' => 'energia-solar',
-                    'title' => 'CRM para energia solar',
+                    'title' => 'Expandor para energia solar',
                     'subtitle' => 'Do primeiro contato à instalação',
                     'description' => 'Controle propostas, visitas técnicas e pós-venda em um fluxo único para equipes de campo.',
                     'features' => [
@@ -41,20 +41,20 @@ class MarketplaceGrowthSeeder extends Seeder
                 ],
                 [
                     'slug' => 'imobiliaria',
-                    'title' => 'CRM para imobiliárias',
-                    'subtitle' => 'Mais visitas, menos leads perdidos',
+                    'title' => 'Expandor para imobiliárias',
+                    'subtitle' => 'Mais visitas, menos clientes perdidos',
                     'description' => 'Centralize corretores, imóveis e negociações com histórico completo de cada cliente.',
                     'features' => [
                         ['title' => 'Carteira por corretor', 'description' => 'Distribua leads e imóveis com regras claras.'],
                         ['title' => 'Agenda de visitas', 'description' => 'Confirme, registre e acompanhe cada visita.'],
-                        ['title' => 'Pipeline de negócios', 'description' => 'Proposta, documentação e fechamento visíveis.'],
+                        ['title' => 'Negócios em andamento', 'description' => 'Proposta, documentação e fechamento visíveis.'],
                     ],
                     'cta_text' => 'Solicitar demonstração',
                     'cta_url' => '#demo',
                 ],
                 [
                     'slug' => 'representante-comercial',
-                    'title' => 'CRM para representantes comerciais',
+                    'title' => 'Expandor para representantes comerciais',
                     'subtitle' => 'Portfólio, rotas e metas',
                     'description' => 'Ideal para representantes autônomos e equipes externas que precisam de mobilidade e controle.',
                     'features' => [
@@ -96,7 +96,7 @@ class MarketplaceGrowthSeeder extends Seeder
 
         if (! MarketplaceCampaign::query()->exists()) {
             MarketplaceCampaign::query()->create([
-                'name' => 'Google Ads — CRM Brasil',
+                'name' => 'Google Ads — Expandor Brasil',
                 'source' => 'google',
                 'medium' => 'cpc',
                 'campaign' => 'crm-brasil',

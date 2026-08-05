@@ -1,6 +1,6 @@
 @extends('layouts.platform')
 
-@section('title', 'Marketplace — Mídias')
+@section('title', 'Site — Mídias')
 
 @section('content')
     <div style="margin-bottom:1.1rem;">

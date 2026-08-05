@@ -36,7 +36,7 @@ class PlatformAdminModuleTest extends TestCase
         $this->actingAs($owner)
             ->get(route('platform.dashboard'))
             ->assertOk()
-            ->assertSee('Expandor Platform')
+            ->assertSee('Painel Expandor')
             ->assertSee('Empresas ativas')
             ->assertSee('Customer Health');
 

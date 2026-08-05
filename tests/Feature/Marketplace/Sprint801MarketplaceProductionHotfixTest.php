@@ -36,7 +36,7 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
         $this->get(route('marketplace.home'))
             ->assertOk()
             ->assertSee('Organize sua equipe de vendas porta a porta', false)
-            ->assertSee('Começar teste grátis', false)
+            ->assertSee('Começar agora', false)
             ->assertSee('Solicitar demonstração', false)
             ->assertSee('Mapa inteligente', false)
             ->assertSee('Posso testar sem cartão?', false)
@@ -127,7 +127,7 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
             ->assertOk()
             ->assertSee('Modo preview', false)
             ->assertSee('Organize sua equipe de vendas porta a porta', false)
-            ->assertSee('Tudo que sua operação precisa', false)
+            ->assertSee('Tudo que sua operação de campo precisa', false)
             ->assertSee('Dúvidas frequentes', false)
             ->assertSee('Carla Souza', false);
     }

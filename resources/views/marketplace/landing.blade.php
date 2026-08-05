@@ -823,7 +823,7 @@
                                             {{ $section->button_text }}
                                         </a>
                                     @else
-                                        <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $uiCopy['start_free_trial'] ?? 'Começar teste grátis' }}</a>
+                                        <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $uiCopy['start_free_trial'] ?? 'Começar agora' }}</a>
                                     @endif
                                     <a class="mkp-btn mkp-btn-outline" href="{{ $heroSecondaryCta['url'] ?? '#demo' }}">
                                         {{ $heroSecondaryCta['text'] ?? ($uiCopy['request_demo'] ?? 'Solicitar demonstração') }}
@@ -1240,7 +1240,7 @@
                                             <a class="mkp-btn mkp-btn-outline"
                                                href="{{ route('signup.create') }}"
                                                data-mkp-event="marketplace.signup_started">
-                                                {{ $uiCopy['start_free_trial'] ?? 'Começar teste grátis' }}
+                                                {{ $uiCopy['start_free_trial'] ?? 'Começar agora' }}
                                             </a>
                                         @endif
                                     </article>
@@ -1287,7 +1287,7 @@
                                 @if($section->button_text)
                                     <a class="mkp-btn mkp-btn-primary" href="{{ $section->button_url ?: route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $section->button_text }}</a>
                                 @else
-                                    <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $uiCopy['start_free_trial'] ?? 'Começar teste grátis' }}</a>
+                                    <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $uiCopy['start_free_trial'] ?? 'Começar agora' }}</a>
                                 @endif
                                 <a class="mkp-btn mkp-btn-ghost" href="{{ route('login') }}">{{ $uiCopy['already_have_account'] ?? 'Já tenho conta' }}</a>
                             </div>

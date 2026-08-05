@@ -31,7 +31,7 @@ class LoginPreparationSprint552Test extends TestCase
             ->assertOk()
             ->assertSee('Acesse sua conta', false)
             ->assertSee('Ainda não conhece o Expandor?', false)
-            ->assertSee('Começar teste grátis', false)
+            ->assertSee('Começar agora', false)
             ->assertSee('data-trial-cta="1"', false)
             ->assertSee('/cadastro', false);
 
@@ -60,7 +60,7 @@ class LoginPreparationSprint552Test extends TestCase
         ])->render();
 
         $this->assertStringNotContainsString('data-trial-cta="1"', $html);
-        $this->assertStringNotContainsString('Começar teste grátis', $html);
+        $this->assertStringNotContainsString('Começar agora', $html);
     }
 
     public function test_custom_branding_works_on_login_and_cadastro(): void
@@ -109,7 +109,7 @@ class LoginPreparationSprint552Test extends TestCase
             ->assertOk()
             ->assertSee('Bem-vindo ao Expandor', false)
             ->assertSee('Acesse sua conta', false)
-            ->assertSee('Começar teste grátis', false)
+            ->assertSee('Começar agora', false)
             ->assertDontSee('data-platform-slogan="1"', false);
 
         $this->get(route('signup.create'))
@@ -126,7 +126,7 @@ class LoginPreparationSprint552Test extends TestCase
             ->assertSee('Login — Expandor', false)
             ->assertSee('data-platform-fallback="1"', false)
             ->assertSee('Bem-vindo ao Expandor', false)
-            ->assertSee('Começar teste grátis', false);
+            ->assertSee('Começar agora', false);
 
         $this->get('/cadastro')
             ->assertOk()

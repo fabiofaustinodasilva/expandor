@@ -23,7 +23,7 @@ enum MarketplaceSectionType: string
     public function label(): string
     {
         return match ($this) {
-            self::Hero => 'Hero',
+            self::Hero => 'Destaque inicial',
             self::Showcase => 'Demonstração visual',
             self::HowItWorks => 'Como funciona',
             self::BeforeAfter => 'Antes e depois',
@@ -35,9 +35,9 @@ enum MarketplaceSectionType: string
             self::Video => 'Vídeo',
             self::Gallery => 'Galeria',
             self::Testimonials => 'Depoimentos',
-            self::Faq => 'FAQ',
+            self::Faq => 'Dúvidas frequentes',
             self::Plans => 'Planos',
-            self::Cta => 'CTA',
+            self::Cta => 'Chamada para ação',
         };
     }
 

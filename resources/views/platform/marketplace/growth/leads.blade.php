@@ -1,6 +1,6 @@
 @extends('layouts.platform')
 
-@section('title', 'Marketplace — Leads')
+@section('title', 'Site — Leads')
 
 @section('content')
     <div style="margin-bottom:1rem;">
@@ -8,7 +8,7 @@
     </div>
 
     <div style="margin-bottom:1.1rem;">
-        <h1 class="page-title" style="margin:0;">Leads do Marketplace</h1>
+        <h1 class="page-title" style="margin:0;">Leads do site</h1>
         <div class="header-meta">Pedidos de demonstração e contatos capturados na landing.</div>
     </div>
 
