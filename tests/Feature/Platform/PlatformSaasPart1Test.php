@@ -35,7 +35,7 @@ class PlatformSaasPart1Test extends TestCase
             ->assertOk()
             ->assertSee('Empresas totais')
             ->assertSee('Churn')
-            ->assertSee('Conversão de trial');
+            ->assertSee('Conversão de teste');
     }
 
     public function test_owner_can_crud_plans(): void

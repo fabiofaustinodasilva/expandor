@@ -38,7 +38,7 @@ class PlatformAdminModuleTest extends TestCase
             ->assertOk()
             ->assertSee('Painel Expandor')
             ->assertSee('Empresas ativas')
-            ->assertSee('Customer Health');
+            ->assertSee('Saúde dos clientes');
 
         $this->actingAs($owner)
             ->get(route('platform.companies.index'))

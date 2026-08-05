@@ -3,24 +3,22 @@
 @section('title', 'Site público — Configuração')
 
 @section('content')
-    <div style="margin-bottom:1rem;">
-        <a href="{{ route('platform.dashboard') }}" class="header-meta" style="text-decoration:none;">← Painel</a>
-    </div>
-
-    <div style="display:flex; justify-content:space-between; gap:1rem; margin-bottom:1.1rem; flex-wrap:wrap; align-items:flex-start;">
-        <div>
-            <h1 class="page-title" style="margin:0;">Site Expandor</h1>
-            <div class="header-meta">Identidade, textos e integrações do site de vendas porta a porta.</div>
-        </div>
-        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-            <form method="POST" action="{{ route('platform.marketplace.settings.restore') }}"
-                  onsubmit="return confirm('Restaurar o conteúdo padrão do site? Textos de seções, FAQ e depoimentos serão substituídos. Logos e mídias enviadas serão preservados.');">
-                @csrf
-                <button type="submit" class="btn btn-ghost">Restaurar conteúdo padrão</button>
-            </form>
-            <a class="btn btn-ghost" href="{{ route('platform.marketplace.preview') }}" target="_blank" rel="noopener">Visualizar site</a>
-        </div>
-    </div>
+    <x-ux.page-header
+        title="Site Expandor"
+        description="Identidade, textos e integrações do site de vendas porta a porta."
+        :breadcrumbs="[
+            ['label' => 'Platform', 'href' => route('platform.dashboard')],
+            ['label' => 'Configurações', 'href' => route('platform.marketplace.settings.edit')],
+            ['label' => 'Site público'],
+        ]"
+    >
+        <form method="POST" action="{{ route('platform.marketplace.settings.restore') }}"
+              onsubmit="return confirm('Restaurar o conteúdo padrão do site? Textos de seções, FAQ e depoimentos serão substituídos. Logos e mídias enviadas serão preservados.');">
+            @csrf
+            <button type="submit" class="btn btn-ghost">Restaurar conteúdo padrão</button>
+        </form>
+        <a class="btn btn-ghost" href="{{ route('platform.marketplace.preview') }}" target="_blank" rel="noopener">Visualizar site</a>
+    </x-ux.page-header>
 
     <form method="POST" action="{{ route('platform.marketplace.settings.update') }}" enctype="multipart/form-data">
         @csrf
