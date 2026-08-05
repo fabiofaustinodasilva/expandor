@@ -4,49 +4,108 @@ namespace App\Domains\Payments\Providers;
 
 use App\Domains\Payments\Models\PaymentGatewaySetting;
 use App\Domains\Payments\Providers\Contracts\PaymentProviderContract;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
+use RuntimeException;
 
 class ProviderFactory
 {
     public function make(?string $driver = null): PaymentProviderContract
     {
-        $driver = strtolower(trim($driver ?: $this->resolveDefaultDriver()));
+        $requested = $driver !== null ? strtolower(trim($driver)) : null;
+        $resolved = $this->resolveDriver($requested);
 
-        return match ($driver) {
+        return match ($resolved) {
             'asaas' => $this->makeAsaas(),
             'mercadopago' => $this->makeMercadoPago(),
             'stripe' => $this->makeStripe(),
             'fake' => $this->makeFake(),
-            default => throw new InvalidArgumentException("Unsupported payment provider [{$driver}]."),
+            default => throw new InvalidArgumentException("Unsupported payment provider [{$resolved}]."),
         };
     }
 
     /**
-     * Produção: se Mercado Pago estiver ativo no painel com token, ele tem prioridade.
-     * Testes (PAYMENT_PROVIDER=fake) e drivers explícitos não são sobrescritos.
+     * Resolve o driver efetivo.
+     *
+     * Regras:
+     * - fake só em testing (ou payments.allow_fake=true)
+     * - PaymentGatewaySetting Mercado Pago ativo tem prioridade
+     * - produção nunca usa fake (mesmo com PAYMENT_PROVIDER=fake no .env)
      */
+    public function resolveDriver(?string $requested = null): string
+    {
+        if ($requested !== null && $requested !== '') {
+            if ($requested === 'fake' && ! $this->allowsFakeProvider()) {
+                Log::warning('payments.fake_blocked', [
+                    'requested' => 'fake',
+                    'resolved' => $this->resolveDefaultDriver(),
+                    'env' => app()->environment(),
+                ]);
+
+                return $this->resolveDefaultDriver();
+            }
+
+            return $requested;
+        }
+
+        return $this->resolveDefaultDriver();
+    }
+
     protected function resolveDefaultDriver(): string
     {
-        $configured = strtolower(trim((string) config('payments.default', 'asaas')));
+        $configured = strtolower(trim((string) config('payments.default', 'mercadopago')));
 
-        // Em testes o fake permanece o padrão do phpunit.xml.
-        if ($configured === 'fake' || app()->environment('testing')) {
-            return $configured !== '' ? $configured : 'fake';
+        // Fake exclusivamente para testes automatizados.
+        if ($configured === 'fake' && $this->allowsFakeProvider()) {
+            return 'fake';
         }
 
-        if (Schema::hasTable('payment_gateway_settings')) {
-            $mp = PaymentGatewaySetting::query()
-                ->where('provider', PaymentGatewaySetting::PROVIDER_MERCADOPAGO)
-                ->where('active', true)
-                ->first();
-
-            if ($mp !== null && filled($mp->access_token)) {
-                return 'mercadopago';
-            }
+        // Painel: Mercado Pago ativo + access token → sempre mercadopago.
+        if ($this->activeMercadoPagoConfigured()) {
+            return 'mercadopago';
         }
 
-        return $configured !== '' ? $configured : 'asaas';
+        // .env com fake fora de testing (ex.: produção) → mercadopago.
+        if ($configured === 'fake' || $configured === '') {
+            return 'mercadopago';
+        }
+
+        return $configured;
+    }
+
+    protected function allowsFakeProvider(): bool
+    {
+        $override = config('payments.allow_fake');
+
+        if ($override !== null) {
+            return filter_var($override, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return app()->environment('testing');
+    }
+
+    protected function activeMercadoPagoConfigured(): bool
+    {
+        if (! Schema::hasTable('payment_gateway_settings')) {
+            return false;
+        }
+
+        $mp = PaymentGatewaySetting::query()
+            ->where('provider', PaymentGatewaySetting::PROVIDER_MERCADOPAGO)
+            ->where('active', true)
+            ->first();
+
+        if ($mp === null) {
+            return false;
+        }
+
+        // Token no painel ou fallback do .env
+        if (filled($mp->access_token)) {
+            return true;
+        }
+
+        return filled(config('payments.providers.mercadopago.access_token'));
     }
 
     protected function makeAsaas(): AsaasProvider
@@ -78,6 +137,10 @@ class ProviderFactory
 
     protected function makeFake(): FakePaymentProvider
     {
+        if (! $this->allowsFakeProvider()) {
+            throw new RuntimeException('Fake payment provider is not allowed outside testing.');
+        }
+
         return new FakePaymentProvider((array) config('payments.providers.fake', []));
     }
 }

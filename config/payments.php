@@ -3,6 +3,12 @@
 return [
     'default' => env('PAYMENT_PROVIDER', 'mercadopago'),
 
+    /*
+    | null = decide por APP_ENV (fake só em testing)
+    | true/false = força permissão do provider fake
+    */
+    'allow_fake' => env('PAYMENT_ALLOW_FAKE'),
+
     'currency' => env('PAYMENT_CURRENCY', 'BRL'),
 
     'checkout' => [
