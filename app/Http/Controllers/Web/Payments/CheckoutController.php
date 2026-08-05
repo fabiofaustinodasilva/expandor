@@ -107,7 +107,17 @@ class CheckoutController extends Controller
         }
 
         if ($session->status === CheckoutStatus::Provisioned || $session->provisioned_at !== null) {
-            return redirect()->route('checkout.success', ['session' => $uuid]);
+            $session->loadMissing('plan');
+
+            return view('payments.pix', [
+                'session' => $session,
+                'transaction' => null,
+                'plan' => $session->plan,
+                'qrCode' => null,
+                'qrCodeBase64' => null,
+                'expiresAt' => null,
+                'provisioned' => true,
+            ]);
         }
 
         $transaction = \App\Domains\Payments\Models\PaymentGatewayTransaction::query()
@@ -126,6 +136,7 @@ class CheckoutController extends Controller
             'qrCodeBase64' => $transaction?->pix_qr_code_base64
                 ?? data_get($session->payload, 'checkout.pix_qr_code_base64'),
             'expiresAt' => $transaction?->pix_expiration_at,
+            'provisioned' => false,
         ]);
     }
 

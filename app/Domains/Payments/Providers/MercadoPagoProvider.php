@@ -205,40 +205,48 @@ class MercadoPagoProvider implements PaymentProviderContract
     public function verifyWebhook(Request $request): bool
     {
         $secret = (string) ($this->config['webhook_token'] ?? '');
-        if ($secret === '') {
-            return false;
-        }
+        $hasToken = filled($this->config['access_token'] ?? null);
 
         // Compatível com testes / integrações internas.
         $plainToken = (string) $request->header('X-Webhook-Token', $request->input('token', ''));
-        if ($plainToken !== '' && hash_equals($secret, $plainToken)) {
+        if ($secret !== '' && $plainToken !== '' && hash_equals($secret, $plainToken)) {
             return true;
         }
 
         $signatureHeader = (string) $request->header('X-Signature', '');
-        if ($signatureHeader === '') {
+
+        if ($secret !== '' && $signatureHeader !== '') {
+            if (hash_equals($secret, $signatureHeader)) {
+                return true;
+            }
+
+            if ($this->verifyMercadoPagoSignature($request, $signatureHeader, $secret)) {
+                return true;
+            }
+
+            Log::warning('mercadopago.webhook.signature_invalid', [
+                'has_request_id' => $request->header('X-Request-Id') !== null,
+                'data_id' => $this->extractPaymentIdFromRequest($request),
+            ]);
+
             return false;
         }
 
-        // Se o header for o próprio secret (legado), aceitar.
-        if (hash_equals($secret, $signatureHeader)) {
+        // Sem secret no painel: ainda processa se access_token existir (autenticidade via GET /v1/payments).
+        if ($secret === '' && $hasToken) {
+            Log::warning('mercadopago.webhook.secret_missing_accepting_with_api_fetch');
+
             return true;
         }
 
-        return $this->verifyMercadoPagoSignature($request, $signatureHeader, $secret);
+        return false;
     }
 
     public function parseWebhook(Request $request): ParsedWebhookEvent
     {
         $payload = $request->all();
-        $type = (string) ($payload['type'] ?? $payload['topic'] ?? $payload['action'] ?? 'payment');
-        $dataId = (string) (
-            $payload['data']['id']
-            ?? $request->query('data.id')
-            ?? $payload['id']
-            ?? $payload['payment_id']
-            ?? ''
-        );
+        $type = (string) ($payload['type'] ?? $payload['topic'] ?? $request->query('type') ?? $request->query('topic') ?? 'payment');
+        $dataId = $this->extractPaymentIdFromRequest($request);
 
         // Notificações reais do MP trazem só type + data.id — buscar o pagamento.
         $payment = null;
@@ -252,6 +260,50 @@ class MercadoPagoProvider implements PaymentProviderContract
 
         // Fallback: payloads de teste com status/event embutidos.
         return $this->parsedFromInlinePayload($payload, $type, $dataId);
+    }
+
+    /**
+     * Expõe fetch de pagamento para comando artisan / processamento manual.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function fetchPaymentPublic(string $paymentId): ?array
+    {
+        return $this->fetchPayment($paymentId);
+    }
+
+    /**
+     * Extrai o payment_id da notificação (nunca o id da notificação em si).
+     */
+    public function extractPaymentIdFromRequest(Request $request): string
+    {
+        $payload = $request->all();
+
+        $candidates = [
+            data_get($payload, 'data.id'),
+            $request->query('data.id'),
+            $request->input('data.id'),
+            $payload['payment_id'] ?? null,
+        ];
+
+        $topic = (string) ($payload['topic'] ?? $request->query('topic') ?? '');
+        $type = (string) ($payload['type'] ?? $request->query('type') ?? '');
+
+        if ($topic === 'payment' || $type === 'payment') {
+            $candidates[] = $request->query('id');
+            // Só usa id do body se não houver data.id (IPN antigo).
+            if (! isset($payload['data']['id']) && isset($payload['id']) && ! isset($payload['action'])) {
+                $candidates[] = $payload['id'];
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            if ($candidate !== null && $candidate !== '') {
+                return (string) $candidate;
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -284,19 +336,23 @@ class MercadoPagoProvider implements PaymentProviderContract
             return false;
         }
 
-        $dataId = (string) (
-            $request->input('data.id')
-            ?? $request->query('data.id')
-            ?? data_get($request->all(), 'data.id')
-            ?? ''
-        );
+        $dataId = $this->extractPaymentIdFromRequest($request);
         $requestId = (string) $request->header('X-Request-Id', '');
 
-        // Manifest oficial MP: id:{data.id};request-id:{x-request-id};ts:{ts};
-        $manifest = "id:{$dataId};request-id:{$requestId};ts:{$ts};";
-        $expected = hash_hmac('sha256', $manifest, $secret);
+        // Manifests oficiais / variações aceitas pelo MP.
+        $manifests = [
+            "id:{$dataId};request-id:{$requestId};ts:{$ts};",
+            "id:{$dataId};request-id:;ts:{$ts};",
+        ];
 
-        return hash_equals($expected, $hash);
+        foreach ($manifests as $manifest) {
+            $expected = hash_hmac('sha256', $manifest, $secret);
+            if (hash_equals($expected, $hash)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

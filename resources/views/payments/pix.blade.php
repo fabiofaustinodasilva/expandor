@@ -1,8 +1,12 @@
 @extends('layouts.guest')
 
-@section('title', 'Pagamento via PIX')
+@section('title', ($provisioned ?? false) ? 'Pagamento confirmado' : 'Pagamento via PIX')
 
 @section('content')
+@php
+    $isProvisioned = (bool) ($provisioned ?? false);
+    $isFailed = ($session->status?->value ?? '') === 'failed';
+@endphp
 <style>
     .pix-wrap { max-width: 480px; margin: 0 auto; }
     .pix-card {
@@ -56,55 +60,81 @@
     }
     .pix-actions { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 1rem; }
     .pix-hint { text-align: center; font-size: 0.8rem; color: var(--muted); margin: 0.75rem 0 0; }
+    .pix-success { text-align: center; color: var(--text); font-size: 1rem; margin: 0.5rem 0 1rem; line-height: 1.45; }
 </style>
 
 <div class="pix-wrap">
     <div class="card pix-card">
-        <h1>Pagamento via PIX</h1>
-        <p class="pix-meta">Escaneie o QR Code ou copie o código para pagar no app do seu banco.</p>
-
-        <div class="pix-summary">
-            <div>
-                <div class="header-meta">Plano</div>
-                <strong>{{ $plan?->name ?? 'Assinatura Expandor' }}</strong>
+        @if($isProvisioned)
+            <h1>Pagamento confirmado!</h1>
+            <p class="pix-success">Sua empresa foi criada. Você já pode entrar no Expandor com o e-mail <strong>{{ $session->buyer_email }}</strong>.</p>
+            <div class="pix-summary">
+                <div>
+                    <div class="header-meta">Empresa</div>
+                    <strong>{{ $session->company_name }}</strong>
+                </div>
+                <div style="text-align:right;">
+                    <div class="header-meta">Valor</div>
+                    <strong>R$ {{ number_format((float) $session->amount, 2, ',', '.') }}</strong>
+                </div>
             </div>
-            <div style="text-align:right;">
-                <div class="header-meta">Valor</div>
-                <strong>R$ {{ number_format((float) $session->amount, 2, ',', '.') }}</strong>
+            <div class="pix-actions">
+                <a class="btn btn-primary" href="{{ route('login') }}" style="text-align:center;">Entrar no Expandor</a>
             </div>
-        </div>
-
-        @if($qrCodeBase64)
-            <div class="pix-qr">
-                <img src="data:image/png;base64,{{ $qrCodeBase64 }}" alt="QR Code PIX" width="240" height="240">
+        @elseif($isFailed)
+            <h1>Pagamento não confirmado</h1>
+            <p class="pix-meta">Não foi possível confirmar este PIX. Tente novamente com outro método ou entre em contato com o suporte.</p>
+            <div class="pix-actions">
+                <a class="btn btn-primary" href="{{ route('marketplace.plans') }}" style="text-align:center;">Voltar aos planos</a>
             </div>
-        @elseif($qrCode)
-            <div class="pix-qr" id="pix-qr-fallback" data-code="{{ $qrCode }}"></div>
         @else
-            <p class="muted" style="text-align:center;">QR Code indisponível. Use o código copia e cola abaixo.</p>
+            <h1>Pagamento via PIX</h1>
+            <p class="pix-meta">Escaneie o QR Code ou copie o código para pagar no app do seu banco.</p>
+
+            <div class="pix-summary">
+                <div>
+                    <div class="header-meta">Plano</div>
+                    <strong>{{ $plan?->name ?? 'Assinatura Expandor' }}</strong>
+                </div>
+                <div style="text-align:right;">
+                    <div class="header-meta">Valor</div>
+                    <strong>R$ {{ number_format((float) $session->amount, 2, ',', '.') }}</strong>
+                </div>
+            </div>
+
+            @if($qrCodeBase64)
+                <div class="pix-qr">
+                    <img src="data:image/png;base64,{{ $qrCodeBase64 }}" alt="QR Code PIX" width="240" height="240">
+                </div>
+            @elseif($qrCode)
+                <div class="pix-qr" id="pix-qr-fallback" data-code="{{ $qrCode }}"></div>
+            @else
+                <p class="muted" style="text-align:center;">QR Code indisponível. Use o código copia e cola abaixo.</p>
+            @endif
+
+            <div class="pix-copy-row">
+                <label for="pix-copy-code">Código PIX Copia e Cola</label>
+                <textarea id="pix-copy-code" readonly>{{ $qrCode }}</textarea>
+                <button type="button" class="btn btn-primary" id="pix-copy-btn">Copiar código PIX</button>
+            </div>
+
+            <p class="pix-status" id="pix-status-line">
+                <span class="pix-pulse" aria-hidden="true"></span>
+                <span>Aguardando confirmação do pagamento… <strong id="status-label">{{ $session->status?->value ?? 'pending' }}</strong></span>
+            </p>
+
+            @if($expiresAt)
+                <p class="pix-hint">Válido até {{ $expiresAt->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</p>
+            @endif
+
+            <div class="pix-actions">
+                <a class="btn" href="{{ route('login') }}" style="background:transparent;border:1px solid var(--border);color:var(--text);text-align:center;">Já paguei — ir para o login</a>
+            </div>
         @endif
-
-        <div class="pix-copy-row">
-            <label for="pix-copy-code">Código PIX Copia e Cola</label>
-            <textarea id="pix-copy-code" readonly>{{ $qrCode }}</textarea>
-            <button type="button" class="btn btn-primary" id="pix-copy-btn">Copiar código PIX</button>
-        </div>
-
-        <p class="pix-status" id="pix-status-line">
-            <span class="pix-pulse" aria-hidden="true"></span>
-            <span>Aguardando confirmação… <strong id="status-label">{{ $session->status?->value ?? 'pending' }}</strong></span>
-        </p>
-
-        @if($expiresAt)
-            <p class="pix-hint">Válido até {{ $expiresAt->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</p>
-        @endif
-
-        <div class="pix-actions">
-            <a class="btn" href="{{ route('login') }}" style="background:transparent;border:1px solid var(--border);color:var(--text);text-align:center;">Já paguei — ir para o login</a>
-        </div>
     </div>
 </div>
 
+@if(! $isProvisioned && ! $isFailed)
 <script>
 (function () {
     const uuid = @json($session->uuid);
@@ -134,7 +164,7 @@
             const data = await res.json();
             if (label) label.textContent = data.status || 'pending';
             if (data.provisioned) {
-                window.location.href = data.redirect || @json(route('checkout.success', ['session' => $session->uuid]));
+                window.location.reload();
             }
         } catch (e) {}
     };
@@ -142,4 +172,5 @@
     setInterval(poll, 4000);
 })();
 </script>
+@endif
 @endsection

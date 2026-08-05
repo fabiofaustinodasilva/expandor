@@ -3,17 +3,20 @@
 namespace App\Domains\Payments\Services;
 
 use App\Domains\Company\Models\Subscription;
+use App\Domains\Payments\Actions\ProcessMercadoPagoPaymentAction;
 use App\Domains\Payments\Actions\ProvisionCompanyAction;
 use App\Domains\Payments\Enums\CheckoutStatus;
 use App\Domains\Payments\Enums\WebhookEventStatus;
 use App\Domains\Payments\Mail\WelcomeCredentialsMail;
 use App\Domains\Payments\Models\Customer;
 use App\Domains\Payments\Models\WebhookEvent;
+use App\Domains\Payments\Providers\MercadoPagoProvider;
 use App\Domains\Payments\Providers\ProviderFactory;
 use App\Domains\Payments\Repositories\PaymentRepository;
 use App\Domains\Security\Services\SecurityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use RuntimeException;
 use Throwable;
@@ -28,12 +31,120 @@ class WebhookService
         protected InvoiceService $invoices,
         protected SubscriptionService $subscriptions,
         protected SecurityService $security,
+        protected ProcessMercadoPagoPaymentAction $processMercadoPagoPayment,
     ) {}
 
     /**
      * @return array{webhook: WebhookEvent, provisioned: bool, duplicate: bool}
      */
     public function handle(string $gateway, Request $request): array
+    {
+        $gateway = strtolower(trim($gateway));
+
+        if ($gateway === 'mercadopago') {
+            return $this->handleMercadoPago($request);
+        }
+
+        return $this->handleGeneric($gateway, $request);
+    }
+
+    /**
+     * @return array{webhook: WebhookEvent, provisioned: bool, duplicate: bool}
+     */
+    protected function handleMercadoPago(Request $request): array
+    {
+        $provider = $this->providers->make('mercadopago');
+
+        if (! $provider instanceof MercadoPagoProvider) {
+            abort(500, 'Mercado Pago provider indisponível.');
+        }
+
+        Log::info('mercadopago.webhook.received', [
+            'query' => $request->query(),
+            'type' => $request->input('type') ?? $request->query('type'),
+            'data_id' => $provider->extractPaymentIdFromRequest($request),
+            'has_signature' => $request->hasHeader('X-Signature'),
+        ]);
+
+        if (! $provider->verifyWebhook($request)) {
+            Log::warning('mercadopago.webhook.unauthorized');
+            abort(401, 'Webhook token inválido.');
+        }
+
+        $paymentId = $provider->extractPaymentIdFromRequest($request);
+
+        if ($paymentId === '') {
+            $webhook = WebhookEvent::query()->create([
+                'gateway' => 'mercadopago',
+                'event_id' => 'mp_ignored_'.uniqid(),
+                'event_type' => (string) ($request->input('type') ?? $request->query('topic') ?? 'unknown'),
+                'payload' => $request->all(),
+                'status' => WebhookEventStatus::Ignored,
+                'processed_at' => now(),
+            ]);
+
+            return [
+                'webhook' => $webhook,
+                'provisioned' => false,
+                'duplicate' => false,
+            ];
+        }
+
+        $result = $this->processMercadoPagoPayment->execute($paymentId);
+        $eventId = 'mp_'.$paymentId.'_'.($result['status'] ?? 'unknown');
+
+        $existing = $this->repository->findWebhook('mercadopago', $eventId);
+        if ($existing !== null && $existing->status === WebhookEventStatus::Processed && ($result['status'] ?? '') === 'approved' && ! $result['provisioned']) {
+            return [
+                'webhook' => $existing,
+                'provisioned' => false,
+                'duplicate' => true,
+            ];
+        }
+
+        $webhook = $existing ?? WebhookEvent::query()->create([
+            'gateway' => 'mercadopago',
+            'event_id' => $eventId,
+            'event_type' => 'payment.'.$result['status'],
+            'payload' => [
+                'payment_id' => $paymentId,
+                'result' => [
+                    'status' => $result['status'],
+                    'provisioned' => $result['provisioned'],
+                    'company_id' => $result['company_id'],
+                    'checkout_uuid' => $result['checkout_uuid'],
+                    'message' => $result['message'],
+                ],
+            ],
+            'status' => WebhookEventStatus::Received,
+        ]);
+
+        $webhook->forceFill([
+            'status' => WebhookEventStatus::Processed,
+            'processed_at' => now(),
+            'error' => null,
+            'payload' => array_merge((array) $webhook->payload, [
+                'result' => [
+                    'status' => $result['status'],
+                    'provisioned' => $result['provisioned'],
+                    'company_id' => $result['company_id'],
+                    'checkout_uuid' => $result['checkout_uuid'],
+                    'message' => $result['message'],
+                ],
+            ]),
+        ])->save();
+
+        return [
+            'webhook' => $webhook->fresh(),
+            'provisioned' => (bool) $result['provisioned'],
+            'duplicate' => false,
+        ];
+    }
+
+    /**
+     * @return array{webhook: WebhookEvent, provisioned: bool, duplicate: bool}
+     */
+    protected function handleGeneric(string $gateway, Request $request): array
     {
         $provider = $this->providers->make($gateway);
 
@@ -122,7 +233,6 @@ class WebhookService
             $payment = $this->repository->findPaymentByGateway($gateway, $gatewayPaymentId);
         }
 
-        // No checkout, o payment pode ainda estar com preference_id; localizar via external_reference.
         if ($payment === null) {
             $checkoutRef = (string) (
                 data_get($payload, '_payment.external_reference')

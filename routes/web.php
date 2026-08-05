@@ -109,6 +109,7 @@ Route::get('/checkout/success', [CheckoutController::class, 'success'])->name('c
 Route::get('/checkout/cancel', [CheckoutController::class, 'cancel'])->name('checkout.cancel');
 
 Route::post('/webhooks/asaas', [WebhookController::class, 'asaas'])->name('webhooks.asaas');
+Route::match(['get', 'post'], '/webhooks/mercadopago', [WebhookController::class, 'mercadopago'])->name('webhooks.mercadopago');
 Route::post('/webhooks/{provider}', [WebhookController::class, 'handle'])->name('webhooks.provider');
 
 Route::middleware('guest')->group(function (): void {

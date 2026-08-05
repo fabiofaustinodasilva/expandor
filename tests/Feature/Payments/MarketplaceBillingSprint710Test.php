@@ -138,11 +138,11 @@ class MarketplaceBillingSprint710Test extends TestCase
             ->assertJsonPath('provisioned', true);
     }
 
-    public function test_mercadopago_webhook_without_secret_is_rejected(): void
+    public function test_mercadopago_webhook_without_credentials_is_rejected(): void
     {
         config([
             'payments.providers.mercadopago.webhook_token' => '',
-            'payments.providers.mercadopago.access_token' => 'TEST-TOKEN',
+            'payments.providers.mercadopago.access_token' => '',
         ]);
 
         $this->postJson('/webhooks/mercadopago', [

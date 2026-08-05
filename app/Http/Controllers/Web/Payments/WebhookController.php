@@ -20,6 +20,14 @@ class WebhookController extends Controller
         return $this->handle('asaas', $request);
     }
 
+    /**
+     * Rota pública dedicada (sem auth; CSRF exempt em webhooks/*).
+     */
+    public function mercadopago(Request $request): JsonResponse
+    {
+        return $this->handle('mercadopago', $request);
+    }
+
     public function handle(string $provider, Request $request): JsonResponse
     {
         $result = $this->webhooks->handle($provider, $request);

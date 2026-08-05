@@ -93,11 +93,13 @@
                     <thead>
                         <tr>
                             <th>Empresa</th>
+                            <th>Plano</th>
                             <th>Cliente</th>
                             <th>Método</th>
+                            <th>Valor</th>
                             <th>Status</th>
-                            <th>payment_id</th>
-                            <th>Data</th>
+                            <th>Payment ID</th>
+                            <th>Última atualização</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -116,14 +118,22 @@
                             @endphp
                             <tr>
                                 <td>{{ $checkout?->company_name ?? '—' }}</td>
+                                <td>{{ $checkout?->plan?->name ?? '—' }}</td>
                                 <td>
                                     <div>{{ $checkout?->buyer_name ?? '—' }}</div>
                                     <div class="header-meta">{{ $checkout?->buyer_email }}</div>
                                 </td>
                                 <td>{{ $methodLabel }}</td>
+                                <td>
+                                    @if($checkout)
+                                        R$ {{ number_format((float) $checkout->amount, 2, ',', '.') }}
+                                    @else
+                                        —
+                                    @endif
+                                </td>
                                 <td>{{ $statusLabel }}</td>
                                 <td><code style="font-size:0.78rem;">{{ $tx->payment_id ?: '—' }}</code></td>
-                                <td>{{ $tx->created_at?->format('d/m/Y H:i') }}</td>
+                                <td>{{ $tx->updated_at?->format('d/m/Y H:i') }}</td>
                             </tr>
                         @endforeach
                     </tbody>

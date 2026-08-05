@@ -20,10 +20,10 @@ class MercadoPagoSettingsController extends Controller
         $settings = PaymentGatewaySetting::forProvider(PaymentGatewaySetting::PROVIDER_MERCADOPAGO);
 
         $recentPayments = \App\Domains\Payments\Models\PaymentGatewayTransaction::query()
-            ->with(['checkoutSession'])
+            ->with(['checkoutSession.plan'])
             ->where('gateway', PaymentGatewaySetting::PROVIDER_MERCADOPAGO)
             ->latest('id')
-            ->limit(20)
+            ->limit(30)
             ->get();
 
         return view('platform.marketplace.mercadopago', [
