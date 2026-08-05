@@ -7,10 +7,9 @@
         <h1 style="margin-top:0;">Aguardando confirmação</h1>
         <p class="muted">
             @if($session)
-                Estamos aguardando a confirmação do pagamento para
-                <strong>{{ $session->company_name }}</strong>
-                ({{ strtoupper($session->gateway) }}).
-                Assim que o PIX/cartão for confirmado, sua conta será provisionada automaticamente.
+                Estamos aguardando a confirmação do gateway de pagamento para
+                <strong>{{ $session->company_name }}</strong>.
+                Assim que o PIX/cartão for aprovado, sua conta será provisionada automaticamente.
             @else
                 Sessão de checkout não encontrada. Se você acabou de pagar, aguarde alguns segundos e atualize.
             @endif

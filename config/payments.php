@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'default' => env('PAYMENT_PROVIDER', 'asaas'),
+    'default' => env('PAYMENT_PROVIDER', 'mercadopago'),
 
     'currency' => env('PAYMENT_CURRENCY', 'BRL'),
 

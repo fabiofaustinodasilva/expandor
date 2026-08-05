@@ -25,8 +25,8 @@ class StoreCheckoutRequest extends FormRequest
             'company_name' => ['required', 'string', 'max:190'],
             'buyer_name' => ['required', 'string', 'max:190'],
             'buyer_email' => ['required', 'email', 'max:190'],
-            'buyer_document' => ['nullable', 'string', 'max:40'],
-            'buyer_phone' => ['nullable', 'string', 'max:40'],
+            'buyer_document' => ['required', 'string', 'min:11', 'max:40'],
+            'buyer_phone' => ['required', 'string', 'min:8', 'max:40'],
             'billing_cycle' => ['nullable', Rule::enum(BillingCycle::class)],
             'payment_method' => ['nullable', 'string', Rule::in([
                 'UNDEFINED', 'PIX', 'BOLETO', 'CREDIT_CARD',
@@ -34,7 +34,7 @@ class StoreCheckoutRequest extends FormRequest
                 PaymentMethodType::Boleto->value,
                 PaymentMethodType::Card->value,
             ])],
-            'admin_password' => ['nullable', 'string', 'confirmed', Password::defaults()],
+            'admin_password' => ['required', 'string', 'confirmed', Password::defaults()],
         ];
     }
 }

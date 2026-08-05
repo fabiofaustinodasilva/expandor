@@ -2,6 +2,7 @@
 
 namespace App\Domains\Payments\Providers;
 
+use App\Domains\Payments\Models\PaymentGatewaySetting;
 use App\Domains\Payments\Providers\Contracts\PaymentProviderContract;
 use App\Domains\Payments\Providers\DTOs\GatewayCheckoutResult;
 use App\Domains\Payments\Providers\DTOs\GatewayCustomerResult;
@@ -10,11 +11,12 @@ use App\Domains\Payments\Providers\DTOs\ParsedWebhookEvent;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Mercado Pago — Preferences API + webhooks (Sprint 7.1).
+ * Mercado Pago — Checkout Pro (Preferences) + webhooks de produção.
  */
 class MercadoPagoProvider implements PaymentProviderContract
 {
@@ -32,7 +34,7 @@ class MercadoPagoProvider implements PaymentProviderContract
 
     public function createCustomer(array $data): GatewayCustomerResult
     {
-        // Preferências MP não exigem customer prévio; usamos referência local.
+        // Checkout Pro não exige customer prévio; referência local suficiente.
         return new GatewayCustomerResult(
             gatewayCustomerId: 'mp_cus_'.Str::lower(Str::random(16)),
             raw: [
@@ -57,12 +59,12 @@ class MercadoPagoProvider implements PaymentProviderContract
                 'title' => (string) ($data['description'] ?? 'Expandor'),
                 'quantity' => 1,
                 'currency_id' => 'BRL',
-                'unit_price' => (float) $data['amount'],
+                'unit_price' => round((float) $data['amount'], 2),
             ]],
-            'payer' => [
+            'payer' => array_filter([
                 'email' => $data['buyer_email'] ?? null,
                 'name' => $data['buyer_name'] ?? null,
-            ],
+            ]),
             'external_reference' => $uuid,
             'notification_url' => url('/webhooks/mercadopago'),
             'back_urls' => [
@@ -83,12 +85,21 @@ class MercadoPagoProvider implements PaymentProviderContract
 
         $response = $this->client()->post('/checkout/preferences', $payload)->throw()->json();
 
-        $checkoutUrl = (string) ($response['init_point']
-            ?? $response['sandbox_init_point']
-            ?? url('/assinar/aguardando?session='.$uuid));
+        $preferenceId = (string) ($response['id'] ?? '');
+        $checkoutUrl = $this->resolveCheckoutUrl($response);
+
+        if ($preferenceId === '' || $checkoutUrl === '') {
+            Log::warning('mercadopago.preference_incomplete', [
+                'checkout_uuid' => $uuid,
+                'has_preference_id' => $preferenceId !== '',
+                'has_init_point' => $checkoutUrl !== '',
+            ]);
+
+            throw new RuntimeException('Mercado Pago não retornou preference_id/init_point válidos.');
+        }
 
         return new GatewayCheckoutResult(
-            gatewaySessionId: (string) ($response['id'] ?? ('mp_pref_'.$uuid)),
+            gatewaySessionId: $preferenceId,
             checkoutUrl: $checkoutUrl,
             raw: $response,
         );
@@ -98,11 +109,14 @@ class MercadoPagoProvider implements PaymentProviderContract
     {
         $this->assertConfigured();
 
-        // Fundação: assinatura via preference recorrente futura; ID sintético por enquanto.
+        // Assinatura recorrente nativa MP fica para evolução; ativação local após approved.
         return new GatewaySubscriptionResult(
             gatewaySubscriptionId: 'mp_sub_'.Str::lower(Str::random(12)),
             nextBillingAt: now()->addMonth()->toIso8601String(),
-            raw: $data,
+            raw: [
+                'external_reference' => $data['external_reference'] ?? null,
+                'amount' => $data['amount'] ?? null,
+            ],
         );
     }
 
@@ -113,37 +127,201 @@ class MercadoPagoProvider implements PaymentProviderContract
 
     public function verifyWebhook(Request $request): bool
     {
-        $expected = (string) ($this->config['webhook_token'] ?? '');
-        if ($expected === '') {
-            // Sem token configurado: rejeita (segurança — nunca confiar no browser).
+        $secret = (string) ($this->config['webhook_token'] ?? '');
+        if ($secret === '') {
             return false;
         }
 
-        $token = (string) $request->header('X-Webhook-Token', $request->header('X-Signature', $request->input('token', '')));
+        // Compatível com testes / integrações internas.
+        $plainToken = (string) $request->header('X-Webhook-Token', $request->input('token', ''));
+        if ($plainToken !== '' && hash_equals($secret, $plainToken)) {
+            return true;
+        }
 
-        return hash_equals($expected, $token);
+        $signatureHeader = (string) $request->header('X-Signature', '');
+        if ($signatureHeader === '') {
+            return false;
+        }
+
+        // Se o header for o próprio secret (legado), aceitar.
+        if (hash_equals($secret, $signatureHeader)) {
+            return true;
+        }
+
+        return $this->verifyMercadoPagoSignature($request, $signatureHeader, $secret);
     }
 
     public function parseWebhook(Request $request): ParsedWebhookEvent
     {
         $payload = $request->all();
-        $type = (string) ($payload['type'] ?? $payload['action'] ?? $payload['topic'] ?? 'payment');
-        $dataId = (string) ($payload['data']['id'] ?? $payload['id'] ?? $payload['payment_id'] ?? Str::uuid());
-        $status = strtolower((string) ($payload['status'] ?? $payload['data']['status'] ?? ''));
+        $type = (string) ($payload['type'] ?? $payload['topic'] ?? $payload['action'] ?? 'payment');
+        $dataId = (string) (
+            $payload['data']['id']
+            ?? $request->query('data.id')
+            ?? $payload['id']
+            ?? $payload['payment_id']
+            ?? ''
+        );
 
+        // Notificações reais do MP trazem só type + data.id — buscar o pagamento.
+        $payment = null;
+        if ($dataId !== '' && $this->looksLikePaymentNotification($type, $payload)) {
+            $payment = $this->fetchPayment($dataId);
+        }
+
+        if (is_array($payment)) {
+            return $this->parsedFromPayment($payload, $type, $payment, $dataId);
+        }
+
+        // Fallback: payloads de teste com status/event embutidos.
+        return $this->parsedFromInlinePayload($payload, $type, $dataId);
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     */
+    protected function resolveCheckoutUrl(array $response): string
+    {
+        $mode = strtolower((string) ($this->config['mode'] ?? PaymentGatewaySetting::MODE_SANDBOX));
+
+        if ($mode === PaymentGatewaySetting::MODE_SANDBOX) {
+            return (string) ($response['sandbox_init_point'] ?? $response['init_point'] ?? '');
+        }
+
+        return (string) ($response['init_point'] ?? $response['sandbox_init_point'] ?? '');
+    }
+
+    protected function verifyMercadoPagoSignature(Request $request, string $signatureHeader, string $secret): bool
+    {
+        $parts = [];
+        foreach (explode(',', $signatureHeader) as $chunk) {
+            [$key, $value] = array_pad(explode('=', trim($chunk), 2), 2, null);
+            if ($key !== null && $value !== null) {
+                $parts[$key] = $value;
+            }
+        }
+
+        $ts = (string) ($parts['ts'] ?? '');
+        $hash = (string) ($parts['v1'] ?? '');
+        if ($ts === '' || $hash === '') {
+            return false;
+        }
+
+        $dataId = (string) (
+            $request->input('data.id')
+            ?? $request->query('data.id')
+            ?? data_get($request->all(), 'data.id')
+            ?? ''
+        );
+        $requestId = (string) $request->header('X-Request-Id', '');
+
+        // Manifest oficial MP: id:{data.id};request-id:{x-request-id};ts:{ts};
+        $manifest = "id:{$dataId};request-id:{$requestId};ts:{$ts};";
+        $expected = hash_hmac('sha256', $manifest, $secret);
+
+        return hash_equals($expected, $hash);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function looksLikePaymentNotification(string $type, array $payload): bool
+    {
+        $normalized = strtolower($type);
+
+        return str_contains($normalized, 'payment')
+            || isset($payload['data']['id'])
+            || (($payload['topic'] ?? null) === 'payment');
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function fetchPayment(string $paymentId): ?array
+    {
+        try {
+            $this->assertConfigured();
+
+            $response = $this->client()->get('/v1/payments/'.$paymentId);
+
+            if (! $response->successful()) {
+                Log::warning('mercadopago.payment_fetch_failed', [
+                    'payment_id' => $paymentId,
+                    'status' => $response->status(),
+                ]);
+
+                return null;
+            }
+
+            /** @var array<string, mixed> $json */
+            $json = $response->json();
+
+            return $json;
+        } catch (\Throwable $e) {
+            Log::warning('mercadopago.payment_fetch_exception', [
+                'payment_id' => $paymentId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $payment
+     */
+    protected function parsedFromPayment(array $payload, string $type, array $payment, string $dataId): ParsedWebhookEvent
+    {
+        $status = strtolower((string) ($payment['status'] ?? ''));
+        $confirmedStatuses = ['approved', 'accredited'];
+        $failedStatuses = ['rejected', 'cancelled', 'canceled', 'refunded', 'charged_back'];
+
+        $confirmed = in_array($status, $confirmedStatuses, true);
+        $failed = in_array($status, $failedStatuses, true);
+
+        $eventId = (string) (
+            $payload['id']
+            ?? $payload['event_id']
+            ?? ('mp_'.$dataId.'_'.$status)
+        );
+
+        return new ParsedWebhookEvent(
+            eventId: $eventId,
+            eventType: $type,
+            payload: array_merge($payload, ['_payment' => $this->safePaymentSnapshot($payment)]),
+            gatewayPaymentId: (string) ($payment['id'] ?? $dataId),
+            gatewayCheckoutId: (string) ($payment['external_reference'] ?? '') ?: null,
+            gatewaySubscriptionId: isset($payment['metadata']['subscription_id'])
+                ? (string) $payment['metadata']['subscription_id']
+                : null,
+            gatewayCustomerId: isset($payment['payer']['id']) ? (string) $payment['payer']['id'] : null,
+            amount: isset($payment['transaction_amount']) ? (float) $payment['transaction_amount'] : null,
+            paymentMethod: (string) ($payment['payment_type_id'] ?? $payment['payment_method_id'] ?? 'pix'),
+            isPaymentConfirmed: $confirmed && ! $failed,
+            isPaymentFailed: $failed,
+            isSubscriptionCancelled: false,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    protected function parsedFromInlinePayload(array $payload, string $type, string $dataId): ParsedWebhookEvent
+    {
+        $status = strtolower((string) ($payload['status'] ?? $payload['data']['status'] ?? ''));
         $confirmedStatuses = ['approved', 'accredited', 'paid'];
-        $failedStatuses = ['rejected', 'cancelled', 'refunded'];
+        $failedStatuses = ['rejected', 'cancelled', 'canceled', 'refunded'];
 
         $event = (string) ($payload['event'] ?? '');
         $confirmed = in_array($status, $confirmedStatuses, true)
-            || $event === 'PAYMENT_CONFIRMED'
-            || $event === 'payment.confirmed';
+            || in_array($event, ['PAYMENT_CONFIRMED', 'PAYMENT_RECEIVED', 'payment.confirmed'], true);
 
         $failed = in_array($status, $failedStatuses, true)
             || in_array($event, ['PAYMENT_FAILED', 'payment.failed'], true);
 
         return new ParsedWebhookEvent(
-            eventId: (string) ($payload['id'] ?? $payload['event_id'] ?? ('mp_'.$dataId.'_'.Str::random(6))),
+            eventId: (string) ($payload['id'] ?? $payload['event_id'] ?? ('mp_'.($dataId !== '' ? $dataId : Str::uuid()).'_'.Str::random(6))),
             eventType: $type,
             payload: $payload,
             gatewayPaymentId: $dataId !== '' ? $dataId : ($payload['payment_id'] ?? null),
@@ -153,12 +331,35 @@ class MercadoPagoProvider implements PaymentProviderContract
                 ?? null,
             gatewaySubscriptionId: $payload['subscription_id'] ?? null,
             gatewayCustomerId: $payload['customer_id'] ?? null,
-            amount: isset($payload['amount']) ? (float) $payload['amount'] : (isset($payload['transaction_amount']) ? (float) $payload['transaction_amount'] : null),
+            amount: isset($payload['amount'])
+                ? (float) $payload['amount']
+                : (isset($payload['transaction_amount']) ? (float) $payload['transaction_amount'] : null),
             paymentMethod: $payload['payment_type_id'] ?? $payload['method'] ?? $payload['billingType'] ?? 'pix',
             isPaymentConfirmed: $confirmed && ! $failed,
             isPaymentFailed: $failed,
             isSubscriptionCancelled: in_array(strtolower($type), ['subscription.cancelled'], true),
         );
+    }
+
+    /**
+     * Snapshot sem dados sensíveis para auditoria/logs.
+     *
+     * @param  array<string, mixed>  $payment
+     * @return array<string, mixed>
+     */
+    protected function safePaymentSnapshot(array $payment): array
+    {
+        return [
+            'id' => $payment['id'] ?? null,
+            'status' => $payment['status'] ?? null,
+            'status_detail' => $payment['status_detail'] ?? null,
+            'external_reference' => $payment['external_reference'] ?? null,
+            'transaction_amount' => $payment['transaction_amount'] ?? null,
+            'currency_id' => $payment['currency_id'] ?? null,
+            'payment_type_id' => $payment['payment_type_id'] ?? null,
+            'payment_method_id' => $payment['payment_method_id'] ?? null,
+            'date_approved' => $payment['date_approved'] ?? null,
+        ];
     }
 
     /**

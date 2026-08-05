@@ -91,11 +91,11 @@
                     <div class="ck-row">
                         <div>
                             <label for="buyer_document">CPF ou CNPJ</label>
-                            <input id="buyer_document" name="buyer_document" type="text" value="{{ old('buyer_document') }}" placeholder="Opcional">
+                            <input id="buyer_document" name="buyer_document" type="text" value="{{ old('buyer_document') }}" required placeholder="000.000.000-00 ou 00.000.000/0000-00">
                         </div>
                         <div>
                             <label for="buyer_phone">Telefone / WhatsApp</label>
-                            <input id="buyer_phone" name="buyer_phone" type="text" value="{{ old('buyer_phone') }}" autocomplete="tel" placeholder="Opcional">
+                            <input id="buyer_phone" name="buyer_phone" type="text" value="{{ old('buyer_phone') }}" required autocomplete="tel" placeholder="(11) 99999-9999">
                         </div>
                     </div>
                 </div>
@@ -129,18 +129,18 @@
                     <h3>Acesso do administrador</h3>
                     <div class="ck-row">
                         <div>
-                            <label for="admin_password">Senha (opcional)</label>
-                            <input id="admin_password" name="admin_password" type="password" value="" autocomplete="new-password" placeholder="Gerada automaticamente se vazia">
+                            <label for="admin_password">Senha</label>
+                            <input id="admin_password" name="admin_password" type="password" value="" required autocomplete="new-password" placeholder="Mínimo conforme política de segurança">
                         </div>
                         <div>
                             <label for="admin_password_confirmation">Confirmar senha</label>
-                            <input id="admin_password_confirmation" name="admin_password_confirmation" type="password" value="" autocomplete="new-password">
+                            <input id="admin_password_confirmation" name="admin_password_confirmation" type="password" value="" required autocomplete="new-password">
                         </div>
                     </div>
                 </div>
 
                 <button class="btn btn-primary ck-submit" type="submit">Confirmar e ir para pagamento</button>
-                <p class="ck-secure">Pagamento seguro. Após a confirmação, sua empresa é provisionada automaticamente.</p>
+                <p class="ck-secure">Você será redirecionado ao checkout seguro do Mercado Pago (PIX ou cartão). Após a aprovação, o acesso é liberado automaticamente.</p>
             </form>
         </div>
 

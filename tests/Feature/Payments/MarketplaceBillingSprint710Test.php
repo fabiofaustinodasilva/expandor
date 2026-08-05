@@ -60,6 +60,8 @@ class MarketplaceBillingSprint710Test extends TestCase
             'company_name' => 'Empresa PIX',
             'buyer_name' => 'Cliente PIX',
             'buyer_email' => 'pix@marketplace.test',
+            'buyer_document' => '12345678909',
+            'buyer_phone' => '11999998888',
             'billing_cycle' => 'monthly',
             'payment_method' => 'PIX',
             'admin_password' => 'SenhaPix123!',
@@ -136,33 +138,32 @@ class MarketplaceBillingSprint710Test extends TestCase
             ->assertJsonPath('provisioned', true);
     }
 
-    public function test_webhook_without_token_is_rejected(): void
-    {
-        $this->postJson('/webhooks/mercadopago', [
-            'event' => 'PAYMENT_CONFIRMED',
-        ])->assertUnauthorized();
-    }
-
-    public function test_mercadopago_webhook_with_token_provisions(): void
+    public function test_mercadopago_webhook_without_secret_is_rejected(): void
     {
         config([
-            'payments.default' => 'fake',
-            'payments.providers.mercadopago.webhook_token' => 'mp-test-token',
+            'payments.providers.mercadopago.webhook_token' => '',
             'payments.providers.mercadopago.access_token' => 'TEST-TOKEN',
         ]);
 
-        // Use fake provider for checkout creation, then parse via mercadopago webhook route
-        // with compatible PAYMENT_CONFIRMED event and token.
+        $this->postJson('/webhooks/mercadopago', [
+            'type' => 'payment',
+            'data' => ['id' => '123'],
+        ])->assertUnauthorized();
+    }
+
+    public function test_fake_webhook_still_provisions_for_dev_compatibility(): void
+    {
         $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
         $result = app(CheckoutService::class)->start([
             'plan_id' => $plan->id,
-            'company_name' => 'Empresa MP',
+            'company_name' => 'Empresa MP Compat',
             'buyer_name' => 'Cliente MP',
             'buyer_email' => 'mp@marketplace.test',
+            'buyer_document' => '12345678909',
+            'buyer_phone' => '11988887777',
             'payment_method' => 'PIX',
         ]);
 
-        // Fake webhook (provider in checkout is fake) — mercadopago route uses mercadopago provider
         $this->postJson('/webhooks/fake', [
             'id' => 'evt_mp_compat',
             'event' => 'PAYMENT_CONFIRMED',

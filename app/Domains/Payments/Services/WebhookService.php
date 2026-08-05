@@ -116,13 +116,38 @@ class WebhookService
      */
     protected function handleFailedPayment(string $gateway, ?string $gatewayPaymentId, array $payload): void
     {
-        if ($gatewayPaymentId === null) {
-            return;
+        $payment = null;
+
+        if ($gatewayPaymentId !== null && $gatewayPaymentId !== '') {
+            $payment = $this->repository->findPaymentByGateway($gateway, $gatewayPaymentId);
         }
 
-        $payment = $this->repository->findPaymentByGateway($gateway, $gatewayPaymentId);
+        // No checkout, o payment pode ainda estar com preference_id; localizar via external_reference.
+        if ($payment === null) {
+            $checkoutRef = (string) (
+                data_get($payload, '_payment.external_reference')
+                ?? data_get($payload, 'external_reference')
+                ?? data_get($payload, 'checkout_id')
+                ?? ''
+            );
+            $checkout = $this->repository->findCheckoutForWebhook($gateway, $checkoutRef !== '' ? $checkoutRef : null);
+            if ($checkout !== null) {
+                $payment = \App\Domains\Payments\Models\Payment::query()
+                    ->withoutGlobalScopes()
+                    ->where('checkout_session_id', $checkout->id)
+                    ->latest('id')
+                    ->first();
+
+                $checkout->forceFill([
+                    'status' => CheckoutStatus::Failed,
+                ])->save();
+            }
+        }
 
         if ($payment !== null) {
+            if ($gatewayPaymentId) {
+                $payment->gateway_payment_id = $gatewayPaymentId;
+            }
             $this->payments->markFailed($payment, 'Webhook reported payment failure.');
         }
     }

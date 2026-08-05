@@ -62,13 +62,27 @@ class CheckoutController extends Controller
     {
         $validated = $request->validated();
         $result = $this->checkout->start($validated);
-        $url = $result->checkoutUrl;
-        $method = strtoupper((string) ($validated['payment_method'] ?? ''));
-        $isPixFake = $method === 'PIX' && $result->session->gateway === 'fake';
+        $url = trim((string) $result->checkoutUrl);
+        $gateway = strtolower((string) $result->session->gateway);
 
-        if (str_contains($url, 'aguardando') || $isPixFake) {
+        // Mercado Pago / gateways reais: sempre redirecionar para o checkout externo (init_point).
+        if (in_array($gateway, ['mercadopago', 'asaas', 'stripe'], true) && $url !== '') {
+            return redirect()->away($url);
+        }
+
+        // Fake (somente testes/dev): PIX permanece na página de polling local.
+        $method = strtoupper((string) ($validated['payment_method'] ?? ''));
+        if ($gateway === 'fake' && ($method === 'PIX' || str_contains($url, 'aguardando'))) {
             return redirect()->route('checkout.waiting', [
                 'session' => $result->session->uuid,
+            ]);
+        }
+
+        if ($url === '') {
+            return redirect()->route('checkout.waiting', [
+                'session' => $result->session->uuid,
+            ])->withErrors([
+                'checkout' => 'Não foi possível abrir o checkout de pagamento. Tente novamente.',
             ]);
         }
 
@@ -108,7 +122,7 @@ class CheckoutController extends Controller
             'status' => $status,
             'provisioned' => $provisioned,
             'redirect' => $provisioned
-                ? route('checkout.success', ['session' => $uuid])
+                ? route('login')
                 : null,
         ]);
     }
@@ -122,8 +136,14 @@ class CheckoutController extends Controller
             $session = $this->checkout->findByUuid($uuid);
         }
 
+        $provisioned = $session !== null && (
+            $session->status === CheckoutStatus::Provisioned
+            || $session->provisioned_at !== null
+        );
+
         return view('payments.checkout-success', [
             'session' => $session,
+            'provisioned' => $provisioned,
         ]);
     }
 
