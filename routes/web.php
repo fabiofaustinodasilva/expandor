@@ -98,6 +98,7 @@ Route::get('/sitemap.xml', [MarketplaceController::class, 'sitemap'])->name('mar
 Route::post('/marketplace/events', [MarketplaceAnalyticsController::class, 'store'])
     ->middleware(['throttle:60,1', 'marketplace.attribution'])
     ->name('marketplace.events.store');
+Route::get('/assinar/pix', [CheckoutController::class, 'pix'])->name('checkout.pix');
 Route::get('/assinar/aguardando', [CheckoutController::class, 'waiting'])->name('checkout.waiting');
 Route::get('/assinar/status/{uuid}', [CheckoutController::class, 'status'])->name('checkout.status');
 

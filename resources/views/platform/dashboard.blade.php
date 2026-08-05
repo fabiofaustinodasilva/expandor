@@ -18,7 +18,7 @@
             <div class="card-header" style="border:0; margin:0; padding:0;">
                 <div>
                     <div class="header-meta">Configurações</div>
-                    <strong style="font-size:1.05rem;">Identidade da plataforma</strong>
+                    <strong style="font-size:1.05rem;">Identidade da Plataforma</strong>
                     <div class="header-meta" style="margin-top:0.25rem;">{{ $platformBrand->name() }} · logo, cores e favicon do login</div>
                 </div>
                 <span class="btn btn-ghost">Editar</span>

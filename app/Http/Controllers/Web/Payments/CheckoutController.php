@@ -64,29 +64,69 @@ class CheckoutController extends Controller
         $result = $this->checkout->start($validated);
         $url = trim((string) $result->checkoutUrl);
         $gateway = strtolower((string) $result->session->gateway);
+        $method = strtoupper((string) ($validated['payment_method'] ?? data_get($result->session->payload, 'payment_method', '')));
+        $uuid = $result->session->uuid;
 
-        // Mercado Pago / gateways reais: sempre redirecionar para o checkout externo (init_point).
+        // PIX Mercado Pago: tela interna com QR Code (não redireciona ao Checkout Pro).
+        if ($method === 'PIX' && ($gateway === 'mercadopago' || str_contains($url, '/assinar/pix'))) {
+            return redirect()->route('checkout.pix', ['session' => $uuid]);
+        }
+
+        // Fake (testes): PIX permanece na página de polling.
+        if ($gateway === 'fake' && ($method === 'PIX' || str_contains($url, 'aguardando'))) {
+            return redirect()->route('checkout.waiting', [
+                'session' => $uuid,
+            ]);
+        }
+
+        // Cartão / gateways externos: init_point.
         if (in_array($gateway, ['mercadopago', 'asaas', 'stripe'], true) && $url !== '') {
             return redirect()->away($url);
         }
 
-        // Fake (somente testes/dev): PIX permanece na página de polling local.
-        $method = strtoupper((string) ($validated['payment_method'] ?? ''));
-        if ($gateway === 'fake' && ($method === 'PIX' || str_contains($url, 'aguardando'))) {
-            return redirect()->route('checkout.waiting', [
-                'session' => $result->session->uuid,
-            ]);
-        }
-
         if ($url === '') {
             return redirect()->route('checkout.waiting', [
-                'session' => $result->session->uuid,
+                'session' => $uuid,
             ])->withErrors([
                 'checkout' => 'Não foi possível abrir o checkout de pagamento. Tente novamente.',
             ]);
         }
 
         return redirect()->away($url);
+    }
+
+    public function pix(Request $request): View|RedirectResponse
+    {
+        $uuid = (string) $request->query('session', '');
+        $session = $uuid !== '' ? $this->checkout->findByUuid($uuid) : null;
+
+        if ($session === null) {
+            return redirect()->route('marketplace.plans')->withErrors([
+                'checkout' => 'Sessão de pagamento não encontrada.',
+            ]);
+        }
+
+        if ($session->status === CheckoutStatus::Provisioned || $session->provisioned_at !== null) {
+            return redirect()->route('checkout.success', ['session' => $uuid]);
+        }
+
+        $transaction = \App\Domains\Payments\Models\PaymentGatewayTransaction::query()
+            ->where('checkout_session_id', $session->id)
+            ->latest('id')
+            ->first();
+
+        $session->loadMissing('plan');
+
+        return view('payments.pix', [
+            'session' => $session,
+            'transaction' => $transaction,
+            'plan' => $session->plan,
+            'qrCode' => $transaction?->pix_qr_code
+                ?? data_get($session->payload, 'checkout.pix_qr_code'),
+            'qrCodeBase64' => $transaction?->pix_qr_code_base64
+                ?? data_get($session->payload, 'checkout.pix_qr_code_base64'),
+            'expiresAt' => $transaction?->pix_expiration_at,
+        ]);
     }
 
     public function waiting(Request $request): View

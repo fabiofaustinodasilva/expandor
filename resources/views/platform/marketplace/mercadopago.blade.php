@@ -80,4 +80,55 @@
             <button class="btn btn-primary" type="submit">Salvar</button>
         </div>
     </form>
+
+    <div class="card" style="margin-top:1.25rem;">
+        <h2 style="margin:0 0 0.35rem;font-size:1.05rem;">Últimos pagamentos</h2>
+        <p class="header-meta" style="margin:0 0 1rem;">PIX interno e cartão (Checkout Pro) via Mercado Pago.</p>
+
+        @if(($recentPayments ?? collect())->isEmpty())
+            <p class="muted" style="margin:0;">Nenhum pagamento registrado ainda.</p>
+        @else
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Empresa</th>
+                            <th>Cliente</th>
+                            <th>Método</th>
+                            <th>Status</th>
+                            <th>payment_id</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($recentPayments as $tx)
+                            @php
+                                $checkout = $tx->checkoutSession;
+                                $method = strtolower((string) $tx->payment_method);
+                                $status = strtolower((string) $tx->status);
+                                $methodLabel = $method === 'pix' ? 'PIX' : ($method === 'card' ? 'Cartão' : strtoupper($method ?: '—'));
+                                $statusLabel = match ($status) {
+                                    'approved', 'paid', 'accredited' => 'Aprovado',
+                                    'pending', 'in_process' => 'Pendente',
+                                    'rejected', 'cancelled', 'canceled', 'failed', 'refunded' => 'Recusado',
+                                    default => $status !== '' ? ucfirst($status) : 'Pendente',
+                                };
+                            @endphp
+                            <tr>
+                                <td>{{ $checkout?->company_name ?? '—' }}</td>
+                                <td>
+                                    <div>{{ $checkout?->buyer_name ?? '—' }}</div>
+                                    <div class="header-meta">{{ $checkout?->buyer_email }}</div>
+                                </td>
+                                <td>{{ $methodLabel }}</td>
+                                <td>{{ $statusLabel }}</td>
+                                <td><code style="font-size:0.78rem;">{{ $tx->payment_id ?: '—' }}</code></td>
+                                <td>{{ $tx->created_at?->format('d/m/Y H:i') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
 @endsection

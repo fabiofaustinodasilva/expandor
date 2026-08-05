@@ -75,4 +75,9 @@ class CheckoutSession extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function gatewayTransactions(): HasMany
+    {
+        return $this->hasMany(PaymentGatewayTransaction::class);
+    }
 }

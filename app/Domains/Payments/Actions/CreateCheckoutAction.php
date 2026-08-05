@@ -9,6 +9,7 @@ use App\Domains\Payments\Enums\PaymentStatus;
 use App\Domains\Payments\Models\CheckoutSession;
 use App\Domains\Payments\Models\Customer;
 use App\Domains\Payments\Models\Payment;
+use App\Domains\Payments\Models\PaymentGatewayTransaction;
 use App\Domains\Payments\Providers\ProviderFactory;
 use App\Domains\Payments\Repositories\PaymentRepository;
 use App\Domains\Security\Services\SecurityService;
@@ -105,13 +106,14 @@ class CreateCheckoutAction
                 'customer' => $gatewayCustomer->raw,
                 'checkout' => $gatewayCheckout->raw,
                 'payment_method' => $paymentMethod,
+                'flow' => $gatewayCheckout->raw['flow'] ?? null,
                 'admin_password' => filled($data['admin_password'] ?? null)
                     ? (string) $data['admin_password']
                     : null,
             ],
         ]);
 
-        Payment::query()->withoutGlobalScopes()->create([
+        $payment = Payment::query()->withoutGlobalScopes()->create([
             'company_id' => null,
             'customer_id' => $customer->id,
             'checkout_session_id' => $session->id,
@@ -124,6 +126,23 @@ class CreateCheckoutAction
             'raw' => $gatewayCheckout->raw,
         ]);
 
+        $pixQr = (string) ($gatewayCheckout->raw['pix_qr_code'] ?? '');
+        $pixQr64 = (string) ($gatewayCheckout->raw['pix_qr_code_base64'] ?? '');
+        $pixExp = $gatewayCheckout->raw['pix_expiration_date'] ?? null;
+
+        PaymentGatewayTransaction::query()->create([
+            'checkout_session_id' => $session->id,
+            'payment_record_id' => $payment->id,
+            'gateway' => $provider->name(),
+            'payment_method' => strtolower($paymentMethod === 'CREDIT_CARD' ? 'card' : ($paymentMethod === 'PIX' ? 'pix' : 'other')),
+            'payment_id' => $gatewayCheckout->gatewaySessionId,
+            'status' => (string) ($gatewayCheckout->raw['status'] ?? PaymentStatus::Pending->value),
+            'pix_qr_code' => $pixQr !== '' ? $pixQr : null,
+            'pix_qr_code_base64' => $pixQr64 !== '' ? $pixQr64 : null,
+            'pix_expiration_at' => filled($pixExp) ? $pixExp : null,
+            'raw' => $gatewayCheckout->raw,
+        ]);
+
         $this->security->recordAudit(
             action: 'payments.checkout.started',
             auditable: $session,
@@ -133,6 +152,7 @@ class CreateCheckoutAction
                 'amount' => $amount,
                 'gateway' => $provider->name(),
                 'payment_method' => $paymentMethod,
+                'flow' => $gatewayCheckout->raw['flow'] ?? null,
             ],
         );
 

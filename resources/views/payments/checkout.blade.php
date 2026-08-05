@@ -112,16 +112,22 @@
                             </select>
                         </div>
                         <div>
-                            <label for="payment_method">Forma de pagamento</label>
-                            <select id="payment_method" name="payment_method">
+                            <span class="header-meta" style="display:block;margin-bottom:0.35rem;">Forma de pagamento</span>
+                            <div style="display:flex;flex-direction:column;gap:0.55rem;margin-top:0.35rem;">
                                 @foreach($paymentMethods as $value => $label)
-                                    <option value="{{ $value }}" @selected($defaultPaymentMethod === $value)>{{ $label }}</option>
+                                    <label style="display:flex;align-items:center;gap:0.5rem;font-weight:600;cursor:pointer;">
+                                        <input type="radio" name="payment_method" value="{{ $value }}" @checked($defaultPaymentMethod === $value) required>
+                                        <span>{{ $label }}</span>
+                                    </label>
                                 @endforeach
-                            </select>
+                            </div>
                         </div>
                     </div>
                     <p class="muted" id="yearly-hint" style="margin-top:0.35rem; margin-bottom:0; font-size:0.85rem;">
                         No anual: R$ {{ number_format($yearly, 2, ',', '.') }} cobrados uma vez por ano.
+                    </p>
+                    <p class="muted" style="margin-top:0.65rem;margin-bottom:0;font-size:0.85rem;">
+                        PIX: pagamento instantâneo nesta tela. Cartão: ambiente seguro do Mercado Pago.
                     </p>
                 </div>
 
@@ -140,7 +146,7 @@
                 </div>
 
                 <button class="btn btn-primary ck-submit" type="submit">Confirmar e ir para pagamento</button>
-                <p class="ck-secure">Você será redirecionado ao checkout seguro do Mercado Pago (PIX ou cartão). Após a aprovação, o acesso é liberado automaticamente.</p>
+                <p class="ck-secure">Pagamento seguro. PIX nesta tela ou cartão no checkout do Mercado Pago. Após a aprovação, o acesso é liberado automaticamente.</p>
             </form>
         </div>
 

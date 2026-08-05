@@ -116,10 +116,16 @@ class Sprint816FixPaymentProviderSelectionTest extends TestCase
         ]);
 
         Http::fake([
-            'api.mercadopago.com/checkout/preferences' => Http::response([
-                'id' => 'pref_816',
-                'init_point' => 'https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=pref_816',
-                'sandbox_init_point' => 'https://sandbox.mercadopago.com.br/checkout/v1/redirect?pref_id=pref_816',
+            'api.mercadopago.com/v1/payments' => Http::response([
+                'id' => 816001,
+                'status' => 'pending',
+                'date_of_expiration' => now()->addHour()->toIso8601String(),
+                'point_of_interaction' => [
+                    'transaction_data' => [
+                        'qr_code' => '00020126580014br.gov.bcb.pix0136PIX816',
+                        'qr_code_base64' => base64_encode('qr-816'),
+                    ],
+                ],
             ], 201),
         ]);
 
@@ -138,9 +144,9 @@ class Sprint816FixPaymentProviderSelectionTest extends TestCase
         ]);
 
         $this->assertSame('mercadopago', $result->session->gateway);
-        $this->assertSame('pref_816', $result->session->gateway_session_id);
+        $this->assertSame('816001', $result->session->gateway_session_id);
         $this->assertSame(CheckoutStatus::Pending, $result->session->status);
-        $this->assertStringContainsString('mercadopago.com', $result->checkoutUrl);
+        $this->assertStringContainsString('/assinar/pix', $result->checkoutUrl);
         $this->assertStringNotContainsString('aguardando', $result->checkoutUrl);
 
         $this->assertDatabaseHas('checkout_sessions', [

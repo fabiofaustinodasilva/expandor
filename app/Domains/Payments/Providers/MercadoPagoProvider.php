@@ -49,6 +49,83 @@ class MercadoPagoProvider implements PaymentProviderContract
     {
         $this->assertConfigured();
 
+        $billingType = strtoupper((string) ($data['billing_type'] ?? 'UNDEFINED'));
+
+        // PIX híbrido: pagamento direto na API (QR no Expandor). Cartão: Checkout Pro.
+        if ($billingType === 'PIX') {
+            return $this->createPixPayment($data);
+        }
+
+        return $this->createCheckoutProPreference($data);
+    }
+
+    /**
+     * PIX interno — POST /v1/payments
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function createPixPayment(array $data): GatewayCheckoutResult
+    {
+        $this->assertConfigured();
+
+        $uuid = (string) ($data['checkout_uuid'] ?? Str::uuid());
+
+        $payload = [
+            'transaction_amount' => round((float) $data['amount'], 2),
+            'description' => (string) ($data['description'] ?? 'Expandor'),
+            'payment_method_id' => 'pix',
+            'payer' => array_filter([
+                'email' => $data['buyer_email'] ?? null,
+                'first_name' => $data['buyer_name'] ?? null,
+            ]),
+            'external_reference' => $uuid,
+            'notification_url' => url('/webhooks/mercadopago'),
+        ];
+
+        $response = $this->client()
+            ->withHeaders(['X-Idempotency-Key' => $uuid])
+            ->post('/v1/payments', $payload)
+            ->throw()
+            ->json();
+
+        $paymentId = (string) ($response['id'] ?? '');
+        $qrCode = (string) data_get($response, 'point_of_interaction.transaction_data.qr_code', '');
+        $qrBase64 = (string) data_get($response, 'point_of_interaction.transaction_data.qr_code_base64', '');
+        $expiration = data_get($response, 'date_of_expiration');
+
+        if ($paymentId === '' || $qrCode === '') {
+            Log::warning('mercadopago.pix_incomplete', [
+                'checkout_uuid' => $uuid,
+                'has_payment_id' => $paymentId !== '',
+                'has_qr' => $qrCode !== '',
+            ]);
+
+            throw new RuntimeException('Mercado Pago não retornou QR Code PIX válido.');
+        }
+
+        return new GatewayCheckoutResult(
+            gatewaySessionId: $paymentId,
+            checkoutUrl: url('/assinar/pix?session='.$uuid),
+            raw: [
+                'id' => $paymentId,
+                'status' => $response['status'] ?? 'pending',
+                'date_of_expiration' => $expiration,
+                'point_of_interaction' => $response['point_of_interaction'] ?? null,
+                'pix_qr_code' => $qrCode,
+                'pix_qr_code_base64' => $qrBase64,
+                'pix_expiration_date' => $expiration,
+                'flow' => 'pix_direct',
+            ],
+        );
+    }
+
+    /**
+     * Cartão — Checkout Pro Preferences
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected function createCheckoutProPreference(array $data): GatewayCheckoutResult
+    {
         $uuid = (string) ($data['checkout_uuid'] ?? Str::uuid());
         $billingType = strtoupper((string) ($data['billing_type'] ?? 'UNDEFINED'));
         $paymentMethods = $this->paymentMethodsFor($billingType);
@@ -101,7 +178,7 @@ class MercadoPagoProvider implements PaymentProviderContract
         return new GatewayCheckoutResult(
             gatewaySessionId: $preferenceId,
             checkoutUrl: $checkoutUrl,
-            raw: $response,
+            raw: array_merge($response, ['flow' => 'checkout_pro']),
         );
     }
 

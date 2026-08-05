@@ -149,6 +149,10 @@ class WebhookService
                 $payment->gateway_payment_id = $gatewayPaymentId;
             }
             $this->payments->markFailed($payment, 'Webhook reported payment failure.');
+
+            \App\Domains\Payments\Models\PaymentGatewayTransaction::query()
+                ->where('payment_record_id', $payment->id)
+                ->update(['status' => 'rejected']);
         }
     }
 
@@ -184,6 +188,13 @@ class WebhookService
             'status' => CheckoutStatus::Paid,
             'paid_at' => now(),
         ])->save();
+
+        \App\Domains\Payments\Models\PaymentGatewayTransaction::query()
+            ->where('checkout_session_id', $checkout->id)
+            ->update(array_filter([
+                'status' => 'approved',
+                'payment_id' => $parsed->gatewayPaymentId ?: null,
+            ], fn ($v) => $v !== null));
 
         $this->security->recordAudit(
             action: 'payments.payment.approved',

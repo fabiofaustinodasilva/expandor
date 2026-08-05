@@ -53,7 +53,7 @@ class Sprint815MercadoPagoProductionFlowTest extends TestCase
 
         $response = $this->post(route('checkout.store'), $this->validCheckoutPayload($plan->id, [
             'buyer_email' => 'cliente@expandor.test',
-            'payment_method' => 'PIX',
+            'payment_method' => 'CREDIT_CARD',
         ]));
 
         $session = CheckoutSession::query()->where('buyer_email', 'cliente@expandor.test')->firstOrFail();
