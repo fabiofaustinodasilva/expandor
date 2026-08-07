@@ -111,11 +111,9 @@
     if (!isFieldSeller) {
         L.control.zoom({ position: 'bottomleft' }).addTo(map);
     } else {
-        // Cinto de segurança: remove qualquer controle Leaflet de chrome no Seller.
+        // Seller: filtros comerciais ocultos; legenda compacta permanece disponível.
         document.getElementById('commercial-filters')?.classList.add('hidden');
         document.getElementById('commercial-filters')?.classList.remove('open');
-        document.getElementById('map-legend-panel')?.classList.add('hidden');
-        document.getElementById('map-legend-panel')?.classList.remove('open');
         map.whenReady(() => {
             map.attributionControl?.remove?.();
             document.querySelectorAll(
@@ -229,11 +227,14 @@
         return { label: 'Baixa precisão', tone: 'text-amber-400' };
     }
 
-    function coloredIcon(color, locationKind = 'gps') {
+    function coloredIcon(color, locationKind = 'gps', mark = '') {
         const ring = locationKindMeta(locationKind).className;
+        const markHtml = mark
+            ? `<span class="map-marker-mark" aria-hidden="true">${mark}</span>`
+            : '';
         return L.divIcon({
             className: '',
-            html: `<div class="map-marker-wrap"><div class="map-marker-ring ${ring}"></div><div class="map-marker-dot" style="background:${color || '#9ca3af'}"></div></div>`,
+            html: `<div class="map-marker-wrap"><div class="map-marker-ring ${ring}"></div><div class="map-marker-dot" style="background:${color || '#9ca3af'}">${markHtml}</div></div>`,
             iconSize: [18, 18],
             iconAnchor: [9, 9],
         });
@@ -457,11 +458,19 @@
             const legendCommercial = JSON.parse(page.dataset.commercialLegend || '[]');
             breakdownEl.innerHTML = (legendCommercial.length ? legendCommercial : legend).map((item) => {
                 const key = item.group || item.status;
-                const total = counts[key] != null
-                    ? counts[key]
-                    : markers.filter((m) => m.status === item.status).length;
+                let total;
+                if (item.status) {
+                    total = markers.filter((m) => m.status === item.status).length;
+                } else if (counts[key] != null) {
+                    total = counts[key];
+                } else {
+                    total = markers.filter((m) => m.status === item.status).length;
+                }
+                const mark = item.mark
+                    ? `<span class="map-legend-mark" aria-hidden="true">${item.mark}</span>`
+                    : '';
                 return `<div class="flex items-center justify-between gap-2">
-                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${item.color}"></span>${item.label}</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="map-legend-swatch" style="background:${item.color}">${mark}</span>${item.label}</span>
                     <span class="text-slate-300">${total}</span>
                 </div>`;
             }).join('');
@@ -1191,7 +1200,11 @@
             const group = commercial?.groupOf(marker) || marker.commercial_group || 'new';
 
             const layer = L.marker([marker.latitude, marker.longitude], {
-                icon: coloredIcon(marker.color, marker.location_kind || 'gps'),
+                icon: coloredIcon(
+                    commercial?.colorOf?.(marker) || marker.color,
+                    marker.location_kind || 'gps',
+                    commercial?.markOf?.(marker) || ''
+                ),
                 commercialGroup: group,
                 markerData: marker,
             });
@@ -2506,6 +2519,14 @@
 
     document.getElementById('toggle-layers')?.addEventListener('click', () => toggleSellerPanel('layers'));
     document.getElementById('close-layers')?.addEventListener('click', () => setSellerPanel('layers', false));
+
+    document.getElementById('toggle-legend')?.addEventListener('click', () => {
+        const panel = document.getElementById('map-legend-panel');
+        const btn = document.getElementById('toggle-legend');
+        if (!panel) return;
+        const collapsed = panel.classList.toggle('is-collapsed');
+        btn?.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    });
 
     if (isFieldSeller) {
         map.on('click', () => closeAllSellerPanels());

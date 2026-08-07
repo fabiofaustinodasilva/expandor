@@ -193,28 +193,33 @@
         </div>
     </div>
 
-    <div id="map-legend-panel" class="absolute left-3 bottom-20 sm:bottom-3 z-20 {{ !empty($isFieldSeller) ? 'hidden' : 'hidden sm:block' }} pointer-events-none"
-         @if(!empty($isFieldSeller)) aria-hidden="true" @endif>
-        <div class="pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 min-w-[170px]">
-            <div class="flex items-center justify-between gap-2 mb-2">
-                <div class="text-[11px] uppercase tracking-wide text-slate-400">Legenda comercial</div>
-                <button type="button" id="close-legend" class="field-seller-only hidden p-1 rounded-lg text-slate-400 hover:bg-slate-800 pointer-events-auto" title="Fechar" aria-label="Fechar legenda">
-                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                </button>
-            </div>
-            <ul class="space-y-1.5">
-                @foreach($commercialLegend as $item)
-                    <li class="flex items-center gap-2 text-xs text-slate-200">
-                        <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: {{ $item['color'] }}"></span>
-                        {{ $item['label'] }}
-                    </li>
-                @endforeach
-            </ul>
-            <div class="mt-2 pt-2 border-t border-slate-700 space-y-1 text-[10px] text-slate-400">
-                <div>Anel: GPS · ajustado · baixa precisão</div>
-            </div>
-            <div class="mt-2 pt-2 border-t border-slate-700 text-xs text-slate-400">
-                <span id="map-marker-count">0</span> pontos no mapa
+    <div id="map-legend-panel" class="map-legend-panel absolute z-20 pointer-events-none{{ !empty($isFieldSeller) ? ' is-field-seller is-collapsed' : ' hidden sm:block' }}"
+         @if(!empty($isFieldSeller)) data-collapsible="1" @endif>
+        <div class="pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-xl overflow-hidden">
+            <button type="button" id="toggle-legend" class="map-legend-toggle w-full flex items-center justify-between gap-2 px-3 py-2 text-left"
+                    aria-expanded="{{ !empty($isFieldSeller) ? 'false' : 'true' }}" aria-controls="map-legend-body">
+                <span class="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Legenda</span>
+                <i data-lucide="chevron-down" class="map-legend-chevron w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden="true"></i>
+            </button>
+            <div id="map-legend-body" class="map-legend-body px-3 pb-3">
+                <ul class="space-y-1.5" id="map-legend-list">
+                    @foreach($commercialLegend as $item)
+                        <li class="flex items-center gap-2 text-xs text-slate-200">
+                            <span class="map-legend-swatch shrink-0" style="background: {{ $item['color'] }}" title="{{ $item['label'] }}">
+                                @if(!empty($item['mark']))
+                                    <span class="map-legend-mark" aria-hidden="true">{{ $item['mark'] }}</span>
+                                @endif
+                            </span>
+                            <span>{{ $item['label'] }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+                <div class="mt-2 pt-2 border-t border-slate-700 space-y-1 text-[10px] text-slate-400">
+                    <div>Marca: R = retorno · × = sem interesse</div>
+                </div>
+                <div class="mt-2 pt-2 border-t border-slate-700 text-xs text-slate-400">
+                    <span id="map-marker-count">0</span> pontos no mapa
+                </div>
             </div>
         </div>
     </div>
@@ -755,7 +760,46 @@
     .map-marker-dot {
         width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff;
         box-shadow: 0 0 0 1px rgba(0,0,0,.35); position: absolute; left: 2px; top: 2px;
+        display: flex; align-items: center; justify-content: center;
     }
+    .map-marker-mark {
+        font-size: 8px; font-weight: 800; line-height: 1; color: #fff;
+        text-shadow: 0 0 2px rgba(0,0,0,.85);
+        pointer-events: none;
+    }
+    .map-legend-swatch {
+        width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #fff;
+        box-shadow: 0 0 0 1px rgba(0,0,0,.35);
+        display: inline-flex; align-items: center; justify-content: center;
+    }
+    .map-legend-mark {
+        font-size: 8px; font-weight: 800; line-height: 1; color: #fff;
+        text-shadow: 0 0 2px rgba(0,0,0,.8);
+    }
+    .map-legend-panel {
+        right: 0.75rem;
+        left: auto;
+        bottom: 5.5rem;
+        max-width: min(11.5rem, 42vw);
+    }
+    @media (min-width: 640px) {
+        .map-legend-panel:not(.is-field-seller) {
+            left: 0.75rem;
+            right: auto;
+            bottom: 0.75rem;
+            max-width: 12.5rem;
+        }
+    }
+    body.field-seller .map-legend-panel {
+        right: 0.75rem;
+        left: auto;
+        bottom: 5.5rem;
+        z-index: 25;
+    }
+    .map-legend-panel.is-collapsed .map-legend-body { display: none; }
+    .map-legend-panel.is-collapsed .map-legend-chevron { transform: rotate(-90deg); }
+    .map-legend-chevron { transition: transform .15s ease; }
+    .map-legend-toggle { min-height: 2.5rem; }
     .map-marker-ring {
         position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; pointer-events: none;
     }
@@ -937,7 +981,7 @@
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-<script src="{{ asset('js/map-provider.js') }}?v=2"></script>
+<script src="{{ asset('js/map-provider.js') }}?v=3"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=44"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=45"></script>
 @endpush

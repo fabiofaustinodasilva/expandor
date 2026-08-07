@@ -30,6 +30,7 @@ enum MapCommercialGroup: string
         return match ($this) {
             self::CUSTOMER => MapMarkerColor::GREEN,
             self::INTERESTED => MapMarkerColor::BLUE,
+            // Aggregate filter group — pins use MapMarkerColor::forStatus() instead.
             self::VISITED => MapMarkerColor::YELLOW,
             self::NEW => MapMarkerColor::RED,
         };
@@ -86,17 +87,47 @@ enum MapCommercialGroup: string
     }
 
     /**
-     * @return list<array{group: string, label: string, color: string}>
+     * Visual legend for the map (pins + labels).
+     * Retorno and Sem interesse are listed separately even though both
+     * remain under commercial_group=visited for API filters.
+     *
+     * @return list<array{group: string, label: string, color: string, mark: string, status?: string}>
      */
     public static function legend(): array
     {
-        return array_map(
-            static fn (self $group) => [
-                'group' => $group->value,
-                'label' => $group->label(),
-                'color' => $group->color()->value,
+        return [
+            [
+                'group' => self::CUSTOMER->value,
+                'label' => 'Cliente / instalação',
+                'color' => MapMarkerColor::GREEN->value,
+                'mark' => '',
             ],
-            self::cases()
-        );
+            [
+                'group' => self::INTERESTED->value,
+                'label' => 'Interessado',
+                'color' => MapMarkerColor::BLUE->value,
+                'mark' => '',
+            ],
+            [
+                'group' => 'return',
+                'status' => PropertyStatus::RETURN_LATER->value,
+                'label' => 'Retorno',
+                'color' => MapMarkerColor::ORANGE->value,
+                'mark' => 'R',
+            ],
+            [
+                'group' => 'no_interest',
+                'status' => PropertyStatus::NO_INTEREST->value,
+                'label' => 'Sem interesse',
+                'color' => MapMarkerColor::SLATE->value,
+                'mark' => '×',
+            ],
+            [
+                'group' => self::NEW->value,
+                'label' => 'Novo',
+                'color' => MapMarkerColor::RED->value,
+                'mark' => '',
+            ],
+        ];
     }
 }

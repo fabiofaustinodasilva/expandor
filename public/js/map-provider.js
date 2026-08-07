@@ -75,11 +75,14 @@
      */
     global.ExpandorCommercialLayer = {
         groups: {
-            customer: { label: 'Cliente ativo', color: '#22c55e', emoji: '🟢' },
-            interested: { label: 'Interessado', color: '#3b82f6', emoji: '🔵' },
-            visited: { label: 'Visitado', color: '#eab308', emoji: '🟡' },
-            new: { label: 'Novo / sem abordagem', color: '#ef4444', emoji: '🔴' },
+            customer: { label: 'Cliente / instalação', color: '#22c55e', mark: '' },
+            interested: { label: 'Interessado', color: '#3b82f6', mark: '' },
+            visited: { label: 'Visitados', color: '#eab308', mark: '' },
+            return: { label: 'Retorno', color: '#f97316', mark: 'R' },
+            no_interest: { label: 'Sem interesse', color: '#64748b', mark: '×' },
+            new: { label: 'Novo', color: '#ef4444', mark: '' },
         },
+        /** Filter/cluster group — return_later + no_interest stay "visited". */
         groupOf(marker) {
             return marker?.commercial_group
                 || (marker?.status === 'customer' || marker?.status === 'installation_requested'
@@ -89,6 +92,21 @@
                         : (marker?.status === 'return_later' || marker?.status === 'no_interest')
                             ? 'visited'
                             : 'new');
+        },
+        colorOf(marker) {
+            if (marker?.color) return marker.color;
+            const status = marker?.status;
+            if (status === 'return_later') return this.groups.return.color;
+            if (status === 'no_interest') return this.groups.no_interest.color;
+            if (status === 'interested') return this.groups.interested.color;
+            if (status === 'customer' || status === 'installation_requested') return this.groups.customer.color;
+            return this.groups.new.color;
+        },
+        markOf(marker) {
+            const status = marker?.status;
+            if (status === 'return_later') return 'R';
+            if (status === 'no_interest') return '×';
+            return '';
         },
         opportunityFromCounts(counts) {
             const total = (counts.customer || 0) + (counts.interested || 0) + (counts.visited || 0) + (counts.new || 0);
@@ -113,7 +131,10 @@
             const size = total < 10 ? 36 : total < 50 ? 44 : 52;
             const bits = order
                 .filter((k) => (counts[k] || 0) > 0)
-                .map((k) => `${this.groups[k].emoji}${counts[k]}`)
+                .map((k) => {
+                    const short = k === 'customer' ? 'C' : k === 'interested' ? 'I' : k === 'visited' ? 'V' : 'N';
+                    return `${short}${counts[k]}`;
+                })
                 .slice(0, 3)
                 .join(' ');
             return L.divIcon({
