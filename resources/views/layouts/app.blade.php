@@ -194,5 +194,6 @@
 @endif
 <script>if (window.lucide) { window.lucide.createIcons(); }</script>
 @include('partials.rc-ux-polish')
+<script src="{{ asset('js/client-mobile.js') }}" defer></script>
 </body>
 </html>

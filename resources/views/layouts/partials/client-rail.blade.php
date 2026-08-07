@@ -5,7 +5,7 @@
     $company = $company ?? $authUser?->company;
     $railItems = $authUser ? \App\Support\ClientArea\ClientNav::railItems($authUser) : [];
 @endphp
-<aside class="op-rail" aria-label="Navegação {{ $brand->name() }}">
+<aside class="op-rail" id="op-nav-drawer" aria-label="Navegação {{ $brand->name() }}">
     <a href="{{ route('map.index') }}" class="op-rail-brand" title="{{ $brand->name() }}">
         @if($brand->logoMark())
             <img src="{{ $brand->logoMark() }}" alt="{{ $brand->name() }}">

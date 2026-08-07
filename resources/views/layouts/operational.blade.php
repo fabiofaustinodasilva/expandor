@@ -110,24 +110,21 @@
         .ux-modal[hidden] { display: none !important; }
         .ux-modal__backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
         .ux-modal__panel { position: relative; z-index: 1; width: min(440px, 100%); }
+        @media (min-width: 901px) and (max-width: 1100px) {
+            .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
         @media (max-width: 900px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
             .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-            .op-shell { grid-template-columns: 1fr; grid-template-rows: 1fr auto; min-height: 100dvh; }
-            .op-rail {
-                order: 2; position: sticky; bottom: 0; top: auto; height: 74px; width: 100%;
-                flex-direction: row; justify-content: space-around; border-right: 0;
-                border-top: 1px solid var(--border); padding: .35rem .2rem;
-            }
-            .op-rail a, .op-rail button { width: auto; min-width: 64px; min-height: 60px; font-size: .65rem; }
-            .op-rail-brand, .op-rail-user { display: none; }
-            .op-main { order: 1; min-height: calc(100dvh - 74px); }
-            body.field-seller .op-rail a span { font-size: .68rem; }
         }
     </style>
     <link rel="stylesheet" href="{{ asset('css/client-ui.css') }}">
     @stack('styles')
 </head>
-<body class="client-ui {{ $isFieldSeller ? 'field-seller' : '' }}">
+<body class="client-ui {{ $isFieldSeller ? 'field-seller' : '' }}{{ $isMap ? ' map-fullscreen' : '' }}">
 <a class="client-skip-link" href="#client-main">Ir para o conteúdo</a>
 @php
     $impersonating = session()->has(\App\Domains\Platform\Actions\StartImpersonationAction::SESSION_ADMIN_ID);
@@ -139,7 +136,25 @@
     </div>
 @endif
 
-<div class="op-shell {{ $impersonating ? 'pt-10' : '' }}">
+<div class="op-shell {{ $impersonating ? 'pt-10' : '' }}" data-nav-open="0">
+    <header class="op-mobile-bar" aria-label="Barra mobile">
+        <button type="button" class="op-nav-toggle" aria-expanded="false" aria-controls="op-nav-drawer">
+            <i data-lucide="menu" class="w-5 h-5" aria-hidden="true"></i>
+            <span>Menu</span>
+        </button>
+        <a href="{{ route('map.index') }}" class="op-mobile-bar__brand" title="{{ $brand->name() }}">
+            @if($brand->logoMark())
+                <img src="{{ $brand->logoMark() }}" alt="">
+            @endif
+            <span>{{ $brand->name() }}</span>
+        </a>
+        <a href="{{ route('operations.more') }}" class="op-mobile-bar__more" title="Mais opções" aria-label="Mais opções">
+            <i data-lucide="ellipsis" class="w-5 h-5" aria-hidden="true"></i>
+        </a>
+    </header>
+
+    <button type="button" class="op-nav-backdrop" hidden aria-hidden="true" aria-label="Fechar menu"></button>
+
     @include('layouts.partials.client-rail', ['brand' => $brand, 'company' => $company, 'authUser' => $authUser])
 
     <div class="op-main" id="client-main" tabindex="-1">
@@ -159,6 +174,7 @@
 <div id="op-toast" class="op-toast" role="status"></div>
 <script>if (window.lucide) { window.lucide.createIcons(); }</script>
 @include('partials.rc-ux-polish')
+<script src="{{ asset('js/client-mobile.js') }}" defer></script>
 @stack('scripts')
 @if($brand->customCss)<style>{!! $brand->customCss !!}</style>@endif
 </body>

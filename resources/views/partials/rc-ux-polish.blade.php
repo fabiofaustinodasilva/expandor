@@ -631,6 +631,8 @@
         @endif
 
         document.querySelectorAll('.shell-nav-toggle').forEach(function (btn) {
+            // Sprint 8.2.6: client-mobile.js owns drawer + backdrop when present.
+            if (document.querySelector('script[src*="client-mobile"]')) return;
             btn.addEventListener('click', function () {
                 var shell = btn.closest('.shell');
                 if (!shell) return;
@@ -639,8 +641,13 @@
             });
         });
 
-        document.querySelectorAll('.content table.table').forEach(function (table) {
-            if (table.parentElement && table.parentElement.classList.contains('table-wrap')) return;
+        document.querySelectorAll('.content table.table, .op-page table.table').forEach(function (table) {
+            if (table.parentElement && (
+                table.parentElement.classList.contains('table-wrap')
+                || table.parentElement.classList.contains('client-data-table')
+                || table.parentElement.classList.contains('client-table-scroll')
+            )) return;
+            if (table.closest('.client-data-table')) return;
             var wrap = document.createElement('div');
             wrap.className = 'table-wrap';
             table.parentNode.insertBefore(wrap, table);
