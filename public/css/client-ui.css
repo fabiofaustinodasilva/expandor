@@ -348,6 +348,111 @@
 .client-btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; pointer-events: none; }
 .client-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
+/* Row actions + overflow menu (⋯) */
+.client-row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.client-overflow {
+    position: relative;
+    display: inline-block;
+}
+.client-overflow > summary {
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+}
+.client-overflow > summary::-webkit-details-marker { display: none; }
+.client-overflow__trigger {
+    min-width: 44px;
+    padding-left: .65rem;
+    padding-right: .65rem;
+    font-size: 1.15rem;
+    line-height: 1;
+    letter-spacing: .05em;
+}
+.client-overflow__menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + .35rem);
+    z-index: 40;
+    min-width: 11.5rem;
+    padding: .35rem;
+    border-radius: var(--client-radius-sm, .75rem);
+    border: 1px solid var(--border);
+    background: var(--bg-elevated, var(--bg));
+    display: grid;
+    gap: .15rem;
+}
+.client-overflow__menu form { margin: 0; }
+.client-overflow__item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: .5rem;
+    min-height: 40px;
+    padding: .45rem .7rem;
+    border: 0;
+    border-radius: .55rem;
+    background: transparent;
+    color: var(--text, var(--text-on-bg));
+    font: inherit;
+    font-weight: 600;
+    font-size: .9rem;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+.client-overflow__item:hover,
+.client-overflow__item:focus-visible {
+    background: var(--bg-soft, rgba(148, 163, 184, .12));
+    outline: none;
+}
+.client-overflow__item--danger {
+    color: #fca5a5;
+}
+.client-overflow__item--danger:hover,
+.client-overflow__item--danger:focus-visible {
+    background: rgba(244, 63, 94, .12);
+}
+
+/* Segmented period control (dashboard quick actions) */
+.client-period-seg {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: var(--client-radius-sm, .75rem);
+    overflow: hidden;
+    background: var(--bg-soft, transparent);
+}
+.client-period-seg__item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 .9rem;
+    border: 0;
+    border-right: 1px solid var(--border);
+    color: var(--muted, var(--text));
+    text-decoration: none;
+    font-weight: 600;
+    font-size: .875rem;
+    background: transparent;
+}
+.client-period-seg__item:last-child { border-right: 0; }
+.client-period-seg__item.is-active {
+    background: var(--primary);
+    color: var(--text-on-primary, #fff);
+}
+.client-period-seg__item:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+    z-index: 1;
+}
+
 /* Polimento de formulários dentro do escopo .client-ui */
 .client-ui .form-control,
 .client-ui select,

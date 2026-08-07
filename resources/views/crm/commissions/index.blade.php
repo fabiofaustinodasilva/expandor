@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Comissões')
+@section('title', 'Regras de comissão')
 
 @section('content')
-    <h1 class="page-title">Comissões (preparadas)</h1>
+    <h1 class="page-title">Regras de comissão</h1>
 
     @can('create', App\Domains\CRM\Models\CommissionRule::class)
         <div class="card" style="margin-bottom:1rem;">
-            <h2 style="margin-top:0;">Nova regra</h2>
+            <h2 style="margin-top:0;">Nova regra de comissão</h2>
             <form method="POST" action="{{ route('crm.commissions.rules.store') }}">
                 @csrf
                 <div class="form-grid">

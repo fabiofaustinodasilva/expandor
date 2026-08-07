@@ -237,7 +237,7 @@ class AnalyticsDashboardTest extends TestCase
             ->assertOk()
             ->assertSee('Aline Rank')
             ->assertSee('Conversão %')
-            ->assertSee('Comissões')
+            ->assertSee('Financeiro')
             ->assertDontSee('Módulo de comissão em preparação')
             ->assertViewHas('metrics', function ($metrics) use ($sellerA) {
                 $first = $metrics->seller_productivity[0] ?? null;

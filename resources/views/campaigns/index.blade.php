@@ -48,45 +48,54 @@
                     <td>{{ $campaign->users_count }}</td>
                     <td>{{ $campaign->sectors_count }}</td>
                     <td class="actions">
-                        @can('viewAny', App\Domains\Visits\Models\Visit::class)
-                            <a class="btn btn-ghost" href="{{ route('campaigns.visits.index', $campaign) }}">Visitas</a>
-                        @endcan
-                        @can('update', $campaign)
-                            <a class="btn btn-ghost" href="{{ route('campaigns.edit', $campaign) }}">Editar</a>
+                        <div class="client-row-actions">
+                            @can('viewAny', App\Domains\Visits\Models\Visit::class)
+                                <a class="btn btn-ghost client-btn" href="{{ route('campaigns.visits.index', $campaign) }}">Visitas</a>
+                            @endcan
+                            @can('update', $campaign)
+                                <details class="client-overflow">
+                                    <summary class="client-overflow__trigger btn btn-ghost client-btn" aria-label="Mais ações">⋯</summary>
+                                    <div class="client-overflow__menu" role="menu">
+                                        <a class="client-overflow__item" role="menuitem" href="{{ route('campaigns.edit', $campaign) }}">Editar</a>
 
-                            @if($campaign->status === App\Domains\Campaigns\Enums\CampaignStatus::DRAFT || $campaign->status === App\Domains\Campaigns\Enums\CampaignStatus::PAUSED)
-                                <form method="POST" action="{{ route('campaigns.activate', $campaign) }}">
-                                    @csrf
-                                    <button class="btn btn-primary" type="submit">Ativar</button>
-                                </form>
-                            @endif
+                                        @if($campaign->status === App\Domains\Campaigns\Enums\CampaignStatus::DRAFT || $campaign->status === App\Domains\Campaigns\Enums\CampaignStatus::PAUSED)
+                                            <form method="POST" action="{{ route('campaigns.activate', $campaign) }}">
+                                                @csrf
+                                                <button class="client-overflow__item" type="submit" role="menuitem">Ativar</button>
+                                            </form>
+                                        @endif
 
-                            @if($campaign->status === App\Domains\Campaigns\Enums\CampaignStatus::ACTIVE)
-                                <form method="POST" action="{{ route('campaigns.pause', $campaign) }}">
-                                    @csrf
-                                    <button class="btn btn-ghost" type="submit">Pausar</button>
-                                </form>
-                            @endif
+                                        @if($campaign->status === App\Domains\Campaigns\Enums\CampaignStatus::ACTIVE)
+                                            <form method="POST" action="{{ route('campaigns.pause', $campaign) }}">
+                                                @csrf
+                                                <button class="client-overflow__item" type="submit" role="menuitem">Pausar</button>
+                                            </form>
+                                        @endif
 
-                            @if($campaign->status !== App\Domains\Campaigns\Enums\CampaignStatus::FINISHED)
-                                <form method="POST" action="{{ route('campaigns.finish', $campaign) }}">
-                                    @csrf
-                                    <button class="btn btn-danger" type="submit">Finalizar</button>
-                                </form>
-                            @endif
-                        @endcan
+                                        @if($campaign->status !== App\Domains\Campaigns\Enums\CampaignStatus::FINISHED)
+                                            <form method="POST" action="{{ route('campaigns.finish', $campaign) }}">
+                                                @csrf
+                                                <button class="client-overflow__item client-overflow__item--danger" type="submit" role="menuitem">Finalizar</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </details>
+                            @endcan
+                        </div>
                     </td>
                 </tr>
             @empty
                 <tr>
                     <td colspan="8">
-                        <div class="empty-friendly">
-                            <div style="font-weight:700;">Nenhuma campanha ativa</div>
-                            <p>Crie uma campanha para organizar a equipe na rua.</p>
+                        <x-client.empty-state
+                            title="Nenhuma campanha ativa"
+                            description="Crie uma campanha para organizar a equipe na rua."
+                            icon="megaphone"
+                        >
                             @can('create', App\Domains\Campaigns\Models\Campaign::class)
                                 <a class="btn btn-primary" href="{{ route('campaigns.create') }}">Nova campanha</a>
                             @endcan
-                        </div>
+                        </x-client.empty-state>
                     </td>
                 </tr>
             @endforelse

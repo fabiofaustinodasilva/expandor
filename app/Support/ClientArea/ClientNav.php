@@ -112,7 +112,7 @@ final class ClientNav
                 'items' => [
                     ['module' => 'dashboard', 'label' => 'Painel', 'route' => 'dashboard', 'params' => [], 'patterns' => ['dashboard']],
                     ['module' => 'map', 'label' => 'Mapa', 'route' => 'map.index', 'params' => [], 'patterns' => ['map.*']],
-                    ['module' => 'reports', 'label' => 'Relatórios', 'route' => 'reports.index', 'params' => [], 'patterns' => ['reports.index']],
+                    ['module' => 'reports', 'label' => 'Atalhos de análise', 'route' => 'reports.index', 'params' => [], 'patterns' => ['reports.index']],
                     ['module' => 'sales_app', 'label' => 'App de campo', 'route' => 'sales-app.dashboard', 'params' => [], 'patterns' => ['sales-app.*']],
                 ],
             ],
@@ -139,6 +139,7 @@ final class ClientNav
                 'icon' => 'building-2',
                 'items' => [
                     ['module' => 'team', 'label' => 'Equipe', 'route' => 'operations.team', 'params' => [], 'patterns' => ['operations.team']],
+                    ['module' => 'settings', 'label' => 'Configurações', 'route' => 'operations.settings', 'params' => [], 'patterns' => ['operations.settings', 'operations.settings.*']],
                     ['module' => 'branding', 'label' => 'Identidade visual', 'route' => 'company.branding.edit', 'params' => [], 'patterns' => ['company.branding.*']],
                     ['module' => 'integrations', 'label' => 'Integrações', 'route' => 'operations.integrations', 'params' => [], 'patterns' => ['operations.integrations']],
                     ['module' => 'billing', 'label' => 'Plano e uso', 'route' => 'company.plan.show', 'params' => [], 'patterns' => ['company.plan.*']],

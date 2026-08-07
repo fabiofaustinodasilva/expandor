@@ -1,6 +1,6 @@
 @extends('layouts.operational')
 
-@section('title', 'Relatórios')
+@section('title', 'Atalhos de análise')
 
 @section('page')
 @php
@@ -9,28 +9,32 @@
 
 <x-client.page-breadcrumb :items="[
     ['label' => 'Dashboard', 'href' => route('dashboard')],
-    ['label' => 'Relatórios'],
+    ['label' => 'Atalhos de análise'],
 ]" />
 
 <x-client.page-header
-    title="Relatórios"
-    description="A análise detalhada (funil, gráficos e desempenho por região) foi organizada aqui, fora do painel principal."
+    title="Atalhos de análise"
+    description="Atalhos para os painéis e módulos onde a análise acontece hoje. Relatórios gráficos dedicados ainda não estão nesta tela."
 >
     <x-client.secondary-button :href="route('dashboard')">Voltar ao dashboard</x-client.secondary-button>
 </x-client.page-header>
 
+<x-client.alert type="info" style="margin-bottom:1rem;">
+    Esta página organiza o acesso rápido. Funil, gráficos e exportações detalhadas serão adicionados em uma sprint futura — não há análise embutida aqui.
+</x-client.alert>
+
 <div class="grid grid-3">
     @if($reportsUser && \App\Support\ClientArea\NavVisibility::can($reportsUser, 'dashboard'))
         <x-client.section-card title="Resultados comerciais">
-            <p class="header-meta" style="margin:0 0 .85rem;">Funil, produtividade e ranking de vendedores dos últimos 30 dias.</p>
-            <x-client.primary-button :href="route('dashboard', ['period' => '30d'])">Ver resultados (30d)</x-client.primary-button>
+            <p class="header-meta" style="margin:0 0 .85rem;">KPIs e ranking de vendedores no Dashboard (últimos 30 dias).</p>
+            <x-client.primary-button :href="route('dashboard', ['period' => '30d'])">Abrir dashboard (30d)</x-client.primary-button>
         </x-client.section-card>
     @endif
 
     @if($reportsUser && \App\Support\ClientArea\NavVisibility::can($reportsUser, 'commissions'))
-        <x-client.section-card title="Comissões">
+        <x-client.section-card title="Financeiro">
             <p class="header-meta" style="margin:0 0 .85rem;">Aprovações, pagamentos e histórico de comissões da equipe.</p>
-            <x-client.primary-button :href="route('commissions.index')">Abrir comissões</x-client.primary-button>
+            <x-client.primary-button :href="route('commissions.index')">Abrir financeiro</x-client.primary-button>
         </x-client.section-card>
     @endif
 
@@ -43,7 +47,7 @@
 
     @if($reportsUser && \App\Support\ClientArea\NavVisibility::can($reportsUser, 'team'))
         <x-client.section-card title="Equipe">
-            <p class="header-meta" style="margin:0 0 .85rem;">Desempenho individual, visitas e vendedores ativos.</p>
+            <p class="header-meta" style="margin:0 0 .85rem;">Membros, funções e desempenho operacional.</p>
             <x-client.primary-button :href="route('operations.team')">Abrir equipe</x-client.primary-button>
         </x-client.section-card>
     @endif

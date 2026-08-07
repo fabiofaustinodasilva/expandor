@@ -523,7 +523,7 @@ class SalesCommissionModuleTest extends TestCase
         $this->actingAs($manager)
             ->get(route('dashboard', ['period' => 'today']))
             ->assertOk()
-            ->assertSee('Comissões')
+            ->assertSee('Financeiro')
             ->assertSee(route('commissions.index'), false)
             ->assertDontSee('Minha comissão');
 
@@ -531,6 +531,7 @@ class SalesCommissionModuleTest extends TestCase
             ->get(route('dashboard', ['period' => 'today']))
             ->assertOk()
             ->assertSee('Minha comissão')
+            ->assertSee('Resultado')
             ->assertSee(route('commissions.index'), false);
     }
 

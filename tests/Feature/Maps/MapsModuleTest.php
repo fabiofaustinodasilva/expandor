@@ -70,7 +70,7 @@ class MapsModuleTest extends TestCase
             ->assertSee('Próxima casa')
             ->assertSee('Começar rota')
             ->assertSee('Casas visitadas hoje')
-            ->assertSee('Nova oportunidade')
+            ->assertSee('Novo ponto')
             ->assertSee('seller-day-brief')
             ->assertSee('data-is-field-seller="1"', false)
             ->assertSee('Situação')

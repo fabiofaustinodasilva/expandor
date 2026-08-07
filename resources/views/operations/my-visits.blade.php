@@ -51,16 +51,16 @@
                                 data-visit-id="{{ $card['id'] }}"
                                 aria-haspopup="dialog"
                                 aria-controls="history-detail-modal"
-                            >👁 Detalhes</button>
+                            >Detalhes</button>
                             @if($card['wa_href'])
-                                <a class="btn btn-ghost" href="{{ $card['wa_href'] }}" target="_blank" rel="noopener">💬 WhatsApp</a>
+                                <a class="btn btn-ghost" href="{{ $card['wa_href'] }}" target="_blank" rel="noopener">WhatsApp</a>
                             @else
-                                <button class="btn btn-ghost" type="button" disabled style="opacity:.45;" title="Sem telefone">💬 WhatsApp</button>
+                                <button class="btn btn-ghost" type="button" disabled style="opacity:.45;" title="Sem telefone">WhatsApp</button>
                             @endif
                             @if($card['route_href'])
-                                <a class="btn btn-ghost" href="{{ $card['route_href'] }}" target="_blank" rel="noopener">🧭 Rota</a>
+                                <a class="btn btn-ghost" href="{{ $card['route_href'] }}" target="_blank" rel="noopener">Navegar</a>
                             @else
-                                <button class="btn btn-ghost" type="button" disabled style="opacity:.45;" title="Sem localização">🧭 Rota</button>
+                                <button class="btn btn-ghost" type="button" disabled style="opacity:.45;" title="Sem localização">Navegar</button>
                             @endif
                         </div>
                     </div>
@@ -121,10 +121,10 @@
             </section>
 
             <div class="actions history-drawer-actions" style="margin-top:1.15rem;">
-                <a id="hd-whatsapp" class="btn btn-ghost" href="#" target="_blank" rel="noopener" hidden>💬 WhatsApp</a>
-                <a id="hd-route" class="btn btn-ghost" href="#" target="_blank" rel="noopener" hidden>🧭 Rota</a>
-                <a id="hd-map" class="btn btn-ghost" href="#">📍 Ver no mapa</a>
-                <a id="hd-new-return" class="btn btn-primary" href="#">🔄 Novo retorno</a>
+                <a id="hd-whatsapp" class="btn btn-ghost" href="#" target="_blank" rel="noopener" hidden>WhatsApp</a>
+                <a id="hd-route" class="btn btn-ghost" href="#" target="_blank" rel="noopener" hidden>Navegar</a>
+                <a id="hd-map" class="btn btn-ghost" href="#">Ver no mapa</a>
+                <a id="hd-new-return" class="btn btn-primary" href="#">Novo retorno</a>
             </div>
         </div>
     </div>

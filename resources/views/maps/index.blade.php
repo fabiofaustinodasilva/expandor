@@ -56,7 +56,7 @@
                     <button id="btn-new-point" type="button"
                             class="h-12 md:h-14 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm md:text-base inline-flex items-center gap-2 shrink-0 shadow-lg">
                         <i data-lucide="plus" class="w-5 h-5"></i>
-                        <span>Nova oportunidade</span>
+                        <span>Novo ponto</span>
                     </button>
                 @endif
                 <span id="offline-queue-badge" class="hidden h-12 md:h-14 px-3 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold items-center gap-1 shrink-0">
@@ -173,16 +173,16 @@
     <div id="next-house-wrap" class="absolute inset-x-0 bottom-20 sm:bottom-4 z-25 flex justify-center pointer-events-none px-3 lg:pr-[316px]">
         <button type="button" id="btn-next-house"
                 class="pointer-events-auto h-16 sm:h-[4.25rem] w-full max-w-sm px-6 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-lg shadow-[0_12px_40px_rgba(14,165,233,0.55)] ring-4 ring-sky-400/30 inline-flex items-center justify-center gap-2">
-            👣 Próxima casa
+            Próxima casa
         </button>
     </div>
 
     <div id="map-empty-state" class="absolute inset-0 z-10 hidden items-center justify-center pointer-events-none p-6 lg:pr-[316px]">
         <div class="pointer-events-auto max-w-sm w-full rounded-2xl bg-slate-950/95 border border-slate-700 p-5 text-center shadow-xl">
             <div class="text-lg font-semibold mb-1">Nenhuma residência nesta área</div>
-            <p class="text-slate-400 text-sm mb-4">Cadastre uma nova oportunidade para começar a vender nesta região.</p>
+            <p class="text-slate-400 text-sm mb-4">Cadastre um novo ponto para começar a vender nesta região.</p>
             @if($permissions['properties_manage'])
-                <button type="button" id="btn-empty-add-point" class="w-full h-12 rounded-xl bg-sky-500 text-slate-950 font-bold">+ Nova oportunidade</button>
+                <button type="button" id="btn-empty-add-point" class="w-full h-12 rounded-xl bg-sky-500 text-slate-950 font-bold">+ Novo ponto</button>
             @endif
         </div>
     </div>
@@ -279,9 +279,9 @@
                 </div>
                 @unless(!empty($isFieldSeller))
                     <div class="mt-2 pt-2 border-t border-slate-800 space-y-1 text-[10px] text-slate-400">
-                        <div><span class="text-emerald-400">●</span> Alta oportunidade · poucos clientes</div>
-                        <div><span class="text-sky-400">●</span> Média oportunidade</div>
-                        <div><span class="text-slate-500">●</span> Baixa oportunidade · área trabalhada</div>
+                        <div><span class="text-emerald-400">●</span> Alto potencial · poucos clientes</div>
+                        <div><span class="text-sky-400">●</span> Médio potencial</div>
+                        <div><span class="text-slate-500">●</span> Baixo potencial · área trabalhada</div>
                     </div>
                 @endunless
             </div>
@@ -324,7 +324,7 @@
 
             @if($permissions['properties_manage'])
                 <button id="btn-new-point-side" type="button" class="w-full h-12 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold">
-                    + Nova oportunidade
+                    + Novo ponto
                 </button>
             @endif
         </div>
@@ -402,10 +402,10 @@
         </div>
         <div class="p-3 border-t border-slate-800 space-y-2">
             <div class="grid grid-cols-2 gap-2">
-                <a id="action-call" href="#" class="h-12 rounded-xl bg-slate-800 text-sm font-semibold inline-flex items-center justify-center gap-1.5">📞 Ligar</a>
-                <a id="action-whatsapp" href="#" target="_blank" rel="noopener" class="h-12 rounded-xl bg-emerald-600 text-white text-sm font-semibold inline-flex items-center justify-center gap-1.5">💬 WhatsApp</a>
-                <a id="action-route" href="#" target="_blank" rel="noopener" class="h-12 rounded-xl border border-slate-700 text-sm font-medium inline-flex items-center justify-center col-span-2">🧭 Rota</a>
-                <button id="action-visit" type="button" class="h-14 rounded-xl bg-sky-500 text-slate-950 text-base font-bold col-span-2 shadow-lg shadow-sky-500/20">👣 Registrar visita</button>
+                <a id="action-call" href="#" class="h-12 rounded-xl bg-slate-800 text-sm font-semibold inline-flex items-center justify-center gap-1.5">Ligar</a>
+                <a id="action-whatsapp" href="#" target="_blank" rel="noopener" class="h-12 rounded-xl bg-emerald-600 text-white text-sm font-semibold inline-flex items-center justify-center gap-1.5">WhatsApp</a>
+                <a id="action-route" href="#" target="_blank" rel="noopener" class="h-12 rounded-xl border border-slate-700 text-sm font-medium inline-flex items-center justify-center col-span-2">Navegar</a>
+                <button id="action-visit" type="button" class="h-14 rounded-xl bg-sky-500 text-slate-950 text-base font-bold col-span-2 shadow-lg shadow-sky-500/20">Registrar visita</button>
             </div>
             <details class="drawer-more-actions rounded-xl border border-slate-800 bg-slate-900/40">
                 <summary class="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center justify-between">
@@ -415,7 +415,7 @@
                 <div class="grid grid-cols-2 gap-2 p-2 pt-0 drawer-extra-actions">
                     <button id="action-edit" type="button" class="h-11 rounded-xl border border-slate-700 text-sm font-medium">✏ Editar</button>
                     <button id="action-adjust" type="button" class="h-11 rounded-xl border border-sky-600/50 text-sky-300 text-sm font-medium opacity-40" disabled>✏ Ajustar</button>
-                    <button id="action-delete" type="button" class="h-11 rounded-xl border border-rose-700/60 text-rose-300 text-sm font-medium col-span-2">🗑 Remover</button>
+                    <button id="action-delete" type="button" class="h-11 rounded-xl border border-rose-700/60 text-rose-300 text-sm font-medium col-span-2">Remover</button>
                 </div>
             </details>
         </div>
@@ -562,7 +562,7 @@
         <div id="point-modal-backdrop" class="absolute inset-0 bg-black/60"></div>
         <div class="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700 p-5 max-h-[92vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-3">
-                <h3 class="text-lg font-semibold" id="point-modal-title">Nova oportunidade</h3>
+                <h3 class="text-lg font-semibold" id="point-modal-title">Novo ponto</h3>
                 <button id="point-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="rounded-xl bg-slate-900 border border-slate-800 p-3 mb-4 text-sm">
@@ -712,7 +712,7 @@
                 <p class="text-sm text-slate-200" id="brief-next-house">Ao começar, o mapa leva você até a próxima casa da rota.</p>
             </div>
             <button type="button" id="seller-start-route" class="w-full h-16 rounded-2xl bg-sky-500 text-slate-950 font-extrabold text-lg shadow-[0_12px_32px_rgba(14,165,233,0.45)]">
-                👣 Começar rota
+                Começar rota
             </button>
         </div>
     </div>

@@ -21,19 +21,19 @@
 
     <div class="actions" style="margin-bottom:1.15rem;">
         @if($dossier['actions']['whatsapp'])
-            <a class="btn btn-ghost" href="{{ $dossier['actions']['whatsapp'] }}" target="_blank" rel="noopener">📱 WhatsApp</a>
+            <a class="btn btn-ghost" href="{{ $dossier['actions']['whatsapp'] }}" target="_blank" rel="noopener">WhatsApp</a>
         @else
-            <button class="btn btn-ghost" type="button" disabled style="opacity:.45;">📱 WhatsApp</button>
+            <button class="btn btn-ghost" type="button" disabled style="opacity:.45;">WhatsApp</button>
         @endif
         @if($dossier['actions']['call'])
-            <a class="btn btn-ghost" href="{{ $dossier['actions']['call'] }}">📞 Ligar</a>
+            <a class="btn btn-ghost" href="{{ $dossier['actions']['call'] }}">Ligar</a>
         @else
-            <button class="btn btn-ghost" type="button" disabled style="opacity:.45;">📞 Ligar</button>
+            <button class="btn btn-ghost" type="button" disabled style="opacity:.45;">Ligar</button>
         @endif
-        <a class="btn btn-ghost" href="{{ $dossier['actions']['map'] }}">📍 Abrir no mapa</a>
-        <a class="btn btn-ghost" href="{{ $dossier['actions']['new_visit'] }}">📝 Nova visita</a>
-        <a class="btn btn-primary" href="{{ $dossier['actions']['new_sale'] }}">🟢 Nova venda</a>
-        <a class="btn btn-ghost" href="{{ $dossier['actions']['schedule_return'] }}">📅 Agendar retorno</a>
+        <a class="btn btn-ghost" href="{{ $dossier['actions']['map'] }}">Abrir no mapa</a>
+        <a class="btn btn-ghost" href="{{ $dossier['actions']['new_visit'] }}">Nova visita</a>
+        <a class="btn btn-primary" href="{{ $dossier['actions']['new_sale'] }}">Nova venda</a>
+        <a class="btn btn-ghost" href="{{ $dossier['actions']['schedule_return'] }}">Agendar retorno</a>
     </div>
 
     <div class="grid grid-2" style="align-items:start;">

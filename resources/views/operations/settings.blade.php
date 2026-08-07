@@ -3,19 +3,21 @@
 @section('title', 'Configurações')
 
 @section('page')
-    <h1 class="page-title">Configurações</h1>
-    <p class="header-meta" style="margin-bottom:1.25rem;">Ajustes da empresa — só gestores.</p>
+    <x-client.page-header
+        title="Configurações"
+        description="Ajustes da empresa — só gestores."
+    />
 
     <div class="grid grid-2">
         @if(!empty($canCommissions))
             <a class="card" href="{{ route('commissions.products.index') }}" style="display:block;">
                 <div class="header-meta">Comercial</div>
-                <strong style="font-size:1.1rem;">📦 Produtos / Estoque</strong>
+                <strong style="font-size:1.1rem;">Produtos / Estoque</strong>
                 <p class="header-meta" style="margin:.5rem 0 0;">Catálogo, {{ mb_strtolower($commercial::commissionPerSale()) }}, estoque e movimentações.</p>
             </a>
             <a class="card" href="{{ route('commissions.index') }}" style="display:block;">
                 <div class="header-meta">Comercial</div>
-                <strong style="font-size:1.1rem;">💰 Comissões</strong>
+                <strong style="font-size:1.1rem;">Financeiro</strong>
                 <p class="header-meta" style="margin:.5rem 0 0;">Aprovar, pagar e acompanhar vendas da equipe.</p>
             </a>
         @endif

@@ -48,6 +48,19 @@ final class NavVisibility
         'ai' => ['permissions' => ['ai.access'], 'flag' => 'ai.enabled', 'plan_feature' => 'ai'],
         'training' => ['permissions' => ['training.view', 'training.manage']],
         'billing' => ['permissions' => ['billing.view']],
+        // Hub de configurações: qualquer permissão que já abre SettingsController.
+        'settings' => [
+            'permissions' => [
+                'company.manage',
+                'branding.manage',
+                'billing.view',
+                'integrations.view',
+                'onboarding.view',
+                'users.manage',
+                'users.create',
+                'commissions.manage',
+            ],
+        ],
         'sales_app' => ['permissions' => ['sales_app.access'], 'flag' => 'mobile.enabled'],
         'audit' => ['permissions' => ['audit.view']],
         'privacy' => ['permissions' => ['privacy.view']],

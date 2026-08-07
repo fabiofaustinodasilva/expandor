@@ -5,7 +5,7 @@
 @section('page')
     <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
         <div>
-            <h1 class="page-title" style="margin:0;">📦 Produtos / Estoque</h1>
+            <h1 class="page-title" style="margin:0;">Produtos / Estoque</h1>
             <p class="header-meta" style="margin:.35rem 0 0;">Catálogo comercial, {{ mb_strtolower($commercial::commissionPerSale()) }} e controle de estoque.</p>
         </div>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;">

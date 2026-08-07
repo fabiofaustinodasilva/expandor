@@ -42,8 +42,8 @@ class ManagerNavCommissionsIntegrationTest extends TestCase
         $this->actingAs($manager)
             ->get(route('operations.settings'))
             ->assertOk()
-            ->assertSee('📦 Produtos / Estoque')
-            ->assertSee('💰 Comissões');
+            ->assertSee('Produtos / Estoque')
+            ->assertSee('Financeiro');
     }
 
     public function test_seller_sees_commission_not_products_in_field_rail(): void

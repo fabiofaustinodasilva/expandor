@@ -1691,7 +1691,7 @@
         document.getElementById('point-mode').value = mode;
         document.getElementById('point-modal-title').textContent = mode === 'edit'
             ? 'Editar residência'
-            : (isFieldSeller ? 'Novo atendimento' : 'Nova oportunidade');
+            : (isFieldSeller ? 'Novo atendimento' : 'Novo ponto');
         document.getElementById('point-submit').textContent = mode === 'edit'
             ? 'Salvar alterações'
             : (isFieldSeller ? 'Salvar atendimento' : 'Salvar');

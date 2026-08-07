@@ -59,7 +59,7 @@
                         @can('update', $lead)
                             <a class="btn btn-ghost" href="{{ route('crm.leads.edit', $lead) }}">Editar</a>
                             @if($lead->status !== App\Domains\CRM\Enums\LeadStatus::CONVERTED && $lead->status !== App\Domains\CRM\Enums\LeadStatus::DISQUALIFIED)
-                                <form method="POST" action="{{ route('crm.leads.convert', $lead) }}">
+                                <form method="POST" action="{{ route('crm.leads.convert', $lead) }}" onsubmit="return confirm('Converter este lead? Esta ação marca o lead como convertido.');">
                                     @csrf
                                     <button class="btn btn-primary" type="submit">Converter</button>
                                 </form>

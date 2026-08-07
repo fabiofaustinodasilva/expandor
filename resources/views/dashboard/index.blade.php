@@ -1,26 +1,38 @@
 @extends('layouts.operational')
 
-@section('title', 'Dashboard')
+@php
+    $dashTitle = ! empty($isSeller) ? 'Resultado' : 'Dashboard';
+@endphp
+
+@section('title', $dashTitle)
 
 @section('page')
 @php
     $teamView = $metrics->team_view;
     $productivity = $metrics->productivity;
+    $periodKey = $period ?? 'today';
 @endphp
 
 <x-client.page-header
-    title="Dashboard"
+    title="{{ $dashTitle }}"
     description="{{ $company->name }} · {{ $teamView ? 'painel comercial do gestor' : 'seus resultados comerciais' }} · {{ $plan_name }}"
 >
     <x-client.quick-actions>
-        <x-client.secondary-button :href="route('dashboard', array_filter(['period' => 'today', 'user_id' => $isSeller ? null : $filters->user_id]))" class="{{ ($period ?? '') === 'today' ? 'btn-primary' : '' }}">Hoje</x-client.secondary-button>
-        <x-client.secondary-button :href="route('dashboard', array_filter(['period' => '7d', 'user_id' => $isSeller ? null : $filters->user_id]))" class="{{ ($period ?? '') === '7d' ? 'btn-primary' : '' }}">Últimos 7 dias</x-client.secondary-button>
-        <x-client.secondary-button :href="route('dashboard', array_filter(['period' => '30d', 'user_id' => $isSeller ? null : $filters->user_id]))" class="{{ ($period ?? '') === '30d' ? 'btn-primary' : '' }}">Últimos 30 dias</x-client.secondary-button>
-        <x-client.secondary-button :href="route('map.index')">Abrir mapa</x-client.secondary-button>
-        @if(!empty($canViewCommissions))
-            <x-client.secondary-button :href="$commissionsUrl">{{ $isSeller ? 'Minha comissão' : 'Comissões' }}</x-client.secondary-button>
-        @endif
-        <x-client.primary-button :href="route('reports.index')">Ver relatórios</x-client.primary-button>
+        <div class="client-period-seg" role="group" aria-label="Período">
+            <a class="client-period-seg__item {{ $periodKey === 'today' ? 'is-active' : '' }}" href="{{ route('dashboard', array_filter(['period' => 'today', 'user_id' => $isSeller ? null : $filters->user_id])) }}">Hoje</a>
+            <a class="client-period-seg__item {{ $periodKey === '7d' ? 'is-active' : '' }}" href="{{ route('dashboard', array_filter(['period' => '7d', 'user_id' => $isSeller ? null : $filters->user_id])) }}">7 dias</a>
+            <a class="client-period-seg__item {{ $periodKey === '30d' ? 'is-active' : '' }}" href="{{ route('dashboard', array_filter(['period' => '30d', 'user_id' => $isSeller ? null : $filters->user_id])) }}">30 dias</a>
+        </div>
+        <x-client.primary-button :href="route('map.index')">Abrir mapa</x-client.primary-button>
+        <details class="client-overflow">
+            <summary class="client-overflow__trigger client-btn btn btn-ghost" aria-label="Mais ações">Mais</summary>
+            <div class="client-overflow__menu" role="menu">
+                @if(!empty($canViewCommissions))
+                    <a class="client-overflow__item" role="menuitem" href="{{ $commissionsUrl }}">{{ $isSeller ? 'Minha comissão' : 'Financeiro' }}</a>
+                @endif
+                <a class="client-overflow__item" role="menuitem" href="{{ route('reports.index') }}">Atalhos de análise</a>
+            </div>
+        </details>
     </x-client.quick-actions>
 </x-client.page-header>
 
@@ -139,7 +151,8 @@
 @endif
 
 <p class="header-meta" style="margin-top:1rem;">
-    Análises detalhadas (funil, gráficos e desempenho por região) foram movidas para
-    <a href="{{ route('reports.index') }}">Relatórios</a>.
+    Para aprofundar, use os
+    <a href="{{ route('reports.index') }}">atalhos de análise</a>
+    (Dashboard, Financeiro, CRM e Equipe).
 </p>
 @endsection

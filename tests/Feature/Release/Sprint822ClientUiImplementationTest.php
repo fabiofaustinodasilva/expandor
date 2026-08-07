@@ -42,7 +42,8 @@ class Sprint822ClientUiImplementationTest extends TestCase
             ->assertOk()
             ->assertSee('Dashboard')
             ->assertSee('Visitas')
-            ->assertSee('Ver relatórios')
+            ->assertSee('Abrir mapa')
+            ->assertSee('Atalhos de análise')
             ->assertDontSee('Funil comercial')
             ->assertDontSee('Resultados por status')
             ->assertDontSee('chart-visits-period', false);
@@ -68,7 +69,7 @@ class Sprint822ClientUiImplementationTest extends TestCase
         $this->actingAs($admin)
             ->get(route('reports.index'))
             ->assertOk()
-            ->assertSee('Relatórios');
+            ->assertSee('Atalhos de análise');
     }
 
     public function test_team_hub_shows_sections(): void
@@ -79,7 +80,7 @@ class Sprint822ClientUiImplementationTest extends TestCase
         $this->actingAs($admin)
             ->get(route('operations.team'))
             ->assertOk()
-            ->assertSee('Usuários')
+            ->assertSee('Membros')
             ->assertSee('Funções')
             ->assertSee('Permissões')
             ->assertSee('Metas')

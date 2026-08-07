@@ -3,6 +3,10 @@
 @section('title', 'Usuários')
 
 @section('content')
+    <x-client.alert type="info" style="margin-bottom:1rem;">
+        A gestão comercial da equipe fica em <a href="{{ route('operations.team') }}">Equipe</a>. Esta tela técnica permanece para manutenção avançada.
+    </x-client.alert>
+
     <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem;">
         <h1 class="page-title" style="margin:0;">Usuários</h1>
         @can('create', App\Domains\Company\Models\User::class)

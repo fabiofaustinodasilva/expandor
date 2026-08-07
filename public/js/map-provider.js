@@ -94,9 +94,9 @@
             const total = (counts.customer || 0) + (counts.interested || 0) + (counts.visited || 0) + (counts.new || 0);
             if (!total) return { level: 'unknown', label: 'Sem dados na região' };
             const ratio = (counts.customer || 0) / total;
-            if (ratio < 0.15) return { level: 'high', label: 'Oportunidade alta' };
-            if (ratio > 0.4) return { level: 'low', label: 'Baixa oportunidade' };
-            return { level: 'medium', label: 'Oportunidade média' };
+            if (ratio < 0.15) return { level: 'high', label: 'Alto potencial' };
+            if (ratio > 0.4) return { level: 'low', label: 'Baixo potencial' };
+            return { level: 'medium', label: 'Médio potencial' };
         },
         clusterIcon(counts, total) {
             const order = ['new', 'interested', 'customer', 'visited'];

@@ -1,6 +1,6 @@
 @extends('layouts.operational')
 
-@section('title', 'Equipe Comercial')
+@section('title', 'Equipe')
 
 @section('page')
 @php
@@ -18,9 +18,21 @@
 @endphp
 
 <div class="team-hub">
+    <x-client.page-header
+        title="Equipe"
+        description="Crie, acompanhe e libere sua equipe de vendas."
+    >
+      @if($canManage)
+        <button type="button" class="team-btn-primary" id="btn-open-create">
+          <i data-lucide="user-plus" class="w-5 h-5"></i>
+          Novo vendedor
+        </button>
+      @endif
+    </x-client.page-header>
+
     <nav class="client-hub-tabs" aria-label="Seções da equipe">
         <a class="client-hub-tab is-active" href="{{ route('operations.team') }}" aria-current="page">
-            <i data-lucide="users" class="w-4 h-4"></i> Usuários
+            <i data-lucide="users" class="w-4 h-4"></i> Membros
         </a>
         <a class="client-hub-tab" href="#team-roles">
             <i data-lucide="shield-check" class="w-4 h-4"></i> Funções
@@ -47,20 +59,6 @@
             @endforeach
         </div>
     </x-client.section-card>
-
-    <header class="team-hub-header">
-        <div>
-            <p class="team-eyebrow">Gestão comercial</p>
-            <h1 class="page-title" style="margin:0;">Equipe Comercial</h1>
-            <p class="header-meta" style="margin:.35rem 0 0;">Crie, acompanhe e libere sua equipe de vendas — sem telas técnicas.</p>
-        </div>
-        @if($canManage)
-            <button type="button" class="team-btn-primary" id="btn-open-create">
-                <i data-lucide="user-plus" class="w-5 h-5"></i>
-                + Novo vendedor
-            </button>
-        @endif
-    </header>
 
     @if(session('temporary_password'))
         <div class="alert alert-success" style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;">
