@@ -92,6 +92,33 @@ class Sprint8210MapStatusVisualDistinctionTest extends TestCase
         $this->assertStringContainsString('body.field-seller .map-legend-panel', $html);
     }
 
+    public function test_map_page_loads_scripts_and_container_without_syntax_break(): void
+    {
+        $company = $this->makeCompanyWithPlan('Empresa 8210 Map Boot');
+        $seller = $this->makeUser($company, Role::SELLER, ['email' => 'seller-mapboot@sprint8210.test']);
+
+        $html = $this->actingAs($seller)->get(route('map.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('id="operational-map"', $html);
+        $this->assertStringContainsString('map-provider.js?v=3', $html);
+        $this->assertStringContainsString('operational-map.js?v=46', $html);
+        $this->assertStringContainsString('leaflet@1.9.4', $html);
+
+        $js = file_get_contents(public_path('js/operational-map.js'));
+        $this->assertNotFalse($js);
+        $this->assertStringContainsString("citySelect.addEventListener('change'", $js);
+        $this->assertStringContainsString("L.map('operational-map'", $js);
+        $this->assertStringContainsString('commercial?.colorOf?.(marker)', $js);
+        $this->assertStringContainsString('commercial?.markOf?.(marker)', $js);
+
+        $provider = file_get_contents(public_path('js/map-provider.js'));
+        $this->assertNotFalse($provider);
+        $this->assertStringContainsString("return: { label: 'Retorno', color: '#f97316', mark: 'R' }", $provider);
+        $this->assertStringContainsString("no_interest: { label: 'Sem interesse', color: '#64748b', mark: '×' }", $provider);
+        $this->assertStringContainsString("if (status === 'return_later') return this.groups.return.color;", $provider);
+        $this->assertStringContainsString("if (status === 'no_interest') return this.groups.no_interest.color;", $provider);
+    }
+
     public function test_marker_payload_colors_differ_for_return_and_no_interest(): void
     {
         $company = $this->makeCompanyWithPlan('Empresa 8210 Markers');

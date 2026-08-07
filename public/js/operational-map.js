@@ -2107,6 +2107,8 @@
             submitBtn.disabled = false;
         }
     }
+
+    citySelect.addEventListener('change', () => {
         filterSectorsByCity();
         initialFitDone = false;
         loadMarkers({ fit: true, useBbox: false });

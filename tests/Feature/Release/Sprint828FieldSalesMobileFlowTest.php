@@ -139,7 +139,7 @@ class Sprint828FieldSalesMobileFlowTest extends TestCase
         $this->assertStringContainsString('id="btn-recenter-location"', $html);
         $this->assertStringContainsString('map-btn-recenter', $html);
         $this->assertStringContainsString('field-seller-outcome-grid', $html);
-        $this->assertStringContainsString('operational-map.js?v=45', $html);
+        $this->assertStringContainsString('operational-map.js?v=46', $html);
         $this->assertStringContainsString('@media (max-width: 640px)', $html);
     }
 }
