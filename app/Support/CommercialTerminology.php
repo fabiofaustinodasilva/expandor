@@ -54,6 +54,19 @@ final class CommercialTerminology
         return 'Cliente';
     }
 
+    /**
+     * Substantivo do ponto/propriedade cadastrado no território (Sprint 8.2.2 — glossário).
+     */
+    public static function pointNoun(): string
+    {
+        return 'Ponto';
+    }
+
+    public static function points(): string
+    {
+        return 'Pontos';
+    }
+
     public static function saleCompleted(): string
     {
         return match (self::segment()) {

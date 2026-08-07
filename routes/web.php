@@ -239,6 +239,7 @@ Route::middleware([
     });
 
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::view('/relatorios', 'reports.index')->name('reports.index');
 
     Route::get('/ai', [AIConversationController::class, 'index'])->name('ai.conversations.index');
     Route::get('/ai/create', [AIConversationController::class, 'create'])->name('ai.conversations.create');

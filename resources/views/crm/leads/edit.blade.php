@@ -3,6 +3,14 @@
 @section('title', 'Editar lead')
 
 @section('content')
+    <x-client.page-breadcrumb :items="[
+        ['label' => 'Dashboard', 'href' => route('dashboard')],
+        ['label' => 'Operação'],
+        ['label' => 'CRM'],
+        ['label' => 'Leads', 'href' => route('crm.leads.index')],
+        ['label' => 'Editar'],
+    ]" />
+
     <h1 class="page-title">Editar lead</h1>
 
     <div class="card">

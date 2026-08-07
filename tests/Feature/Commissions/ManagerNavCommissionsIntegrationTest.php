@@ -23,19 +23,21 @@ class ManagerNavCommissionsIntegrationTest extends TestCase
         $company = $this->makeCompanyWithPlan('Empresa Nav Manager');
         $manager = $this->makeUser($company, Role::MANAGER, ['email' => 'nav-mgr@comm.test']);
 
+        // Sprint 8.2.2: o hub da Equipe passou a ter abas próprias (Usuários,
+        // Funções, Permissões, Metas, Comissões) — o link de Produtos/Estoque
+        // agora vive apenas em "Mais opções".
         $this->actingAs($manager)
             ->get(route('operations.team'))
             ->assertOk()
             ->assertSee('Comissões')
-            ->assertSee('Produtos')
-            ->assertSee(route('commissions.index'), false)
-            ->assertSee(route('commissions.products.index'), false);
+            ->assertSee(route('commissions.index'), false);
 
         $this->actingAs($manager)
             ->get(route('operations.more'))
             ->assertOk()
-            ->assertSee('💰 Comissões')
-            ->assertSee('📦 Produtos / Estoque');
+            ->assertSee('Comissões')
+            ->assertSee('Produtos / Estoque')
+            ->assertSee(route('commissions.products.index'), false);
 
         $this->actingAs($manager)
             ->get(route('operations.settings'))

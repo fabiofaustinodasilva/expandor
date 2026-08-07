@@ -1,12 +1,18 @@
 @extends('layouts.app')
 
-@section('title', 'Clientes / Pontos')
+@section('title', 'Pontos')
 
 @section('content')
+    <x-client.page-breadcrumb :items="[
+        ['label' => 'Dashboard', 'href' => route('dashboard')],
+        ['label' => 'Operação'],
+        ['label' => 'Pontos'],
+    ]" />
+
     <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem;">
-        <h1 class="page-title" style="margin:0;">Clientes / Pontos</h1>
+        <h1 class="page-title" style="margin:0;">Pontos</h1>
         @can('create', App\Domains\Sales\Properties\Models\Property::class)
-            <a class="btn btn-primary" href="{{ route('properties.create') }}">Novo cliente</a>
+            <a class="btn btn-primary" href="{{ route('properties.create') }}">Novo ponto</a>
         @endcan
     </div>
 

@@ -123,12 +123,8 @@
             .op-main { order: 1; min-height: calc(100dvh - 74px); }
             body.field-seller .op-rail a span { font-size: .68rem; }
         }
-        .op-rail a.op-rail-field { display: none; }
-        body.field-seller .op-rail a.op-rail-admin { display: none !important; }
-        body.field-seller .op-rail a.op-rail-field { display: inline-flex !important; }
-        body.field-seller .op-rail .flex-1 { display: none; }
-        body.field-seller .op-rail { gap: .15rem; }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/client-ui.css') }}">
     @stack('styles')
 </head>
 <body class="{{ $isFieldSeller ? 'field-seller' : '' }}">
@@ -143,103 +139,7 @@
 @endif
 
 <div class="op-shell {{ $impersonating ? 'pt-10' : '' }}">
-    <aside class="op-rail" aria-label="Navegação {{ $brand->name() }}">
-        <a href="{{ route('map.index') }}" class="op-rail-brand" title="{{ $brand->name() }}">
-            @if($brand->logoMark())
-                <img src="{{ $brand->logoMark() }}" alt="{{ $brand->name() }}">
-            @else
-                <span>{{ \Illuminate\Support\Str::limit($brand->name(), 8, '') }}</span>
-            @endif
-        </a>
-        <div class="op-rail-user op-rail-admin" title="{{ $authUser?->name }}">
-            <strong>{{ $authUser?->name }}</strong>
-            <span>{{ $authUser?->role?->name ?? ($company?->name ?? '') }}</span>
-        </div>
-        {{-- Seller: só o essencial de campo --}}
-        <a href="{{ route('map.index') }}" class="op-rail-field {{ request()->routeIs('map.*') ? 'active' : '' }}" title="Mapa">
-            <i data-lucide="map-pinned" class="w-5 h-5"></i><span>Mapa</span>
-        </a>
-        @if($authUser?->hasPermission('visits.view'))
-            <a href="{{ route('follow-ups.index') }}" class="op-rail-field {{ request()->routeIs('follow-ups.*') ? 'active' : '' }}" title="Agenda">
-                <i data-lucide="calendar-clock" class="w-5 h-5"></i><span>Agenda</span>
-            </a>
-            <a href="{{ route('operations.my-visits') }}" class="op-rail-field {{ request()->routeIs('operations.my-visits') ? 'active' : '' }}" title="Visitas">
-                <i data-lucide="clipboard-list" class="w-5 h-5"></i><span>Visitas</span>
-            </a>
-        @endif
-        @if($authUser?->hasPermission('customers.view'))
-            <a href="{{ route('customers.index') }}" class="op-rail-field {{ request()->routeIs('customers.*') ? 'active' : '' }}" title="Clientes">
-                <i data-lucide="contact" class="w-5 h-5"></i><span>Clientes</span>
-            </a>
-        @endif
-        @if($authUser?->hasPermission('dashboard.view'))
-            <a href="{{ route('dashboard') }}" class="op-rail-field {{ request()->routeIs('dashboard') ? 'active' : '' }}" title="Resultado">
-                <i data-lucide="gauge" class="w-5 h-5"></i><span>Resultado</span>
-            </a>
-        @endif
-        @if($authUser?->hasPermission('commissions.view_self'))
-            <a href="{{ route('commissions.index') }}" class="op-rail-field {{ request()->routeIs('commissions.index') ? 'active' : '' }}" title="Minha comissão">
-                <i data-lucide="wallet" class="w-5 h-5"></i><span>Comissão</span>
-            </a>
-        @endif
-
-        {{-- Gestão (admin / gerente) --}}
-        <a href="{{ route('map.index') }}" class="op-rail-admin {{ request()->routeIs('map.*') ? 'active' : '' }}" title="Mapa">
-            <i data-lucide="map-pinned" class="w-5 h-5"></i><span>Mapa</span>
-        </a>
-        <a href="{{ route('operations.team') }}" class="op-rail-admin {{ request()->routeIs('operations.team') ? 'active' : '' }}" title="Equipe">
-            <i data-lucide="users" class="w-5 h-5"></i><span>Equipe</span>
-        </a>
-        @if($authUser?->hasPermission('campaigns.view'))
-            <a href="{{ route('campaigns.index') }}" class="op-rail-admin {{ request()->routeIs('campaigns.*') ? 'active' : '' }}" title="Campanhas">
-                <i data-lucide="target" class="w-5 h-5"></i><span>Campanhas</span>
-            </a>
-        @endif
-        @if($authUser?->hasPermission('visits.view'))
-            <a href="{{ route('follow-ups.index') }}" class="op-rail-admin {{ request()->routeIs('follow-ups.*') ? 'active' : '' }}" title="Agenda">
-                <i data-lucide="calendar-clock" class="w-5 h-5"></i><span>Agenda</span>
-            </a>
-        @endif
-        @if($authUser?->hasPermission('customers.view'))
-            <a href="{{ route('customers.index') }}" class="op-rail-admin {{ request()->routeIs('customers.*') ? 'active' : '' }}" title="Clientes">
-                <i data-lucide="contact" class="w-5 h-5"></i><span>Clientes</span>
-            </a>
-        @endif
-        @if($authUser?->hasPermission('dashboard.view'))
-            <a href="{{ route('dashboard') }}" class="op-rail-admin {{ request()->routeIs('dashboard') ? 'active' : '' }}" title="Resultados">
-                <i data-lucide="bar-chart-3" class="w-5 h-5"></i><span>Resultados</span>
-            </a>
-        @endif
-        @if($authUser?->hasPermission('commissions.manage'))
-            <a href="{{ route('commissions.index') }}"
-               class="op-rail-admin {{ request()->routeIs('commissions.index') ? 'active' : '' }}"
-               title="Comissões">
-                <i data-lucide="wallet" class="w-5 h-5"></i><span>Comissões</span>
-            </a>
-            <a href="{{ route('commissions.products.index') }}"
-               class="op-rail-admin {{ request()->routeIs('commissions.products.*') ? 'active' : '' }}"
-               title="Produtos e estoque">
-                <i data-lucide="package" class="w-5 h-5"></i><span>Produtos</span>
-            </a>
-        @endif
-        @if($authUser?->hasPermission('company.manage') || $authUser?->hasPermission('integrations.view') || $authUser?->hasPermission('billing.view') || $authUser?->hasPermission('branding.manage') || $authUser?->hasPermission('commissions.manage'))
-            <a href="{{ route('operations.settings') }}"
-               class="op-rail-admin {{ request()->routeIs('operations.settings*', 'operations.integrations') ? 'active' : '' }}"
-               title="Configurações">
-                <i data-lucide="settings" class="w-5 h-5"></i><span>Config</span>
-            </a>
-        @endif
-        <div class="flex-1 op-rail-admin"></div>
-        <a href="{{ route('profile.edit') }}" class="op-rail-admin {{ request()->routeIs('profile.*') ? 'active' : '' }}" title="Meu perfil">
-            <i data-lucide="user-round" class="w-5 h-5"></i><span>Perfil</span>
-        </a>
-        <a href="{{ route('operations.more') }}" class="op-rail-admin {{ request()->routeIs('operations.more') ? 'active' : '' }}" title="Mais opções">
-            <i data-lucide="ellipsis" class="w-5 h-5"></i><span>Mais</span>
-        </a>
-        <form method="POST" action="{{ route('logout') }}">@csrf
-            <button type="submit" title="Sair"><i data-lucide="log-out" class="w-5 h-5"></i><span>Sair</span></button>
-        </form>
-    </aside>
+    @include('layouts.partials.client-rail', ['brand' => $brand, 'company' => $company, 'authUser' => $authUser])
 
     <div class="op-main">
         @include('onboarding.partials.trial-banner')

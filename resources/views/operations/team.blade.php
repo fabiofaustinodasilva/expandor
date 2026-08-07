@@ -6,14 +6,48 @@
 @php
     use App\Domains\Company\Models\User;
     use App\Domains\Company\Support\CommercialProfileCatalog;
+    use App\Support\ClientArea\NavVisibility;
     $statusLabels = [
         User::STATUS_ACTIVE => 'Ativo',
         User::STATUS_INACTIVE => 'Inativo',
         User::STATUS_BLOCKED => 'Bloqueado',
     ];
+    $hubUser = auth()->user();
+    $canSeeGoals = $hubUser && NavVisibility::can($hubUser, 'crm');
+    $canSeeCommissions = $hubUser && NavVisibility::can($hubUser, 'commissions');
 @endphp
 
 <div class="team-hub">
+    <nav class="client-hub-tabs" aria-label="Seções da equipe">
+        <a class="client-hub-tab is-active" href="{{ route('operations.team') }}">
+            <i data-lucide="users" class="w-4 h-4"></i> Usuários
+        </a>
+        <a class="client-hub-tab" href="#team-roles">
+            <i data-lucide="shield-check" class="w-4 h-4"></i> Funções
+        </a>
+        <a class="client-hub-tab" href="#team-grid">
+            <i data-lucide="lock" class="w-4 h-4"></i> Permissões
+        </a>
+        @if($canSeeGoals)
+            <a class="client-hub-tab" href="{{ route('crm.goals.index') }}">
+                <i data-lucide="target" class="w-4 h-4"></i> Metas
+            </a>
+        @endif
+        @if($canSeeCommissions)
+            <a class="client-hub-tab" href="{{ route('commissions.index') }}">
+                <i data-lucide="wallet" class="w-4 h-4"></i> Comissões
+            </a>
+        @endif
+    </nav>
+
+    <x-client.section-card title="Funções da equipe" description="O que cada perfil pode fazer na operação.">
+        <div id="team-roles" class="client-quick-actions">
+            @foreach($profiles as $profile)
+                <x-client.status-badge tone="primary">{{ CommercialProfileCatalog::labelForSlug($profile->slug) }}</x-client.status-badge>
+            @endforeach
+        </div>
+    </x-client.section-card>
+
     <header class="team-hub-header">
         <div>
             <p class="team-eyebrow">Gestão comercial</p>
@@ -48,7 +82,7 @@
         </div>
     @endif
 
-    <div class="team-grid">
+    <div id="team-grid" class="team-grid">
         @forelse($cards as $card)
             @php $u = $card['user']; @endphp
             <article class="team-card {{ $u->status !== User::STATUS_ACTIVE ? 'is-inactive' : '' }}" data-member-id="{{ $u->id }}">

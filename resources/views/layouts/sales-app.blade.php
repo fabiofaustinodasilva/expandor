@@ -129,11 +129,13 @@
             .btn-row { grid-template-columns: 1fr 1fr; }
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/client-ui.css') }}">
 </head>
-<body>
+<body class="sales-app-shell">
 @php
     $authUser = auth()->user();
 @endphp
+<div class="app-field-banner">App de campo</div>
 <header class="app-top">
     <div class="app-brand">EXPANDOR <span>Campo</span></div>
     <div class="app-meta">

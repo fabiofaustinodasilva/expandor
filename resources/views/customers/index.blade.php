@@ -3,6 +3,12 @@
 @section('title', 'Clientes')
 
 @section('page')
+    <x-client.page-breadcrumb :items="[
+        ['label' => 'Dashboard', 'href' => route('dashboard')],
+        ['label' => 'Operação'],
+        ['label' => 'Clientes'],
+    ]" />
+
     <div style="display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1.1rem; flex-wrap:wrap;">
         <div>
             <h1 class="page-title" style="margin:0;">Clientes</h1>

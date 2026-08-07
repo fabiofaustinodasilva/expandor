@@ -77,10 +77,9 @@ class AnalyticsDashboardTest extends TestCase
         $response->assertOk()
             ->assertSee('Empresa Analytics A')
             ->assertDontSee('Empresa Analytics B')
-            ->assertSee('Resultados')
+            ->assertSee('Dashboard')
             ->assertSee('Hoje')
             ->assertSee('Ranking de vendedores')
-            ->assertSee('Funil comercial')
             ->assertSee('1')
             ->assertViewHas('metrics', function ($metrics) {
                 return $metrics->visits_total === 1
@@ -238,22 +237,22 @@ class AnalyticsDashboardTest extends TestCase
             ->assertOk()
             ->assertSee('Aline Rank')
             ->assertSee('Conversão %')
-            ->assertSee('Casas')
-            ->assertSee('Setor Norte 44')
-            ->assertSee('user_id='.$sellerA->id, false)
-            ->assertSee('sector_id='.$sector->id, false)
-            ->assertSee('💰 Comissões')
+            ->assertSee('Comissões')
             ->assertDontSee('Módulo de comissão em preparação')
             ->assertViewHas('metrics', function ($metrics) use ($sellerA) {
                 $first = $metrics->seller_productivity[0] ?? null;
                 $sector = $metrics->sector_performance[0] ?? null;
 
+                // Sprint 8.2.2: a tabela de setores saiu do dashboard slim,
+                // mas os dados de enriquecimento continuam calculados pelo
+                // serviço (disponíveis em "Relatórios").
                 return $metrics->team_view === true
                     && $first
                     && $first['user_id'] === $sellerA->id
                     && $first['installations'] === 1
                     && isset($first['conversion_rate'])
                     && $sector
+                    && $sector['name'] === 'Setor Norte 44'
                     && $sector['properties_worked'] === 1
                     && isset($sector['installations'])
                     && isset($sector['conversion_rate']);
@@ -295,7 +294,7 @@ class AnalyticsDashboardTest extends TestCase
         $this->actingAs($sellerA)
             ->get(route('dashboard', ['period' => 'today']))
             ->assertOk()
-            ->assertSee('Funil comercial')
+            ->assertSee('Visitas')
             ->assertDontSee('Ranking de vendedores')
             ->assertDontSee('Desempenho por região')
             ->assertDontSee('Seller Scope B')
@@ -344,13 +343,17 @@ class AnalyticsDashboardTest extends TestCase
             ]);
         }
 
+        // Sprint 8.2.2: a lista de alertas saiu do dashboard slim, mas o
+        // serviço continua calculando os alertas (consumidos em "Relatórios").
         $this->actingAs($manager)
             ->get(route('dashboard', ['period' => '30d']))
             ->assertOk()
-            ->assertSee('Atenção')
-            ->assertSee('Vendedor sem visitas hoje')
-            ->assertSee('Idle Seller 44')
-            ->assertSee('Muitos retornos pendentes');
+            ->assertViewHas('metrics', function ($metrics) {
+                $titles = collect($metrics->alerts)->pluck('title')->all();
+
+                return in_array('Vendedor sem visitas hoje', $titles, true)
+                    && in_array('Muitos retornos pendentes', $titles, true);
+            });
     }
 
     public function test_user_without_permission_receives_forbidden(): void

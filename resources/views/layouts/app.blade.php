@@ -13,6 +13,7 @@
     @if($brand->faviconUrl)
         <link rel="icon" href="{{ $brand->faviconUrl }}">
     @endif
+    <script src="https://unpkg.com/lucide@0.469.0"></script>
     <style>
         :root {
             {{ $themeService->cssVariables($brand) }}
@@ -121,6 +122,7 @@
             .header { flex-wrap: wrap; }
         }
     </style>
+    <link rel="stylesheet" href="{{ asset('css/client-ui.css') }}">
 </head>
 <body>
 @php
@@ -189,6 +191,7 @@
 @if($brand->customCss)
     <style>{!! $brand->customCss !!}</style>
 @endif
+<script>if (window.lucide) { window.lucide.createIcons(); }</script>
 @include('partials.rc-ux-polish')
 </body>
 </html>

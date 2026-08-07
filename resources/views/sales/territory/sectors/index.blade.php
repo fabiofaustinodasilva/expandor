@@ -3,6 +3,13 @@
 @section('title', 'Setores')
 
 @section('content')
+    <x-client.page-breadcrumb :items="[
+        ['label' => 'Dashboard', 'href' => route('dashboard')],
+        ['label' => 'Operação'],
+        ['label' => 'Território'],
+        ['label' => 'Setores'],
+    ]" />
+
     <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem;">
         <h1 class="page-title" style="margin:0;">Setores</h1>
         @can('create', App\Domains\Sales\Territory\Models\Sector::class)

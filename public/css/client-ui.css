@@ -1,0 +1,252 @@
+/*
+ * Sprint 8.2.2 — Client Area UI
+ * Estilos compartilhados dos componentes resources/views/components/client/*
+ * Usa as variáveis de tema já definidas pelo ThemeService (--primary, --border, etc.)
+ */
+
+/* Page header */
+.client-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.1rem;
+}
+.client-page-header__title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 750;
+    color: var(--text, var(--text-on-bg));
+}
+.client-page-header__desc {
+    margin: .35rem 0 0;
+    color: var(--muted, var(--muted-on-bg));
+    font-size: .92rem;
+}
+.client-page-header__actions {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Section card */
+.client-section-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.1rem;
+    margin-bottom: 1rem;
+}
+.client-section-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: .85rem;
+}
+.client-section-card__title {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 700;
+}
+.client-section-card__desc {
+    margin: .25rem 0 0;
+    color: var(--muted);
+    font-size: .85rem;
+}
+
+/* Metric card */
+.client-metric-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1rem 1.05rem;
+    position: relative;
+}
+.client-metric-card__icon {
+    color: var(--muted);
+    margin-bottom: .4rem;
+}
+.client-metric-card__label {
+    color: var(--muted);
+    font-size: .82rem;
+    margin-bottom: .3rem;
+}
+.client-metric-card__value {
+    font-size: 1.55rem;
+    font-weight: 750;
+    color: var(--text);
+    line-height: 1.15;
+}
+.client-metric-card__hint {
+    color: var(--muted);
+    font-size: .78rem;
+    margin-top: .3rem;
+}
+
+/* Empty state */
+.client-empty-state {
+    text-align: center;
+    padding: 2.25rem 1rem;
+    border: 1px dashed var(--border);
+    border-radius: 1rem;
+    color: var(--muted);
+}
+.client-empty-state__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    background: var(--bg-soft);
+    color: var(--muted);
+    margin: 0 auto .75rem;
+}
+.client-empty-state__title {
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 .35rem;
+    font-size: 1.02rem;
+}
+.client-empty-state__desc {
+    margin: 0 0 1rem;
+}
+
+/* Data table */
+.client-data-table {
+    overflow-x: auto;
+}
+
+/* Search / filter bars */
+.client-search-bar {
+    display: flex;
+    gap: .6rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.client-search-bar__input {
+    flex: 1;
+    min-width: 220px;
+}
+.client-filter-bar {
+    display: flex;
+    gap: .6rem;
+    flex-wrap: wrap;
+    align-items: end;
+}
+
+/* Quick actions */
+.client-quick-actions {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Danger button */
+.client-btn-danger {
+    background: color-mix(in srgb, var(--highlight) 16%, transparent);
+    color: var(--highlight);
+    border: 1px solid color-mix(in srgb, var(--highlight) 40%, transparent);
+}
+.client-btn-danger:hover {
+    background: color-mix(in srgb, var(--highlight) 26%, transparent);
+}
+
+/* Entity avatar */
+.client-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--primary) 20%, transparent);
+    color: var(--text);
+    font-weight: 700;
+    border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.client-avatar--sm { width: 2rem; height: 2rem; font-size: .78rem; }
+.client-avatar--md { width: 2.75rem; height: 2.75rem; font-size: 1rem; }
+.client-avatar--lg { width: 3.5rem; height: 3.5rem; font-size: 1.25rem; }
+
+/* Breadcrumb */
+.client-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    flex-wrap: wrap;
+    font-size: .8rem;
+    color: var(--muted);
+    margin-bottom: .6rem;
+}
+.client-breadcrumb__link {
+    color: var(--muted);
+    text-decoration: none;
+}
+.client-breadcrumb__link:hover {
+    color: var(--text);
+    text-decoration: underline;
+}
+.client-breadcrumb__current {
+    color: var(--text);
+    font-weight: 600;
+}
+.client-breadcrumb__sep {
+    color: var(--muted);
+    opacity: .6;
+}
+
+/* Hub tabs (Sprint 8.2.2 — Equipe / hubs de módulo) */
+.client-hub-tabs {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.1rem;
+}
+.client-hub-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .55rem .9rem;
+    border-radius: .8rem;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--muted);
+    font-weight: 650;
+    font-size: .86rem;
+    text-decoration: none;
+}
+.client-hub-tab:hover {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+.client-hub-tab.is-active {
+    background: color-mix(in srgb, var(--primary) 18%, var(--bg-elevated));
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+}
+.client-hub-tab__hint {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: .78rem;
+}
+
+/* Sales app shell strip (Sprint 8.2.2) */
+.sales-app-shell .app-field-banner {
+    background: color-mix(in srgb, var(--accent) 14%, var(--bg));
+    border-bottom: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--border));
+    color: var(--muted);
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: .3rem .5rem;
+}
+
+@media (max-width: 640px) {
+    .client-page-header { flex-direction: column; align-items: stretch; }
+}

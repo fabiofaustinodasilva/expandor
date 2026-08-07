@@ -97,10 +97,12 @@ class OnboardingModuleTest extends TestCase
         app(TenantContext::class)->set($company, $admin);
         app(OnboardingService::class)->completeStep('branding', $company, $admin);
 
+        // Sprint 8.2.2: o dashboard slim colapsa o card de setup quando o
+        // workspace já está pronto (banner de "workspace ready" some no lugar).
         $this->actingAs($admin)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Setup');
+            ->assertSee('Dashboard');
 
         Sanctum::actingAs($admin);
         $this->getJson('/api/v1/onboarding')
