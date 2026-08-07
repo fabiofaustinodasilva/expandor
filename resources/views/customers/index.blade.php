@@ -9,26 +9,24 @@
         ['label' => 'Clientes'],
     ]" />
 
-    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1.1rem; flex-wrap:wrap;">
-        <div>
-            <h1 class="page-title" style="margin:0;">Clientes</h1>
-            <p class="header-meta" style="margin:.35rem 0 0;">CRM comercial — histórico, vendas e retornos em um só lugar.</p>
-        </div>
-        <a class="btn btn-ghost" href="{{ route('map.index') }}">Abrir mapa</a>
-    </div>
+    <x-client.page-header title="Clientes" description="CRM comercial — histórico, vendas e retornos em um só lugar.">
+        <x-client.secondary-button :href="route('map.index')">Abrir mapa</x-client.secondary-button>
+    </x-client.page-header>
 
-    <form method="GET" action="{{ route('customers.index') }}" class="card" style="padding:.85rem 1rem; margin-bottom:1rem;">
-        <label class="header-meta" for="customer-q" style="display:block; margin-bottom:.35rem;">Buscar</label>
-        <div style="display:flex; gap:.65rem; flex-wrap:wrap;">
-            <input id="customer-q" class="form-control" type="search" name="q" value="{{ $q }}"
-                   placeholder="Nome, telefone, CPF, rua, bairro, cidade ou produto…"
-                   style="flex:1; min-width:220px;">
-            <button class="btn btn-primary" type="submit">Buscar</button>
-            @if($q !== '')
-                <a class="btn btn-ghost" href="{{ route('customers.index') }}">Limpar</a>
-            @endif
-        </div>
-    </form>
+    <x-client.crud-toolbar>
+        <x-slot:search>
+            <form method="GET" action="{{ route('customers.index') }}" style="display:flex; gap:.65rem; flex-wrap:wrap; width:100%;">
+                <label class="sr-only" for="customer-q">Buscar clientes</label>
+                <input id="customer-q" class="form-control" type="search" name="q" value="{{ $q }}"
+                       placeholder="Nome, telefone, CPF, rua, bairro, cidade ou produto…"
+                       style="flex:1; min-width:220px;">
+                <button class="btn btn-primary client-btn" type="submit">Buscar</button>
+                @if($q !== '')
+                    <a class="btn btn-ghost client-btn" href="{{ route('customers.index') }}">Limpar</a>
+                @endif
+            </form>
+        </x-slot:search>
+    </x-client.crud-toolbar>
 
     @if($customers->isEmpty())
         <div class="card">
@@ -74,7 +72,7 @@
                 </a>
             @endforeach
         </div>
-        <div style="margin-top:1.1rem;">{{ $paginator->links() }}</div>
+        <x-client.pagination-bar :paginator="$paginator" />
     @endif
 
     <style>

@@ -6,19 +6,12 @@
 @php
     $authUser = auth()->user();
 @endphp
-    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1.25rem; flex-wrap:wrap;">
-        <div>
-            <h1 class="page-title" style="margin:0;">Agenda</h1>
-            <p class="header-meta" style="margin:.35rem 0 0;">
-                @if($teamView)
-                    Retornos da equipe — visão operacional completa.
-                @else
-                    Seus retornos agendados — acompanhe e conclua sem sair da tela.
-                @endif
-            </p>
-        </div>
-        <a class="btn btn-ghost" href="{{ route('map.index') }}">Abrir mapa</a>
-    </div>
+    <x-client.page-header
+        title="Agenda"
+        :description="$teamView ? 'Retornos da equipe — visão operacional completa.' : 'Seus retornos agendados — acompanhe e conclua sem sair da tela.'"
+    >
+        <x-client.secondary-button :href="route('map.index')">Abrir mapa</x-client.secondary-button>
+    </x-client.page-header>
 
     @if($followUps->isEmpty())
         <div class="card">
@@ -109,7 +102,7 @@
                 </article>
             @endforeach
         </div>
-        <div style="margin-top:1rem;">{{ $followUps->links() }}</div>
+        <x-client.pagination-bar :paginator="$followUps" />
     @endif
 
     {{-- Modal resultado (padrão Sprint 4.1) --}}

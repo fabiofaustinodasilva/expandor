@@ -9,14 +9,17 @@
         ['label' => 'Campanhas'],
     ]" />
 
-    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem;">
-        <h1 class="page-title" style="margin:0;">Campanhas</h1>
-        @can('create', App\Domains\Campaigns\Models\Campaign::class)
-            <a class="btn btn-primary" href="{{ route('campaigns.create') }}">Nova campanha</a>
-        @endcan
-    </div>
+    <x-client.page-header title="Campanhas" description="Organize equipes, metas e período de cada campanha." />
 
-    <div class="card">
+    <x-client.crud-toolbar>
+        <x-slot:actions>
+            @can('create', App\Domains\Campaigns\Models\Campaign::class)
+                <x-client.primary-button :href="route('campaigns.create')">Nova campanha</x-client.primary-button>
+            @endcan
+        </x-slot:actions>
+    </x-client.crud-toolbar>
+
+    <div class="card client-data-table">
         <table class="table">
             <thead>
             <tr>
@@ -89,6 +92,6 @@
             @endforelse
             </tbody>
         </table>
-        <div style="margin-top:1rem;">{{ $campaigns->links() }}</div>
+        <x-client.pagination-bar :paginator="$campaigns" />
     </div>
 @endsection

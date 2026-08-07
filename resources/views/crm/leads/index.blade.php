@@ -10,27 +10,30 @@
         ['label' => 'Leads'],
     ]" />
 
-    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem;">
-        <h1 class="page-title" style="margin:0;">Leads</h1>
+    <x-client.page-header title="Leads" description="Pipeline de leads comerciais — origem, status e conversão.">
         @can('create', App\Domains\CRM\Models\Lead::class)
-            <a class="btn btn-primary" href="{{ route('crm.leads.create') }}">Novo lead</a>
+            <x-client.primary-button :href="route('crm.leads.create')">Novo lead</x-client.primary-button>
         @endcan
-    </div>
+    </x-client.page-header>
 
-    <form method="GET" class="card" style="margin-bottom:1rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:end;">
-        <div>
-            <label class="header-meta">Status</label>
-            <select name="status">
-                <option value="">Todos</option>
-                @foreach($statuses as $value => $label)
-                    <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </div>
-        <button class="btn btn-ghost" type="submit">Filtrar</button>
-    </form>
+    <x-client.crud-toolbar>
+        <x-slot:filters>
+            <form method="GET" style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:end;">
+                <div>
+                    <label class="header-meta" for="lead-status">Status</label>
+                    <select id="lead-status" name="status">
+                        <option value="">Todos</option>
+                        @foreach($statuses as $value => $label)
+                            <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <button class="btn btn-ghost client-btn" type="submit">Filtrar</button>
+            </form>
+        </x-slot:filters>
+    </x-client.crud-toolbar>
 
-    <div class="card">
+    <div class="card client-data-table">
         <table class="table">
             <thead>
             <tr>
@@ -69,6 +72,6 @@
             @endforelse
             </tbody>
         </table>
-        <div style="margin-top:1rem;">{{ $leads->links() }}</div>
+        <x-client.pagination-bar :paginator="$leads" />
     </div>
 @endsection

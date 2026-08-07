@@ -124,7 +124,8 @@
     </style>
     <link rel="stylesheet" href="{{ asset('css/client-ui.css') }}">
 </head>
-<body>
+<body class="client-ui">
+<a class="client-skip-link" href="#client-main">Ir para o conteúdo</a>
 @php
     $authUser = auth()->user();
     $company = $authUser?->company;
@@ -169,7 +170,7 @@
             </div>
         </header>
 
-        <main class="content">
+        <main class="content" id="client-main" tabindex="-1">
             @if(session('success'))
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif

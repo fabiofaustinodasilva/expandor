@@ -13,6 +13,14 @@
     flex-wrap: wrap;
     margin-bottom: 1.1rem;
 }
+.client-page-header__eyebrow {
+    margin: 0 0 .25rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--muted, var(--muted-on-bg));
+}
 .client-page-header__title {
     margin: 0;
     font-size: 1.4rem;
@@ -249,4 +257,387 @@
 
 @media (max-width: 640px) {
     .client-page-header { flex-direction: column; align-items: stretch; }
+}
+
+/* ============================================================
+ * Sprint 8.2.3 — Client UX Refinement (design system tokens +
+ * novos componentes: alert, skeleton, tooltip, modal/drawer
+ * chrome, paginação, filtros colapsáveis, crud-toolbar).
+ * Continua usando somente as variáveis de tema já existentes
+ * (--primary, --border, --bg-elevated, --text, --muted,
+ * --success, --warning, --highlight).
+ * ============================================================ */
+
+:root {
+    --client-radius: 0.875rem;
+    --client-radius-sm: 0.6rem;
+    --client-radius-lg: 1.1rem;
+    --client-space-1: 0.35rem;
+    --client-space-2: 0.6rem;
+    --client-space-3: 0.85rem;
+    --client-space-4: 1.1rem;
+    --client-space-5: 1.5rem;
+    --client-focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+/* Foco visível consistente (WCAG 2.4.7) em toda a área do cliente */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Utilitário para texto apenas para leitor de tela (labels, skip link) */
+.sr-only {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Skip link (a11y) — visível apenas ao receber foco via teclado */
+.client-skip-link {
+    position: absolute;
+    left: -999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    z-index: 200;
+    background: var(--bg-elevated);
+    color: var(--text);
+    padding: .65rem 1rem;
+    border-radius: var(--client-radius-sm);
+    border: 1px solid var(--border);
+    font-weight: 700;
+    font-size: .85rem;
+    text-decoration: none;
+}
+.client-skip-link:focus {
+    left: .75rem;
+    top: .75rem;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    box-shadow: var(--client-focus-ring);
+}
+
+/* Botão base unificado (alvo de toque >= 44px) */
+.client-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    min-height: 44px;
+    padding: .6rem 1.05rem;
+    border-radius: var(--client-radius);
+    border: 1px solid transparent;
+    font-weight: 700;
+    font-size: .9rem;
+    line-height: 1.2;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .05s ease;
+}
+.client-btn:active { transform: translateY(1px); }
+.client-btn:disabled,
+.client-btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; pointer-events: none; }
+.client-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Polimento de formulários dentro do escopo .client-ui */
+.client-ui .form-control,
+.client-ui select,
+.client-ui input:not([type="checkbox"]):not([type="radio"]),
+.client-ui textarea,
+.client-input {
+    min-height: 44px;
+    border-radius: var(--client-radius-sm);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.client-ui .form-control:focus,
+.client-ui select:focus,
+.client-ui input:focus,
+.client-ui textarea:focus,
+.client-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: var(--client-focus-ring);
+}
+.client-ui .form-group label { font-weight: 650; }
+
+/* Tabela de dados — cabeçalho fixo, zebra opcional, células mais generosas */
+.client-data-table {
+    overflow-x: auto;
+    border-radius: var(--client-radius);
+}
+.client-data-table table { border-collapse: collapse; width: 100%; }
+.client-data-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-elevated);
+    color: var(--muted);
+    font-size: .76rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-weight: 700;
+    padding: .75rem .9rem;
+    border-bottom: 1px solid var(--border);
+    z-index: 1;
+}
+.client-data-table td {
+    padding: .8rem .9rem;
+    border-bottom: 1px solid var(--border);
+    font-size: .9rem;
+}
+.client-data-table--zebra tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--bg-soft, var(--bg-elevated)) 55%, transparent);
+}
+.client-data-table tbody tr:hover {
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+/* Alertas com tonalidade semântica */
+.client-alert {
+    display: flex;
+    gap: .65rem;
+    align-items: flex-start;
+    padding: .85rem 1rem;
+    border-radius: var(--client-radius);
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
+    font-size: .9rem;
+    color: var(--text);
+}
+.client-alert__icon { flex-shrink: 0; margin-top: .1rem; }
+.client-alert__body { flex: 1; min-width: 0; }
+.client-alert--success {
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    border-color: color-mix(in srgb, var(--success) 40%, transparent);
+}
+.client-alert--error {
+    background: color-mix(in srgb, var(--highlight) 14%, transparent);
+    border-color: color-mix(in srgb, var(--highlight) 40%, transparent);
+}
+.client-alert--warning {
+    background: color-mix(in srgb, var(--warning) 16%, transparent);
+    border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+}
+.client-alert--info {
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+/* Skeleton loaders */
+.client-skeleton {
+    display: block;
+    border-radius: var(--client-radius-sm);
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--bg-elevated) 70%, transparent) 25%,
+        color-mix(in srgb, var(--border) 45%, transparent) 37%,
+        color-mix(in srgb, var(--bg-elevated) 70%, transparent) 63%);
+    background-size: 400% 100%;
+    animation: client-skeleton-shimmer 1.4s ease infinite;
+}
+.client-skeleton--text { height: .85rem; margin-bottom: .5rem; width: 100%; }
+.client-skeleton--title { height: 1.3rem; width: 55%; margin-bottom: .75rem; }
+.client-skeleton--block { height: 4rem; width: 100%; }
+.client-skeleton--circle { border-radius: 999px; }
+@keyframes client-skeleton-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: 0 0; }
+}
+
+/* Tooltip acessível (hover + foco por teclado) */
+.client-tooltip {
+    position: relative;
+    display: inline-flex;
+}
+.client-tooltip__trigger {
+    cursor: help;
+    border-bottom: 1px dashed var(--muted);
+}
+.client-tooltip__bubble {
+    position: absolute;
+    bottom: calc(100% + .5rem);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: var(--bg-elevated);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--client-radius-sm);
+    padding: .45rem .65rem;
+    font-size: .78rem;
+    white-space: normal;
+    width: max-content;
+    max-width: 220px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease;
+    z-index: 50;
+}
+.client-tooltip:hover .client-tooltip__bubble,
+.client-tooltip:focus-within .client-tooltip__bubble {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Chrome de modal / drawer (somente estilos — sem lógica) */
+.client-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 1rem; }
+.client-modal[hidden] { display: none !important; }
+.client-modal__backdrop { position: absolute; inset: 0; background: rgba(2, 6, 23, .6); }
+.client-modal__panel {
+    position: relative;
+    z-index: 1;
+    width: min(480px, 100%);
+    max-height: min(88dvh, 720px);
+    overflow: auto;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--client-radius-lg);
+    padding: 1.1rem 1.25rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+}
+.client-drawer { position: fixed; inset: 0; z-index: 100; }
+.client-drawer[hidden] { display: none !important; }
+.client-drawer__backdrop { position: absolute; inset: 0; background: rgba(2, 6, 23, .6); }
+.client-drawer__panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: min(420px, 100%);
+    background: var(--bg-elevated);
+    border-left: 1px solid var(--border);
+    padding: 1rem 1.1rem 1.5rem;
+    overflow: auto;
+    box-shadow: -20px 0 50px rgba(0, 0, 0, .3);
+}
+
+/* Barra de paginação */
+.client-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: .35rem;
+    margin-top: var(--client-space-4);
+    flex-wrap: wrap;
+}
+.client-pagination :is(a, span) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    border-radius: var(--client-radius-sm);
+    font-size: .85rem;
+}
+
+/* Filtros colapsáveis (details/summary nativo — sem JS) */
+.client-filters-collapsible {
+    border: 1px solid var(--border);
+    border-radius: var(--client-radius);
+    background: var(--bg-elevated);
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+.client-filters-collapsible summary {
+    cursor: pointer;
+    list-style: none;
+    padding: .85rem 1rem;
+    font-weight: 700;
+    font-size: .92rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--text);
+}
+.client-filters-collapsible summary::-webkit-details-marker { display: none; }
+.client-filters-collapsible summary::before {
+    content: '›';
+    display: inline-block;
+    transition: transform .18s ease;
+    color: var(--muted);
+}
+.client-filters-collapsible[open] summary::before { transform: rotate(90deg); }
+.client-filters-collapsible__body {
+    padding: 0 1rem 1.05rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+}
+
+/* Barra de ferramentas CRUD (busca / filtros / ações) */
+.client-crud-toolbar {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+.client-crud-toolbar__search { flex: 1; min-width: 220px; display: flex; gap: .5rem; }
+.client-crud-toolbar__search form { width: 100%; }
+.client-crud-toolbar__filters { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.client-crud-toolbar__actions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+/* Indicador de carregamento inline */
+.client-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    color: var(--muted);
+    font-size: .85rem;
+}
+.client-loading__spinner {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 999px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    animation: client-spin .7s linear infinite;
+}
+@keyframes client-spin { to { transform: rotate(360deg); } }
+
+/* Redução de ruído visual (sombras) — radius consistente 0.875rem */
+.card,
+.client-section-card,
+.client-metric-card,
+.client-empty-state {
+    box-shadow: none;
+    border-radius: var(--client-radius);
+}
+
+/* Mobile: espaçamento mais denso */
+@media (max-width: 640px) {
+    .client-metric-card { padding: .8rem .85rem; }
+    .client-section-card { padding: .9rem; }
+    .client-crud-toolbar { gap: .5rem; }
+    .client-crud-toolbar__search,
+    .client-crud-toolbar__filters,
+    .client-crud-toolbar__actions { width: 100%; }
+    .client-page-header { gap: .75rem; }
+    .client-filters-collapsible summary { padding: .75rem .85rem; }
+}
+
+/* Alto contraste de foco — reforça a regra global acima */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Movimento reduzido — desativa animações/transições decorativas */
+@media (prefers-reduced-motion: reduce) {
+    .client-skeleton,
+    .client-loading__spinner,
+    .client-tooltip__bubble,
+    * {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+        scroll-behavior: auto !important;
+    }
 }

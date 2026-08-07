@@ -127,7 +127,8 @@
     <link rel="stylesheet" href="{{ asset('css/client-ui.css') }}">
     @stack('styles')
 </head>
-<body class="{{ $isFieldSeller ? 'field-seller' : '' }}">
+<body class="client-ui {{ $isFieldSeller ? 'field-seller' : '' }}">
+<a class="client-skip-link" href="#client-main">Ir para o conteúdo</a>
 @php
     $impersonating = session()->has(\App\Domains\Platform\Actions\StartImpersonationAction::SESSION_ADMIN_ID);
 @endphp
@@ -141,7 +142,7 @@
 <div class="op-shell {{ $impersonating ? 'pt-10' : '' }}">
     @include('layouts.partials.client-rail', ['brand' => $brand, 'company' => $company, 'authUser' => $authUser])
 
-    <div class="op-main">
+    <div class="op-main" id="client-main" tabindex="-1">
         @include('onboarding.partials.trial-banner')
         @include('onboarding.partials.saas-onboarding-banner')
         @if(session('success'))

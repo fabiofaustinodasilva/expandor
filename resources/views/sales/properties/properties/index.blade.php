@@ -9,26 +9,27 @@
         ['label' => 'Pontos'],
     ]" />
 
-    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem;">
-        <h1 class="page-title" style="margin:0;">Pontos</h1>
+    <x-client.page-header title="Pontos" description="Cadastro de pontos comerciais no território.">
         @can('create', App\Domains\Sales\Properties\Models\Property::class)
-            <a class="btn btn-primary" href="{{ route('properties.create') }}">Novo ponto</a>
+            <x-client.primary-button :href="route('properties.create')">Novo ponto</x-client.primary-button>
         @endcan
-    </div>
+    </x-client.page-header>
 
-    <div class="card" style="margin-bottom:1rem;">
-        <form method="GET" action="{{ route('properties.index') }}" class="actions">
-            <select class="form-control" name="status" style="max-width:280px;">
-                <option value="">Todos os status</option>
-                @foreach($statuses as $value => $label)
-                    <option value="{{ $value }}" @selected($selectedStatus === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-            <button class="btn btn-ghost" type="submit">Filtrar</button>
-        </form>
-    </div>
+    <x-client.crud-toolbar>
+        <x-slot:filters>
+            <form method="GET" action="{{ route('properties.index') }}" class="actions">
+                <select class="form-control" name="status" style="max-width:280px;">
+                    <option value="">Todos os status</option>
+                    @foreach($statuses as $value => $label)
+                        <option value="{{ $value }}" @selected($selectedStatus === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <button class="btn btn-ghost client-btn" type="submit">Filtrar</button>
+            </form>
+        </x-slot:filters>
+    </x-client.crud-toolbar>
 
-    <div class="card">
+    <div class="card client-data-table">
         <table class="table">
             <thead>
             <tr>
@@ -60,6 +61,6 @@
             @endforelse
             </tbody>
         </table>
-        <div style="margin-top:1rem;">{{ $properties->links() }}</div>
+        <x-client.pagination-bar :paginator="$properties" />
     </div>
 @endsection

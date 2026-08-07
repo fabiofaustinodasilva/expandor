@@ -5,7 +5,7 @@
     'confirm' => null,
 ])
 @if($href)
-    <a {{ $attributes->merge(['class' => 'btn client-btn-danger', 'href' => $href, 'onclick' => $confirm ? "return confirm('{$confirm}')" : null]) }}>{{ $slot }}</a>
+    <a {{ $attributes->merge(['class' => 'btn client-btn-danger client-btn', 'href' => $href, 'onclick' => $confirm ? "return confirm('{$confirm}')" : null]) }}>{{ $slot }}</a>
 @else
-    <button {{ $attributes->merge(['class' => 'btn client-btn-danger', 'type' => $type, 'onclick' => $confirm ? "return confirm('{$confirm}')" : null]) }}>{{ $slot }}</button>
+    <button {{ $attributes->merge(['class' => 'btn client-btn-danger client-btn', 'type' => $type, 'onclick' => $confirm ? "return confirm('{$confirm}')" : null]) }}>{{ $slot }}</button>
 @endif

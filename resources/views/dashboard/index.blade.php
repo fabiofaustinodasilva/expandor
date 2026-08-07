@@ -48,59 +48,62 @@
 @include('onboarding.partials.activation-card')
 @include('onboarding.partials.activation-guidance')
 
-<x-client.section-card title="Filtros">
-    <form method="GET" action="{{ route('dashboard') }}" class="grid grid-4" style="align-items:end;">
-        <input type="hidden" name="period" value="{{ $period }}">
-        <div class="form-group" style="margin:0;">
-            <label for="date_from">De</label>
-            <input class="form-control" type="date" id="date_from" name="date_from" value="{{ $filters->date_from }}">
-        </div>
-        <div class="form-group" style="margin:0;">
-            <label for="date_to">Até</label>
-            <input class="form-control" type="date" id="date_to" name="date_to" value="{{ $filters->date_to }}">
-        </div>
-        <div class="form-group" style="margin:0;">
-            <label for="city_id">Cidade</label>
-            <select class="form-control" id="city_id" name="city_id">
-                <option value="">Todas</option>
-                @foreach($cities as $city)
-                    <option value="{{ $city->id }}" @selected((string) $filters->city_id === (string) $city->id)>
-                        {{ $city->name }}/{{ $city->state }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="form-group" style="margin:0;">
-            <label for="sector_id">Setor</label>
-            <select class="form-control" id="sector_id" name="sector_id">
-                <option value="">Todos</option>
-                @foreach($sectors as $sector)
-                    <option value="{{ $sector->id }}" data-city-id="{{ $sector->city_id }}"
-                        @selected((string) $filters->sector_id === (string) $sector->id)>
-                        {{ $sector->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        @if($teamView)
+<details class="client-filters-collapsible">
+    <summary>Filtros</summary>
+    <div class="client-filters-collapsible__body">
+        <form method="GET" action="{{ route('dashboard') }}" class="grid grid-4" style="align-items:end;">
+            <input type="hidden" name="period" value="{{ $period }}">
             <div class="form-group" style="margin:0;">
-                <label for="user_id">Vendedor</label>
-                <select class="form-control" id="user_id" name="user_id">
-                    <option value="">Todos</option>
-                    @foreach($sellers as $seller)
-                        <option value="{{ $seller['id'] }}" @selected((string) $filters->user_id === (string) $seller['id'])>
-                            {{ $seller['name'] }}
+                <label for="date_from">De</label>
+                <input class="form-control" type="date" id="date_from" name="date_from" value="{{ $filters->date_from }}">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label for="date_to">Até</label>
+                <input class="form-control" type="date" id="date_to" name="date_to" value="{{ $filters->date_to }}">
+            </div>
+            <div class="form-group" style="margin:0;">
+                <label for="city_id">Cidade</label>
+                <select class="form-control" id="city_id" name="city_id">
+                    <option value="">Todas</option>
+                    @foreach($cities as $city)
+                        <option value="{{ $city->id }}" @selected((string) $filters->city_id === (string) $city->id)>
+                            {{ $city->name }}/{{ $city->state }}
                         </option>
                     @endforeach
                 </select>
             </div>
-        @endif
-        <div class="actions" style="grid-column: 1 / -1;">
-            <button class="btn btn-primary" type="submit">Aplicar filtros</button>
-            <a class="btn btn-ghost" href="{{ route('dashboard') }}">Limpar</a>
-        </div>
-    </form>
-</x-client.section-card>
+            <div class="form-group" style="margin:0;">
+                <label for="sector_id">Setor</label>
+                <select class="form-control" id="sector_id" name="sector_id">
+                    <option value="">Todos</option>
+                    @foreach($sectors as $sector)
+                        <option value="{{ $sector->id }}" data-city-id="{{ $sector->city_id }}"
+                            @selected((string) $filters->sector_id === (string) $sector->id)>
+                            {{ $sector->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            @if($teamView)
+                <div class="form-group" style="margin:0;">
+                    <label for="user_id">Vendedor</label>
+                    <select class="form-control" id="user_id" name="user_id">
+                        <option value="">Todos</option>
+                        @foreach($sellers as $seller)
+                            <option value="{{ $seller['id'] }}" @selected((string) $filters->user_id === (string) $seller['id'])>
+                                {{ $seller['name'] }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+            <div class="actions" style="grid-column: 1 / -1;">
+                <button class="btn btn-primary client-btn" type="submit">Aplicar filtros</button>
+                <a class="btn btn-ghost client-btn" href="{{ route('dashboard') }}">Limpar</a>
+            </div>
+        </form>
+    </div>
+</details>
 
 <div class="grid grid-4" style="margin-bottom:1rem;">
     <x-client.metric-card icon="footprints" label="Visitas" :value="$metrics->visits_total" hint="Visitas no período" />
@@ -115,17 +118,6 @@
         <x-client.metric-card icon="award" label="Vendedores ativos" :value="$productivity['active_sellers']" hint="Com atividade no período" />
     @endif
 </div>
-
-@if(!empty($canViewCommissions) || auth()->user()?->hasPermission('billing.view'))
-    <div class="grid grid-1" style="margin-bottom:1rem;">
-        <x-client.metric-card
-            icon="wallet"
-            label="Financeiro do mês"
-            value="{{ $plan_name }}"
-            hint="Detalhamento de comissões e plano em Financeiro / Relatórios (sem alterar billing nesta sprint)."
-        />
-    </div>
-@endif
 
 @if($teamView)
     <x-client.section-card title="Ranking de vendedores" description="Top desempenho no período selecionado.">

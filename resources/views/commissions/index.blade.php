@@ -3,17 +3,14 @@
 @section('title', $pageTitle)
 
 @section('page')
-    <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
-        <div>
-            <h1 class="page-title" style="margin:0;">{{ $pageTitle }}</h1>
-            <p class="header-meta" style="margin:.35rem 0 0;">
-                {{ $isManager ? 'Gestão de comissões da equipe' : 'Suas vendas e comissão acumulada no período' }}
-            </p>
-        </div>
+    <x-client.page-header
+        :title="$pageTitle"
+        :description="$isManager ? 'Gestão de comissões da equipe' : 'Suas vendas e comissão acumulada no período'"
+    >
         @if($isManager)
-            <a class="btn btn-ghost" href="{{ route('commissions.products.index') }}">Produtos / Estoque</a>
+            <x-client.secondary-button :href="route('commissions.products.index')">Produtos / Estoque</x-client.secondary-button>
         @endif
-    </div>
+    </x-client.page-header>
 
     <div class="grid grid-4" style="margin-bottom:1.25rem;">
         <div class="card">
@@ -39,67 +36,71 @@
         </div>
     </div>
 
-    <form method="GET" action="{{ route('commissions.index') }}" class="card" style="margin-bottom:1rem;">
-        <div class="grid grid-4" style="gap:.75rem;">
-            <div>
-                <label for="date_from">De</label>
-                <input class="form-control" type="date" id="date_from" name="date_from" value="{{ $filters['date_from'] }}">
-            </div>
-            <div>
-                <label for="date_to">Até</label>
-                <input class="form-control" type="date" id="date_to" name="date_to" value="{{ $filters['date_to'] }}">
-            </div>
-            @if($isManager)
-                <div>
-                    <label for="user_id">Vendedor</label>
-                    <select class="form-control" id="user_id" name="user_id">
-                        <option value="">Todos</option>
-                        @foreach($sellers as $seller)
-                            <option value="{{ $seller->id }}" @selected((string) $filters['user_id'] === (string) $seller->id)>
-                                {{ $seller->name }}
-                            </option>
-                        @endforeach
-                    </select>
+    <x-client.crud-toolbar>
+        <x-slot:filters>
+            <form method="GET" action="{{ route('commissions.index') }}" class="card" style="margin-bottom:0;">
+                <div class="grid grid-4" style="gap:.75rem;">
+                    <div>
+                        <label for="date_from">De</label>
+                        <input class="form-control" type="date" id="date_from" name="date_from" value="{{ $filters['date_from'] }}">
+                    </div>
+                    <div>
+                        <label for="date_to">Até</label>
+                        <input class="form-control" type="date" id="date_to" name="date_to" value="{{ $filters['date_to'] }}">
+                    </div>
+                    @if($isManager)
+                        <div>
+                            <label for="user_id">Vendedor</label>
+                            <select class="form-control" id="user_id" name="user_id">
+                                <option value="">Todos</option>
+                                @foreach($sellers as $seller)
+                                    <option value="{{ $seller->id }}" @selected((string) $filters['user_id'] === (string) $seller->id)>
+                                        {{ $seller->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label for="campaign_id">Campanha</label>
+                            <select class="form-control" id="campaign_id" name="campaign_id">
+                                <option value="">Todas</option>
+                                @foreach($campaigns as $campaign)
+                                    <option value="{{ $campaign->id }}" @selected((string) $filters['campaign_id'] === (string) $campaign->id)>
+                                        {{ $campaign->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                    <div>
+                        <label for="product_id">Produto</label>
+                        <select class="form-control" id="product_id" name="product_id">
+                            <option value="">Todos</option>
+                            @foreach($products as $product)
+                                <option value="{{ $product->id }}" @selected((string) $filters['product_id'] === (string) $product->id)>
+                                    {{ $product->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="status">Status</label>
+                        <select class="form-control" id="status" name="status">
+                            <option value="">Todos</option>
+                            @foreach($statusOptions as $value => $label)
+                                <option value="{{ $value }}" @selected($filters['status'] === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="display:flex;align-items:end;">
+                        <button class="btn btn-primary client-btn" type="submit">Filtrar</button>
+                    </div>
                 </div>
-                <div>
-                    <label for="campaign_id">Campanha</label>
-                    <select class="form-control" id="campaign_id" name="campaign_id">
-                        <option value="">Todas</option>
-                        @foreach($campaigns as $campaign)
-                            <option value="{{ $campaign->id }}" @selected((string) $filters['campaign_id'] === (string) $campaign->id)>
-                                {{ $campaign->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            @endif
-            <div>
-                <label for="product_id">Produto</label>
-                <select class="form-control" id="product_id" name="product_id">
-                    <option value="">Todos</option>
-                    @foreach($products as $product)
-                        <option value="{{ $product->id }}" @selected((string) $filters['product_id'] === (string) $product->id)>
-                            {{ $product->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
-                <label for="status">Status</label>
-                <select class="form-control" id="status" name="status">
-                    <option value="">Todos</option>
-                    @foreach($statusOptions as $value => $label)
-                        <option value="{{ $value }}" @selected($filters['status'] === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div style="display:flex;align-items:end;">
-                <button class="btn btn-primary" type="submit">Filtrar</button>
-            </div>
-        </div>
-    </form>
+            </form>
+        </x-slot:filters>
+    </x-client.crud-toolbar>
 
-    <div class="card" style="overflow-x:auto;">
+    <div class="card client-data-table" style="overflow-x:auto;">
         <table class="table" style="width:100%;">
             <thead>
             <tr>
@@ -156,7 +157,7 @@
             @endforelse
             </tbody>
         </table>
-        <div style="margin-top:1rem;">{{ $commissions->links() }}</div>
+        <x-client.pagination-bar :paginator="$commissions" />
     </div>
 
     <style>

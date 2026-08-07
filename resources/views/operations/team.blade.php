@@ -19,7 +19,7 @@
 
 <div class="team-hub">
     <nav class="client-hub-tabs" aria-label="Seções da equipe">
-        <a class="client-hub-tab is-active" href="{{ route('operations.team') }}">
+        <a class="client-hub-tab is-active" href="{{ route('operations.team') }}" aria-current="page">
             <i data-lucide="users" class="w-4 h-4"></i> Usuários
         </a>
         <a class="client-hub-tab" href="#team-roles">

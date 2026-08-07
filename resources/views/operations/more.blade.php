@@ -12,19 +12,23 @@
     <x-client.secondary-button :href="route('profile.edit')">Meu perfil</x-client.secondary-button>
 </x-client.page-header>
 
-@forelse($moreSections as $section)
-    <x-client.section-card :title="$section['label']">
-        <x-client.quick-actions>
-            @foreach($section['items'] as $item)
-                <x-client.secondary-button :href="route($item['route'], $item['params'])">{{ $item['label'] }}</x-client.secondary-button>
-            @endforeach
-        </x-client.quick-actions>
-    </x-client.section-card>
-@empty
+@if(count($moreSections) > 0)
+    <div class="grid grid-2">
+        @foreach($moreSections as $section)
+            <x-client.section-card :title="$section['label']">
+                <x-client.quick-actions>
+                    @foreach($section['items'] as $item)
+                        <x-client.secondary-button :href="route($item['route'], $item['params'])">{{ $item['label'] }}</x-client.secondary-button>
+                    @endforeach
+                </x-client.quick-actions>
+            </x-client.section-card>
+        @endforeach
+    </div>
+@else
     <x-client.empty-state
         title="Nenhuma opção adicional disponível"
         description="Seu perfil de acesso atual não libera telas avançadas."
         icon="lock"
     />
-@endforelse
+@endif
 @endsection
