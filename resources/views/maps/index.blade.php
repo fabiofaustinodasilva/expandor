@@ -56,7 +56,7 @@
                     @if($permissions['properties_manage'])
                         <button id="btn-new-point" type="button"
                                 class="map-btn-meu-local h-12 md:h-14 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm md:text-base inline-flex items-center justify-center gap-2 flex-1 sm:flex-none min-w-[9.5rem] shadow-lg"
-                                title="Usar minha localização para cadastrar">
+                                title="Centralizar o mapa na minha posição GPS">
                             <i data-lucide="map-pin" class="w-5 h-5 shrink-0" aria-hidden="true"></i>
                             <span>Meu Local</span>
                         </button>
@@ -183,7 +183,7 @@
     <div id="map-empty-state" class="absolute inset-0 z-10 hidden items-center justify-center pointer-events-none p-6 lg:pr-[316px]">
         <div class="pointer-events-auto max-w-sm w-full rounded-2xl bg-slate-950/95 border border-slate-700 p-5 text-center shadow-xl">
             <div class="text-lg font-semibold mb-1">Nenhuma residência nesta área</div>
-            <p class="text-slate-400 text-sm mb-4">Use Meu Local para cadastrar a partir da sua posição GPS.</p>
+            <p class="text-slate-400 text-sm mb-4">Use Meu Local para se localizar e toque no mapa para registrar um ponto.</p>
             @if($permissions['properties_manage'])
                 <button type="button" id="btn-empty-add-point" class="map-btn-meu-local w-full h-12 rounded-xl bg-sky-500 text-slate-950 font-bold inline-flex items-center justify-center gap-2">
                     <i data-lucide="map-pin" class="w-5 h-5" aria-hidden="true"></i>
@@ -558,12 +558,12 @@
         <div id="point-modal-backdrop" class="absolute inset-0 bg-black/60"></div>
         <div class="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700 p-5 max-h-[92vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-3">
-                <h3 class="text-lg font-semibold" id="point-modal-title">Meu Local</h3>
-                <button id="point-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <h3 class="text-lg font-semibold" id="point-modal-title">Novo ponto</h3>
+                <button id="point-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800" aria-label="Fechar"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="rounded-xl bg-slate-900 border border-slate-800 p-3 mb-4 text-sm" id="point-gps-block">
-                <div class="text-slate-400 text-xs uppercase mb-1" id="point-gps-title">Capturando localização...</div>
-                <div id="point-gps-label" class="text-sm text-sky-300 font-medium">Aguarde um instante</div>
+                <div class="text-slate-400 text-xs uppercase mb-1" id="point-gps-title">Local no mapa</div>
+                <div id="point-gps-label" class="text-sm text-sky-300 font-medium">Posição pronta para registro</div>
                 <div class="text-xs text-slate-500 mt-1 field-seller-hide-meta" id="point-meta-label">Você: {{ $sellerName }}</div>
                 <div class="text-xs text-emerald-400 mt-0.5 font-medium" id="point-accuracy-label"></div>
                 <div class="text-xs text-slate-400 mt-0.5 field-seller-hide-meta" id="point-accuracy-class"></div>
@@ -663,7 +663,10 @@
                     </div>
                 </div>
                 <p id="point-error" class="text-sm text-rose-400 hidden"></p>
-                <button type="submit" id="point-submit" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold text-base sticky bottom-0">Salvar</button>
+                <div class="point-form-actions sticky bottom-0 -mx-1 px-1 pt-2 pb-1 bg-slate-950/95 backdrop-blur-sm space-y-2 z-10">
+                    <button type="submit" id="point-submit" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold text-base">Salvar</button>
+                    <button type="button" id="point-modal-cancel" class="w-full h-12 rounded-xl border border-slate-700 text-slate-200 font-medium text-sm">Voltar ao mapa</button>
+                </div>
             </form>
         </div>
     </div>
@@ -705,7 +708,7 @@
             </div>
             <div class="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 mb-5">
                 <div class="text-xs uppercase tracking-wide text-slate-500 mb-1">Meu Local</div>
-                <p class="text-sm text-slate-200" id="brief-next-house">Toque em Meu Local para cadastrar a partir do GPS, sem etapas extras.</p>
+                <p class="text-sm text-slate-200" id="brief-next-house">Use Meu Local para se localizar. Depois toque no mapa para registrar o ponto.</p>
             </div>
             <button type="button" id="seller-start-route" class="w-full h-16 rounded-2xl bg-sky-500 text-slate-950 font-extrabold text-lg shadow-[0_12px_32px_rgba(14,165,233,0.45)]">
                 Começar no mapa
@@ -721,15 +724,15 @@
             <ol class="space-y-3 mb-6 text-sm text-slate-200">
                 <li class="flex gap-3 items-start">
                     <span class="shrink-0 w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center">1</span>
-                    <span><strong class="text-white">Meu Local</strong> — use o GPS para abrir o cadastro na sua posição.</span>
+                    <span><strong class="text-white">Meu Local</strong> — centraliza o mapa na sua posição GPS.</span>
                 </li>
                 <li class="flex gap-3 items-start">
                     <span class="shrink-0 w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center">2</span>
-                    <span><strong class="text-white">Registre o resultado</strong> — ao salvar o ponto, diga como foi o atendimento.</span>
+                    <span><strong class="text-white">Toque no mapa</strong> — o formulário abre direto. Informe a situação e salve.</span>
                 </li>
                 <li class="flex gap-3 items-start">
                     <span class="shrink-0 w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center">3</span>
-                    <span><strong class="text-white">Continue na rua</strong> — toque no mapa ou use Meu Local de novo.</span>
+                    <span><strong class="text-white">Continue na rua</strong> — volte ao mapa e registre o próximo ponto.</span>
                 </li>
             </ol>
             <button type="button" id="seller-tips-continue" class="w-full h-14 rounded-2xl bg-sky-500 text-slate-950 font-bold mb-2">Entendi, vamos lá</button>
@@ -913,7 +916,19 @@
             grid-template-columns: 1fr 1fr;
         }
     }
-    body.adjust-mode { cursor: grab; }
+    @media (max-width: 430px) {
+        .map-toolbar { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+        .map-btn-meu-local { min-width: 7.5rem; padding-left: 0.75rem; padding-right: 0.75rem; }
+        #map-bottom-left-controls { max-width: calc(100vw - 1.5rem); }
+        body.map-fullscreen .op-main,
+        body.field-seller .op-main { overflow-x: hidden; }
+        #point-modal .relative { max-height: min(92dvh, 100%); }
+        .point-form-actions { box-shadow: 0 -8px 24px rgba(2, 6, 23, 0.55); }
+    }
+    @media (max-width: 320px) {
+        .map-btn-meu-local span { font-size: 0.8rem; }
+        .map-btn-recenter { font-size: 0.65rem; max-width: 42vw; }
+    }
     body.adjust-mode .leaflet-marker-draggable { cursor: grabbing; }
     body.region-select-mode { cursor: crosshair; }
 </style>
@@ -924,5 +939,5 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="{{ asset('js/map-provider.js') }}?v=2"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=43"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=44"></script>
 @endpush

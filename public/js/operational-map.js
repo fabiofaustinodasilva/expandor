@@ -76,7 +76,6 @@
     const pointModal = document.getElementById('point-modal');
     const pointForm = document.getElementById('point-form');
     const pointError = document.getElementById('point-error');
-    const emptySpotModal = document.getElementById('empty-spot-modal');
     const adjustBanner = document.getElementById('adjust-banner');
     const adjustConfirmModal = document.getElementById('adjust-confirm-modal');
     const postCreateAdjustModal = document.getElementById('post-create-adjust-modal');
@@ -89,7 +88,6 @@
     let suppressMoveLoad = false;
     let initialFitDone = false;
     let loadSeq = 0;
-    let pendingEmptyLatLng = null;
     let ignoreMapClickUntil = 0;
     let adjustState = null;
     let pendingPostCreatePropertyId = null;
@@ -972,7 +970,7 @@
             else notesHint.textContent = '(opcional)';
         }
         if (submitBtn && isFieldSeller) {
-            submitBtn.textContent = status === 'installation_requested' ? 'Confirmar venda' : 'Salvar atendimento';
+            submitBtn.textContent = status === 'installation_requested' ? 'Confirmar venda' : 'Salvar';
         }
         if (status !== 'installation_requested') {
             clearSaleFinalizeFields('point');
@@ -1625,10 +1623,28 @@
         return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
 
+    function gpsErrorMessage(error) {
+        const code = error && typeof error.code === 'number' ? error.code : null;
+        // 1 PERMISSION_DENIED, 2 POSITION_UNAVAILABLE, 3 TIMEOUT
+        if (code === 1) {
+            return 'Verifique a permissão de localização do navegador.';
+        }
+        if (code === 3) {
+            return 'Não foi possível acessar sua localização. Tente de novo.';
+        }
+        if (code === 2) {
+            return 'Não foi possível acessar sua localização.';
+        }
+        if (!navigator.geolocation) {
+            return 'Este navegador não oferece localização.';
+        }
+        return 'Não foi possível acessar sua localização.';
+    }
+
     function getGps() {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
-                reject(new Error('Permita o acesso à localização para usar o Meu Local.'));
+                reject(new Error(gpsErrorMessage(null)));
                 return;
             }
             navigator.geolocation.getCurrentPosition(
@@ -1641,7 +1657,7 @@
                     sellerGps = coords;
                     resolve(coords);
                 },
-                () => reject(new Error('Permita o acesso à localização para usar o Meu Local.')),
+                (err) => reject(new Error(gpsErrorMessage(err))),
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
             );
         });
@@ -1740,12 +1756,12 @@
         document.getElementById('point-mode').value = mode;
         document.getElementById('point-modal-title').textContent = mode === 'edit'
             ? 'Editar residência'
-            : 'Meu Local';
+            : 'Novo ponto';
         document.getElementById('point-submit').textContent = mode === 'edit'
             ? 'Salvar alterações'
-            : (isFieldSeller ? 'Salvar atendimento' : 'Salvar');
+            : 'Salvar';
         const title = document.getElementById('point-gps-title');
-        if (title) title.textContent = mode === 'edit' ? 'Local da residência' : 'Capturando localização...';
+        if (title) title.textContent = mode === 'edit' ? 'Local da residência' : 'Local no mapa';
 
         const managerStatus = document.getElementById('point-manager-status');
         const firstApproach = document.getElementById('point-first-approach');
@@ -1794,46 +1810,23 @@
             return;
         }
 
-        document.getElementById('point-gps-label').textContent = 'Aguarde um instante';
-        if (title) title.textContent = 'Capturando localização...';
-        document.getElementById('point-accuracy-label').textContent = '';
-        const classEl = document.getElementById('point-accuracy-class');
-        if (classEl) classEl.textContent = '';
-        document.getElementById('point-adjust-on-map')?.classList.add('hidden');
-        pointModal.classList.add('open');
-        try {
-            const gps = await getGps();
-            fillPointCoords(gps.latitude, gps.longitude, gps.accuracy);
-            centerMapOnCoords(gps.latitude, gps.longitude, 17);
-            toast('Localização obtida');
-        } catch (error) {
-            if (title) title.textContent = 'Localização indisponível';
-            const friendly = 'Permita o acesso à localização para usar o Meu Local.';
-            pointError.textContent = friendly + ' Você também pode tocar no mapa para escolher o local.';
-            pointError.classList.remove('hidden');
-            toast(friendly, 'error');
-        }
-        if (window.lucide) window.lucide.createIcons();
+        // Sprint 8.2.9: sem coords = não abre cadastro (Meu Local só localiza).
+        return;
     }
 
     function closePointModal() {
         pointModal?.classList.remove('open');
-        clearDraftLocationMarker();
+        pointSubmitting = false;
     }
 
-    function openEmptySpot(latlng) {
-        // Sprint 8.2.7: sem etapa intermediária — abre o formulário direto.
+    function openCreateAtMapTap(latlng) {
+        // Sprint 8.2.7+: toque no mapa → formulário direto (sem etapa intermediária).
         if (!canCreatePoint || !latlng) return;
         openPointModal({
             latitude: latlng.lat,
             longitude: latlng.lng,
             accuracy: null,
         });
-    }
-
-    function closeEmptySpot() {
-        pendingEmptyLatLng = null;
-        emptySpotModal?.classList.remove('open');
     }
 
     function openDeleteModal() {
@@ -1887,8 +1880,11 @@
         }
     }
 
+    let pointSubmitting = false;
+
     async function submitPoint(event) {
         event.preventDefault();
+        if (pointSubmitting) return;
         const mode = document.getElementById('point-mode').value || 'create';
         if (mode === 'create' && !canCreatePoint) return;
         if (mode === 'edit' && !canEditPoint) return;
@@ -1937,6 +1933,7 @@
         }
 
         submitBtn.disabled = true;
+        pointSubmitting = true;
         pointError.classList.add('hidden');
 
         const payload = {
@@ -1969,12 +1966,13 @@
         }
 
         if (!payload.street) {
-            payload.street = isFieldSeller ? 'Local GPS' : '';
+            payload.street = isFieldSeller ? 'Posição no mapa' : '';
         }
         if (!payload.street) {
             pointError.textContent = 'Informe a rua.';
             pointError.classList.remove('hidden');
             submitBtn.disabled = false;
+            pointSubmitting = false;
             return;
         }
         if (!payload.city_id && citySelect.value) {
@@ -2032,6 +2030,7 @@
             }
 
             closePointModal();
+            clearDraftLocationMarker();
             const saleDone = useFirstApproach && status === 'installation_requested';
             const saveMsg = saleDone
                 ? saleRegisteredToast
@@ -2091,11 +2090,10 @@
                 toast(friendlySave, 'error');
             }
         } finally {
+            pointSubmitting = false;
             submitBtn.disabled = false;
         }
     }
-
-    citySelect.addEventListener('change', () => {
         filterSectorsByCity();
         initialFitDone = false;
         loadMarkers({ fit: true, useBbox: false });
@@ -2262,7 +2260,6 @@
             closeDrawer();
             closeVisitModal();
             closePointModal();
-            closeEmptySpot();
             closeDeleteModal();
             closePostCreateAdjust();
             closePostVisitModal();
@@ -2278,7 +2275,7 @@
         if (adjustState || regionSelectMode) return;
         if (!canCreatePoint) return;
         if (Date.now() < ignoreMapClickUntil) return;
-        openEmptySpot(event.latlng);
+        openCreateAtMapTap(event.latlng);
     });
 
     clusterGroup.on('click', () => {
@@ -2389,7 +2386,7 @@
                 centerMapOnCoords(gps.latitude, gps.longitude, 17);
             }
         } catch (e) {}
-        toast('Mapa pronto — use Meu Local para cadastrar.');
+        toast('Mapa pronto — toque no mapa para registrar um ponto.');
     }
 
     function updateOfflineBadge() {
@@ -2529,29 +2526,37 @@
         metricsPanel.classList.remove('open');
     });
 
-    document.getElementById('btn-new-point')?.addEventListener('click', () => openPointModal(null));
-    document.getElementById('btn-new-point-side')?.addEventListener('click', () => openPointModal(null));
-    document.getElementById('btn-empty-add-point')?.addEventListener('click', () => openPointModal(null));
+    document.getElementById('btn-new-point')?.addEventListener('click', () => {
+        locateMyPosition({ sourceBtn: document.getElementById('btn-new-point') }).catch(() => {});
+    });
+    document.getElementById('btn-new-point-side')?.addEventListener('click', () => {
+        locateMyPosition({ sourceBtn: document.getElementById('btn-new-point-side') }).catch(() => {});
+    });
+    document.getElementById('btn-empty-add-point')?.addEventListener('click', () => {
+        locateMyPosition({ sourceBtn: document.getElementById('btn-empty-add-point') }).catch(() => {});
+    });
 
-    async function recenterOnMyLocation() {
-        const btn = document.getElementById('btn-recenter-location');
+    /** Sprint 8.2.9: Meu Local / Minha localização — só GPS + centralizar (não cria ponto). */
+    async function locateMyPosition({ sourceBtn } = {}) {
+        const btn = sourceBtn || document.getElementById('btn-recenter-location');
         if (btn) btn.disabled = true;
         try {
             const gps = await getGps();
             centerMapOnCoords(gps.latitude, gps.longitude, 17);
             toast('Localização obtida');
         } catch (error) {
-            toast(error.message || 'Permita o acesso à localização para usar o Meu Local.', 'error');
+            toast(error.message || 'Não foi possível acessar sua localização.', 'error');
         } finally {
             if (btn) btn.disabled = false;
         }
     }
 
     document.getElementById('btn-recenter-location')?.addEventListener('click', () => {
-        recenterOnMyLocation().catch(() => {});
+        locateMyPosition({ sourceBtn: document.getElementById('btn-recenter-location') }).catch(() => {});
     });
     document.getElementById('point-modal-close')?.addEventListener('click', closePointModal);
     document.getElementById('point-modal-backdrop')?.addEventListener('click', closePointModal);
+    document.getElementById('point-modal-cancel')?.addEventListener('click', closePointModal);
     pointForm?.addEventListener('submit', submitPoint);
     document.getElementById('point-adjust-on-map')?.addEventListener('click', () => {
         const lat = Number(document.getElementById('point-latitude').value);
@@ -2567,10 +2572,7 @@
         });
     });
 
-    // empty-spot-modal removido na UI (8.2.7); handlers mantidos como no-ops seguros
-    document.getElementById('empty-spot-cancel')?.addEventListener('click', closeEmptySpot);
-    document.getElementById('empty-spot-backdrop')?.addEventListener('click', closeEmptySpot);
-    document.getElementById('empty-spot-confirm')?.addEventListener('click', closeEmptySpot);
+    // empty-spot-modal removido (8.2.7+)
 
     document.getElementById('delete-point-cancel')?.addEventListener('click', closeDeleteModal);
     document.getElementById('delete-point-backdrop')?.addEventListener('click', closeDeleteModal);
@@ -2673,7 +2675,7 @@
         }).catch(() => {});
         if (window.lucide) window.lucide.createIcons();
         if (openNewPointOnLoad) {
-            openPointModal(null);
+            locateMyPosition().catch(() => {});
         }
         if (isFieldSeller) {
             ensureSellerGps().catch(() => {});

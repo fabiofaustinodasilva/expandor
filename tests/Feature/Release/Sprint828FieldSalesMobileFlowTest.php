@@ -106,11 +106,12 @@ class Sprint828FieldSalesMobileFlowTest extends TestCase
         $js = file_get_contents(public_path('js/operational-map.js'));
         $this->assertIsString($js);
 
-        $this->assertStringContainsString('Permita o acesso à localização para usar o Meu Local.', $js);
+        $this->assertStringContainsString('Não foi possível acessar sua localização.', $js);
+        $this->assertStringContainsString('Verifique a permissão de localização do navegador.', $js);
         $this->assertStringContainsString("'Localização obtida'", $js);
         $this->assertStringContainsString("'Ponto registrado'", $js);
         $this->assertStringContainsString('Não foi possível salvar. Tente novamente.', $js);
-        $this->assertStringContainsString('function recenterOnMyLocation()', $js);
+        $this->assertStringContainsString('function locateMyPosition(', $js);
         $this->assertStringContainsString("getElementById('btn-recenter-location')", $js);
         $this->assertStringContainsString('Posição pronta para registro', $js);
         $this->assertStringContainsString('openPostCreateAdjust', $js);
@@ -120,6 +121,7 @@ class Sprint828FieldSalesMobileFlowTest extends TestCase
         );
         $this->assertStringContainsString('function centerMapOnCoords', $js);
         $this->assertStringContainsString('openPointModal({', $js);
+        $this->assertStringContainsString('openCreateAtMapTap', $js);
         $this->assertStringNotContainsString('emptySpotModal?.classList.add(\'open\')', $js);
     }
 
@@ -137,7 +139,7 @@ class Sprint828FieldSalesMobileFlowTest extends TestCase
         $this->assertStringContainsString('id="btn-recenter-location"', $html);
         $this->assertStringContainsString('map-btn-recenter', $html);
         $this->assertStringContainsString('field-seller-outcome-grid', $html);
-        $this->assertStringContainsString('operational-map.js?v=43', $html);
+        $this->assertStringContainsString('operational-map.js?v=44', $html);
         $this->assertStringContainsString('@media (max-width: 640px)', $html);
     }
 }

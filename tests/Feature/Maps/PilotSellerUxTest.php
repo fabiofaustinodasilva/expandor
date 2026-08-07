@@ -43,7 +43,7 @@ class PilotSellerUxTest extends TestCase
             ->assertSee('Começar no mapa')
             ->assertSee('seller-tips-modal')
             ->assertSee('Meu Local')
-            ->assertSee('Registre o resultado')
+            ->assertSee('Toque no mapa')
             ->assertSee('Continue na rua')
             ->assertSee('Pular')
             ->assertSee('visit-sale-finalize')
