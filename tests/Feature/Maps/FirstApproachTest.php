@@ -222,7 +222,8 @@ class FirstApproachTest extends TestCase
             ->assertSee('point-first-approach')
             ->assertSee('Resultado do atendimento')
             ->assertSee('Registre o resultado')
-            ->assertSee('btn-next-house');
+            ->assertSee('Meu Local')
+            ->assertDontSee('btn-next-house');
     }
 
     public function test_action_message_constant_is_stable_for_clients(): void

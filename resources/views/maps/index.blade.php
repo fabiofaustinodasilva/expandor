@@ -42,9 +42,9 @@
     data-commercial-legend='@json($commercialLegend)'
     data-sellers='@json($sellers->map(fn ($s) => ["id" => $s->id, "name" => $s->name])->values())'
 >
-    <header class="absolute top-0 inset-x-0 z-30 pointer-events-none p-3 md:p-4 lg:pr-[316px]">
+    <header class="absolute top-0 inset-x-0 z-30 pointer-events-none p-3 pt-[4.25rem] md:p-4 md:pt-4 lg:pr-[316px] map-toolbar">
         <div class="pointer-events-auto flex flex-col gap-2">
-            <div class="flex gap-2 items-center">
+            <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                 <div id="map-search-wrap" class="relative flex-1 min-w-0 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl flex items-center gap-2 px-3 h-12 md:h-14">
                     <i data-lucide="search" class="w-5 h-5 text-slate-400 shrink-0"></i>
                     <input id="map-search" type="search" placeholder="Buscar cliente, telefone, CPF ou endereço…"
@@ -52,25 +52,27 @@
                            autocomplete="off" aria-label="Buscar no mapa" aria-controls="map-search-results" aria-expanded="false">
                     <div id="map-search-results" class="hidden absolute left-0 right-0 top-[calc(100%+0.4rem)] z-50 max-h-72 overflow-y-auto rounded-xl border border-slate-700 bg-slate-950 shadow-xl" role="listbox"></div>
                 </div>
-                @if($permissions['properties_manage'])
-                    <button id="btn-new-point" type="button"
-                            class="h-12 md:h-14 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm md:text-base inline-flex items-center gap-2 shrink-0 shadow-lg">
-                        <i data-lucide="plus" class="w-5 h-5"></i>
-                        <span>Novo ponto</span>
+                <div class="flex gap-2 items-center shrink-0">
+                    @if($permissions['properties_manage'])
+                        <button id="btn-new-point" type="button"
+                                class="map-btn-meu-local h-12 md:h-14 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm md:text-base inline-flex items-center justify-center gap-2 flex-1 sm:flex-none min-w-[9.5rem] shadow-lg"
+                                title="Usar minha localização para cadastrar">
+                            <i data-lucide="map-pin" class="w-5 h-5 shrink-0" aria-hidden="true"></i>
+                            <span>Meu Local</span>
+                        </button>
+                    @endif
+                    <span id="offline-queue-badge" class="hidden h-12 md:h-14 px-3 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold items-center gap-1 shrink-0">
+                        <span id="offline-queue-count">0</span> pendente(s)
+                    </span>
+                    @unless(!empty($isFieldSeller))
+                    <button id="toggle-filters-manager" type="button" class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-2" title="Filtros">
+                        <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
                     </button>
-                @endif
-                <span id="offline-queue-badge" class="hidden h-12 md:h-14 px-3 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold items-center gap-1 shrink-0">
-                    <span id="offline-queue-count">0</span> pendente(s)
-                </span>
-                @unless(!empty($isFieldSeller))
-                {{-- Manager/Admin: filtros + métricas --}}
-                <button id="toggle-filters-manager" type="button" class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-2" title="Filtros">
-                    <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
-                </button>
-                <button id="toggle-metrics" type="button" class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-2 lg:hidden">
-                    <i data-lucide="activity" class="w-5 h-5"></i>
-                </button>
-                @endunless
+                    <button id="toggle-metrics" type="button" class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-2 lg:hidden" title="Métricas">
+                        <i data-lucide="activity" class="w-5 h-5"></i>
+                    </button>
+                    @endunless
+                </div>
             </div>
 
             @unless(!empty($isFieldSeller))
@@ -169,20 +171,17 @@
         </div>
     </div>
 
-    {{-- Ação principal de campo: próxima casa --}}
-    <div id="next-house-wrap" class="absolute inset-x-0 bottom-20 sm:bottom-4 z-25 flex justify-center pointer-events-none px-3 lg:pr-[316px]">
-        <button type="button" id="btn-next-house"
-                class="pointer-events-auto h-16 sm:h-[4.25rem] w-full max-w-sm px-6 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-lg shadow-[0_12px_40px_rgba(14,165,233,0.55)] ring-4 ring-sky-400/30 inline-flex items-center justify-center gap-2">
-            Próxima casa
-        </button>
-    </div>
+    {{-- Sprint 8.2.7: CTA de rota removida — fluxo via Meu Local --}}
 
     <div id="map-empty-state" class="absolute inset-0 z-10 hidden items-center justify-center pointer-events-none p-6 lg:pr-[316px]">
         <div class="pointer-events-auto max-w-sm w-full rounded-2xl bg-slate-950/95 border border-slate-700 p-5 text-center shadow-xl">
             <div class="text-lg font-semibold mb-1">Nenhuma residência nesta área</div>
-            <p class="text-slate-400 text-sm mb-4">Cadastre um novo ponto para começar a vender nesta região.</p>
+            <p class="text-slate-400 text-sm mb-4">Use Meu Local para cadastrar a partir da sua posição GPS.</p>
             @if($permissions['properties_manage'])
-                <button type="button" id="btn-empty-add-point" class="w-full h-12 rounded-xl bg-sky-500 text-slate-950 font-bold">+ Novo ponto</button>
+                <button type="button" id="btn-empty-add-point" class="map-btn-meu-local w-full h-12 rounded-xl bg-sky-500 text-slate-950 font-bold inline-flex items-center justify-center gap-2">
+                    <i data-lucide="map-pin" class="w-5 h-5" aria-hidden="true"></i>
+                    <span>Meu Local</span>
+                </button>
             @endif
         </div>
     </div>
@@ -323,8 +322,9 @@
             </div>
 
             @if($permissions['properties_manage'])
-                <button id="btn-new-point-side" type="button" class="w-full h-12 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold">
-                    + Novo ponto
+                <button id="btn-new-point-side" type="button" class="map-btn-meu-local w-full h-12 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold inline-flex items-center justify-center gap-2">
+                    <i data-lucide="map-pin" class="w-5 h-5" aria-hidden="true"></i>
+                    <span>Meu Local</span>
                 </button>
             @endif
         </div>
@@ -430,18 +430,8 @@
     </div>
     <div id="drawer-backdrop" class="absolute inset-0 z-30 bg-black/40 opacity-0 pointer-events-none transition-opacity lg:hidden"></div>
 
-    {{-- Empty map confirm --}}
-    <div id="empty-spot-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
-        <div id="empty-spot-backdrop" class="absolute inset-0 bg-black/60"></div>
-        <div class="relative w-full max-w-sm rounded-2xl bg-slate-950 border border-slate-700 p-5 text-center">
-            <h3 class="text-lg font-semibold mb-1">Casa sem cadastro</h3>
-            <p class="text-slate-400 text-sm mb-4">Quer adicionar este ponto no mapa?</p>
-            <div class="grid grid-cols-2 gap-2">
-                <button type="button" id="empty-spot-cancel" class="h-12 rounded-xl border border-slate-700">Não</button>
-                <button type="button" id="empty-spot-confirm" class="h-12 rounded-xl bg-sky-500 text-slate-950 font-bold">Sim</button>
-            </div>
-        </div>
-    </div>
+    {{-- Sprint 8.2.7: etapa "Casa sem cadastro" removida — clique no mapa abre o formulário direto --}}
+    <div id="empty-spot-modal" class="fixed inset-0 z-50 hidden" hidden aria-hidden="true"></div>
 
     {{-- Delete confirm --}}
     <div id="delete-point-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
@@ -552,7 +542,7 @@
             <div class="text-3xl mb-2">✅</div>
             <h3 class="text-lg font-semibold mb-1">Visita salva</h3>
             <p class="text-slate-400 text-sm mb-4">Pronto. Continuar na rua?</p>
-            <button type="button" id="post-visit-next" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold mb-2">➡ Próxima casa</button>
+            <button type="button" id="post-visit-next" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold mb-2">Continuar no mapa</button>
             <button type="button" id="post-visit-close" class="w-full h-11 rounded-xl border border-slate-700 text-sm">Ficar aqui</button>
         </div>
     </div>
@@ -562,7 +552,7 @@
         <div id="point-modal-backdrop" class="absolute inset-0 bg-black/60"></div>
         <div class="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700 p-5 max-h-[92vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-3">
-                <h3 class="text-lg font-semibold" id="point-modal-title">Novo ponto</h3>
+                <h3 class="text-lg font-semibold" id="point-modal-title">Meu Local</h3>
                 <button id="point-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <div class="rounded-xl bg-slate-900 border border-slate-800 p-3 mb-4 text-sm">
@@ -708,11 +698,11 @@
                 </div>
             </div>
             <div class="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 mb-5">
-                <div class="text-xs uppercase tracking-wide text-slate-500 mb-1">Próxima casa</div>
-                <p class="text-sm text-slate-200" id="brief-next-house">Ao começar, o mapa leva você até a próxima casa da rota.</p>
+                <div class="text-xs uppercase tracking-wide text-slate-500 mb-1">Meu Local</div>
+                <p class="text-sm text-slate-200" id="brief-next-house">Toque em Meu Local para cadastrar a partir do GPS, sem etapas extras.</p>
             </div>
             <button type="button" id="seller-start-route" class="w-full h-16 rounded-2xl bg-sky-500 text-slate-950 font-extrabold text-lg shadow-[0_12px_32px_rgba(14,165,233,0.45)]">
-                Começar rota
+                Começar no mapa
             </button>
         </div>
     </div>
@@ -725,15 +715,15 @@
             <ol class="space-y-3 mb-6 text-sm text-slate-200">
                 <li class="flex gap-3 items-start">
                     <span class="shrink-0 w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center">1</span>
-                    <span><strong class="text-white">Veja sua próxima casa</strong> — o botão leva você até o próximo ponto da rota.</span>
+                    <span><strong class="text-white">Meu Local</strong> — use o GPS para abrir o cadastro na sua posição.</span>
                 </li>
                 <li class="flex gap-3 items-start">
                     <span class="shrink-0 w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center">2</span>
-                    <span><strong class="text-white">Registre o resultado</strong> — ao adicionar o ponto, diga como foi o atendimento.</span>
+                    <span><strong class="text-white">Registre o resultado</strong> — ao salvar o ponto, diga como foi o atendimento.</span>
                 </li>
                 <li class="flex gap-3 items-start">
                     <span class="shrink-0 w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center">3</span>
-                    <span><strong class="text-white">Avance para a próxima</strong> — continue a rua sem perder o ritmo.</span>
+                    <span><strong class="text-white">Continue na rua</strong> — toque no mapa ou use Meu Local de novo.</span>
                 </li>
             </ol>
             <button type="button" id="seller-tips-continue" class="w-full h-14 rounded-2xl bg-sky-500 text-slate-950 font-bold mb-2">Entendi, vamos lá</button>
@@ -786,7 +776,7 @@
     #commercial-filters.open { display: block !important; }
     #map-legend-panel.open { display: block !important; }
     .visit-quick.is-selected { border-color: #38bdf8 !important; background: rgba(14,165,233,.12) !important; }
-    #btn-next-house { z-index: 25; }
+    #map-empty-state { z-index: 10; }
     #offline-queue-badge:not(.hidden) { display: inline-flex; }
 
     /* Manager vs Seller chrome — também via data-attr (não depende só de body.field-seller) */
@@ -840,8 +830,9 @@
     #map-search-results button:last-child { border-bottom: 0; }
     #map-search-results .search-hit-meta { font-size: 0.75rem; color: #94a3b8; margin-top: 0.15rem; }
     body.field-seller #map-filters-form { display: none !important; }
+    #basemap-controls { bottom: 5.5rem; }
     body.field-seller #basemap-controls {
-        bottom: 11.5rem;
+        bottom: 5.5rem;
         left: 0.75rem;
     }
     body.field-seller #basemap-controls .basemap-btn {
@@ -851,26 +842,12 @@
         font-size: 10px;
         border-radius: 0.65rem;
     }
-    body.field-seller #next-house-wrap {
-        bottom: 5.5rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-    body.field-seller #btn-next-house {
-        bottom: auto;
-        min-height: 4rem;
-        font-size: 1.125rem;
-        padding-left: 1.5rem;
-        padding-right: 1.5rem;
-        animation: nextHousePulse 2.4s ease-in-out infinite;
-    }
     @media (min-width: 640px) {
-        body.field-seller #next-house-wrap { bottom: 1.25rem; }
-        body.field-seller #basemap-controls { bottom: 6.5rem; }
+        body.field-seller #basemap-controls { bottom: 1.5rem; }
+        .map-toolbar { padding-top: 1rem !important; }
     }
-    @keyframes nextHousePulse {
-        0%, 100% { box-shadow: 0 12px 40px rgba(14,165,233,0.45); transform: translateY(0); }
-        50% { box-shadow: 0 16px 48px rgba(14,165,233,0.7); transform: translateY(-1px); }
+    @media (max-width: 900px) {
+        .map-toolbar { padding-top: 4.25rem !important; }
     }
     body.field-seller .visit-notes-block { display: none; }
     body.field-seller .visit-campaign-block select { font-size: 14px; }
@@ -887,8 +864,11 @@
         #commercial-filters .text-xs { font-size: 11px; }
         body.field-seller #point-modal .relative,
         body.field-seller #visit-modal .relative { max-height: 88dvh; overflow-y: auto; }
-        body.field-seller #btn-new-point span { display: none; }
-        body.field-seller #btn-new-point { padding-left: 0.9rem; padding-right: 0.9rem; }
+        .map-btn-meu-local span { display: inline !important; }
+        .map-btn-meu-local {
+            min-height: 3rem;
+            font-size: 0.95rem;
+        }
         body.field-seller #marker-drawer {
             width: min(100vw, 400px);
             max-height: 78dvh;
@@ -898,8 +878,7 @@
             border-left: 0;
             border-top: 1px solid rgb(51 65 85);
         }
-        body.field-seller #next-house-wrap { bottom: 5.75rem; }
-        body.field-seller #basemap-controls { bottom: 12rem; }
+        body.field-seller #basemap-controls { bottom: 5.5rem; }
     }
     body.adjust-mode { cursor: grab; }
     body.adjust-mode .leaflet-marker-draggable { cursor: grabbing; }
@@ -912,5 +891,5 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="{{ asset('js/map-provider.js') }}?v=2"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=41"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=42"></script>
 @endpush

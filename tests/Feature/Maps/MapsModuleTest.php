@@ -38,8 +38,8 @@ class MapsModuleTest extends TestCase
             ->assertSee('/api/v1/maps/markers')
             ->assertSee('map-provider')
             ->assertSee('commercial-filters')
-            ->assertSee('Próxima casa')
-            ->assertSee('btn-next-house');
+            ->assertSee('Meu Local')
+            ->assertDontSee('btn-next-house');
     }
 
     public function test_manager_map_shows_team_view_panel(): void
@@ -67,10 +67,11 @@ class MapsModuleTest extends TestCase
         $response = $this->actingAs($seller)->get(route('map.index'));
 
         $response->assertOk()
-            ->assertSee('Próxima casa')
-            ->assertSee('Começar rota')
+            ->assertSee('Meu Local')
+            ->assertSee('Começar no mapa')
             ->assertSee('Casas visitadas hoje')
-            ->assertSee('Novo ponto')
+            ->assertDontSee('Próxima casa')
+            ->assertDontSee('btn-next-house')
             ->assertSee('seller-day-brief')
             ->assertSee('data-is-field-seller="1"', false)
             ->assertSee('Situação')

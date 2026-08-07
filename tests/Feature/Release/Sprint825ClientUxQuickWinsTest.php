@@ -62,7 +62,7 @@ class Sprint825ClientUxQuickWinsTest extends TestCase
         $this->actingAs($admin)
             ->get(route('map.index'))
             ->assertOk()
-            ->assertSee('Novo ponto')
+            ->assertSee('Meu Local')
             ->assertDontSee('Nova oportunidade');
     }
 

@@ -1628,7 +1628,7 @@
     function getGps() {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
-                reject(new Error('Não conseguimos localizar você. Verifique a permissão de localização.'));
+                reject(new Error('Não foi possível obter sua localização.'));
                 return;
             }
             navigator.geolocation.getCurrentPosition(
@@ -1641,10 +1641,46 @@
                     sellerGps = coords;
                     resolve(coords);
                 },
-                () => reject(new Error('Não conseguimos localizar você.\nVerifique a permissão de localização.')),
+                () => reject(new Error('Não foi possível obter sua localização.')),
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
             );
         });
+    }
+
+    let draftLocationMarker = null;
+
+    function clearDraftLocationMarker() {
+        if (draftLocationMarker && map) {
+            try { map.removeLayer(draftLocationMarker); } catch (e) {}
+        }
+        draftLocationMarker = null;
+    }
+
+    function showDraftLocationMarker(lat, lng) {
+        if (!map || typeof L === 'undefined') return;
+        clearDraftLocationMarker();
+        const latNum = Number(lat);
+        const lngNum = Number(lng);
+        if (Number.isNaN(latNum) || Number.isNaN(lngNum)) return;
+        draftLocationMarker = L.circleMarker([latNum, lngNum], {
+            radius: 10,
+            color: '#0ea5e9',
+            weight: 3,
+            fillColor: '#38bdf8',
+            fillOpacity: 0.85,
+        }).addTo(map);
+        draftLocationMarker.bindTooltip('Meu Local', { permanent: false, direction: 'top' });
+    }
+
+    function centerMapOnCoords(lat, lng, zoom = 17) {
+        if (!map) return;
+        const latNum = Number(lat);
+        const lngNum = Number(lng);
+        if (Number.isNaN(latNum) || Number.isNaN(lngNum)) return;
+        suppressMoveLoad = true;
+        map.setView([latNum, lngNum], Math.max(map.getZoom?.() || 0, zoom));
+        setTimeout(() => { suppressMoveLoad = false; }, 600);
+        showDraftLocationMarker(latNum, lngNum);
     }
 
     function fillPointCoords(lat, lng, accuracy) {
@@ -1679,6 +1715,10 @@
         if (citySelect.value) {
             document.getElementById('point-city-id').value = citySelect.value;
         }
+        if (sectorSelect?.value) {
+            const sectorField = document.getElementById('point-sector-id');
+            if (sectorField) sectorField.value = sectorSelect.value;
+        }
     }
 
     async function openPointModal(coords, mode = 'create') {
@@ -1691,7 +1731,7 @@
         document.getElementById('point-mode').value = mode;
         document.getElementById('point-modal-title').textContent = mode === 'edit'
             ? 'Editar residência'
-            : (isFieldSeller ? 'Novo atendimento' : 'Novo ponto');
+            : 'Meu Local';
         document.getElementById('point-submit').textContent = mode === 'edit'
             ? 'Salvar alterações'
             : (isFieldSeller ? 'Salvar atendimento' : 'Salvar');
@@ -1739,6 +1779,7 @@
 
         if (coords) {
             fillPointCoords(coords.latitude, coords.longitude, coords.accuracy);
+            centerMapOnCoords(coords.latitude, coords.longitude, 17);
             pointModal.classList.add('open');
             if (window.lucide) window.lucide.createIcons();
             return;
@@ -1754,24 +1795,30 @@
         try {
             const gps = await getGps();
             fillPointCoords(gps.latitude, gps.longitude, gps.accuracy);
-            map.setView([gps.latitude, gps.longitude], Math.max(map.getZoom(), 17));
+            centerMapOnCoords(gps.latitude, gps.longitude, 17);
         } catch (error) {
             if (title) title.textContent = 'Localização indisponível';
-            pointError.textContent = error.message.replace(/\n/g, ' ');
+            const friendly = 'Não foi possível obter sua localização.';
+            pointError.textContent = friendly + ' Selecione a posição no mapa ou use Ajustar posição.';
             pointError.classList.remove('hidden');
-            toast(error.message.replace(/\n/g, ' '), 'error');
+            toast(friendly, 'error');
         }
         if (window.lucide) window.lucide.createIcons();
     }
 
     function closePointModal() {
         pointModal?.classList.remove('open');
+        clearDraftLocationMarker();
     }
 
     function openEmptySpot(latlng) {
-        if (!canCreatePoint) return;
-        pendingEmptyLatLng = latlng;
-        emptySpotModal?.classList.add('open');
+        // Sprint 8.2.7: sem etapa intermediária — abre o formulário direto.
+        if (!canCreatePoint || !latlng) return;
+        openPointModal({
+            latitude: latlng.lat,
+            longitude: latlng.lng,
+            accuracy: null,
+        });
     }
 
     function closeEmptySpot() {
@@ -2294,9 +2341,7 @@
         const next = findNextHouse();
         const hint = document.getElementById('brief-next-house');
         if (hint) {
-            hint.textContent = next
-                ? (next.address || next.resident_name || 'Ponto na rota') + (next.status_label ? ` · ${next.status_label}` : '')
-                : 'Ao começar, o mapa leva você até a próxima casa da rota.';
+            hint.textContent = 'Toque em Meu Local para cadastrar com GPS, ou toque no mapa para escolher o local.';
         }
         el.classList.add('open');
     }
@@ -2314,9 +2359,13 @@
     async function startSellerRoute() {
         markRouteStarted();
         closeSellerBrief();
-        await ensureSellerGps().catch(() => {});
-        goToNextHouse();
-        toast('Rota iniciada — boa venda!');
+        try {
+            const gps = await ensureSellerGps();
+            if (gps) {
+                centerMapOnCoords(gps.latitude, gps.longitude, 17);
+            }
+        } catch (e) {}
+        toast('Mapa pronto — use Meu Local para cadastrar.');
     }
 
     function updateOfflineBadge() {
@@ -2391,7 +2440,6 @@
 
     document.getElementById('post-visit-next')?.addEventListener('click', () => {
         closePostVisitModal();
-        goToNextHouse({ fromVisit: true });
     });
     document.getElementById('post-visit-close')?.addEventListener('click', closePostVisitModal);
     document.getElementById('post-visit-backdrop')?.addEventListener('click', closePostVisitModal);
@@ -2477,20 +2525,10 @@
         });
     });
 
+    // empty-spot-modal removido na UI (8.2.7); handlers mantidos como no-ops seguros
     document.getElementById('empty-spot-cancel')?.addEventListener('click', closeEmptySpot);
     document.getElementById('empty-spot-backdrop')?.addEventListener('click', closeEmptySpot);
-    document.getElementById('empty-spot-confirm')?.addEventListener('click', async () => {
-        const latlng = pendingEmptyLatLng;
-        closeEmptySpot();
-        if (!latlng) return;
-        try {
-            const gps = await getGps();
-            await openPointModal({ latitude: gps.latitude, longitude: gps.longitude, accuracy: gps.accuracy });
-        } catch (error) {
-            await openPointModal({ latitude: latlng.lat, longitude: latlng.lng });
-            toast('Usamos o ponto do mapa. Ative a localização quando puder.', 'error');
-        }
-    });
+    document.getElementById('empty-spot-confirm')?.addEventListener('click', closeEmptySpot);
 
     document.getElementById('delete-point-cancel')?.addEventListener('click', closeDeleteModal);
     document.getElementById('delete-point-backdrop')?.addEventListener('click', closeDeleteModal);
