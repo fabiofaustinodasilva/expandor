@@ -1,4 +1,4 @@
-@extends('layouts.operational')
+﻿@extends('layouts.operational')
 
 @section('title', 'Mapa operacional')
 
@@ -138,11 +138,18 @@
     </header>
 
     <div id="operational-map" class="absolute inset-0 z-0" role="application" aria-label="Mapa operacional"></div>
-
-    {{-- Basemap: rua / satélite (Map Provider) — canto inferior esquerdo, acima dos filtros do topo --}}
-    <div id="basemap-controls" class="absolute left-3 bottom-[13.5rem] sm:bottom-[11.5rem] z-20 flex gap-1 pointer-events-auto">
-        <button type="button" id="basemap-street" class="basemap-btn is-active h-10 px-3 rounded-xl bg-slate-900/95 border border-slate-600 text-xs font-semibold text-slate-100 shadow-lg">🗺 Rua</button>
-        <button type="button" id="basemap-satellite" class="basemap-btn h-10 px-3 rounded-xl bg-slate-900/90 border border-slate-700 text-xs font-semibold text-slate-300 shadow-lg" title="Satélite provisório (Esri) até Google/Mapbox">🛰 Satélite</button>
+    {{-- Basemap + Minha localização (Sprint 8.2.8) --}}
+    <div id="map-bottom-left-controls" class="absolute left-3 bottom-[5.5rem] sm:bottom-6 z-20 flex flex-col gap-2 pointer-events-auto">
+        <button type="button" id="btn-recenter-location"
+                class="map-btn-recenter h-12 min-w-[3rem] sm:h-14 sm:w-auto sm:px-4 px-3 rounded-2xl bg-slate-900/95 border border-slate-600 text-slate-100 shadow-lg inline-flex items-center justify-center gap-2 font-semibold text-sm"
+                title="Centralizar no GPS sem criar ponto" aria-label="Minha localização">
+            <i data-lucide="locate-fixed" class="w-5 h-5 shrink-0" aria-hidden="true"></i>
+            <span>Minha localização</span>
+        </button>
+        <div id="basemap-controls" class="flex gap-1">
+            <button type="button" id="basemap-street" class="basemap-btn is-active h-10 px-3 rounded-xl bg-slate-900/95 border border-slate-600 text-xs font-semibold text-slate-100 shadow-lg">Rua</button>
+            <button type="button" id="basemap-satellite" class="basemap-btn h-10 px-3 rounded-xl bg-slate-900/90 border border-slate-700 text-xs font-semibold text-slate-300 shadow-lg" title="Satélite">Satélite</button>
+        </div>
     </div>
 
     {{-- Filtros comerciais — manager sempre; seller: DOM oculto (JS mantém checkboxes) --}}
@@ -430,8 +437,7 @@
     </div>
     <div id="drawer-backdrop" class="absolute inset-0 z-30 bg-black/40 opacity-0 pointer-events-none transition-opacity lg:hidden"></div>
 
-    {{-- Sprint 8.2.7: etapa "Casa sem cadastro" removida — clique no mapa abre o formulário direto --}}
-    <div id="empty-spot-modal" class="fixed inset-0 z-50 hidden" hidden aria-hidden="true"></div>
+    {{-- Sprint 8.2.7/8.2.8: sem modal intermediário — clique no mapa abre o formulário direto --}}
 
     {{-- Delete confirm --}}
     <div id="delete-point-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
@@ -555,14 +561,14 @@
                 <h3 class="text-lg font-semibold" id="point-modal-title">Meu Local</h3>
                 <button id="point-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <div class="rounded-xl bg-slate-900 border border-slate-800 p-3 mb-4 text-sm">
+            <div class="rounded-xl bg-slate-900 border border-slate-800 p-3 mb-4 text-sm" id="point-gps-block">
                 <div class="text-slate-400 text-xs uppercase mb-1" id="point-gps-title">Capturando localização...</div>
-                <div id="point-gps-label" class="font-mono text-xs text-sky-300">Aguarde um instante</div>
-                <div class="text-xs text-slate-500 mt-1" id="point-meta-label">Você: {{ $sellerName }}</div>
+                <div id="point-gps-label" class="text-sm text-sky-300 font-medium">Aguarde um instante</div>
+                <div class="text-xs text-slate-500 mt-1 field-seller-hide-meta" id="point-meta-label">Você: {{ $sellerName }}</div>
                 <div class="text-xs text-emerald-400 mt-0.5 font-medium" id="point-accuracy-label"></div>
-                <div class="text-xs text-slate-400 mt-0.5" id="point-accuracy-class"></div>
-                <button type="button" id="point-adjust-on-map" class="mt-3 w-full h-11 rounded-xl border border-sky-600/50 text-sky-300 text-sm font-medium hidden">
-                    ✏ Ajustar posição no mapa
+                <div class="text-xs text-slate-400 mt-0.5 field-seller-hide-meta" id="point-accuracy-class"></div>
+                <button type="button" id="point-adjust-on-map" class="mt-3 w-full h-12 rounded-xl border border-sky-600/50 text-sky-300 text-sm font-medium hidden">
+                    Ajustar posição no mapa
                 </button>
             </div>
             <form id="point-form" class="space-y-3">
@@ -572,16 +578,16 @@
                 <input type="hidden" id="point-gps-accuracy" name="gps_accuracy">
                 <input type="hidden" id="point-mode" value="create">
                 <div class="point-field-primary">
-                    <label class="text-xs text-slate-400">Nome</label>
-                    <input id="point-contact-name" name="contact_name" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" placeholder="Nome de quem atendeu" autocomplete="name">
+                    <label class="text-xs text-slate-400" for="point-contact-name">Nome / responsável</label>
+                    <input id="point-contact-name" name="contact_name" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" placeholder="Quem atendeu" autocomplete="name">
                 </div>
                 <div class="point-field-primary">
-                    <label class="text-xs text-slate-400">Telefone</label>
+                    <label class="text-xs text-slate-400" for="point-contact-phone">Telefone / WhatsApp</label>
                     <input id="point-contact-phone" name="contact_phone" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" inputmode="tel" placeholder="WhatsApp" autocomplete="tel">
                 </div>
                 <div class="point-field-primary">
-                    <label class="text-xs text-slate-400">Observação <span class="text-slate-600" id="point-notes-hint">(opcional)</span></label>
-                    <textarea id="point-notes" name="notes" rows="2" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2" placeholder="Referência, horário, portão…"></textarea>
+                    <label class="text-xs text-slate-400" for="point-notes">Observação curta <span class="text-slate-600" id="point-notes-hint">(opcional)</span></label>
+                    <textarea id="point-notes" name="notes" rows="2" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2" placeholder="Referência rápida…"></textarea>
                 </div>
                 <div class="point-address-block space-y-3">
                     <div>
@@ -627,14 +633,14 @@
                         <p class="text-[11px] text-slate-500 mt-1" id="point-campaign-hint"></p>
                     </div>
                     <div>
-                        <label class="text-xs text-slate-400 mb-2 block">Resultado do atendimento</label>
+                        <label class="text-xs text-slate-400 mb-2 block">Situação / interesse</label>
                         <input type="hidden" id="point-visit-status" value="">
-                        <div class="grid grid-cols-1 gap-2" id="point-outcome-group">
-                            <button type="button" class="point-outcome h-12 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="installation_requested">🟢 {{ $commercial::saleCompleted() }}</button>
-                            <button type="button" class="point-outcome h-12 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="interested">🔵 Interessado</button>
-                            <button type="button" class="point-outcome h-12 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="return_later">🟡 Retornar</button>
-                            <button type="button" class="point-outcome h-12 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="no_interest">🔴 Sem interesse</button>
-                            <button type="button" class="point-outcome h-12 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="not_home">⚪ Não encontrado</button>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 field-seller-outcome-grid" id="point-outcome-group">
+                            <button type="button" class="point-outcome h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="interested">Interessado</button>
+                            <button type="button" class="point-outcome h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="no_interest">Não interessado</button>
+                            <button type="button" class="point-outcome h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="return_later">Retornar depois</button>
+                            <button type="button" class="point-outcome h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="installation_requested">{{ $commercial::saleCompleted() }}</button>
+                            <button type="button" class="point-outcome h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm sm:col-span-2" data-status="not_home">Não encontrado</button>
                         </div>
                     </div>
                     @include('partials.sale-finalize-fields', [
@@ -657,7 +663,7 @@
                     </div>
                 </div>
                 <p id="point-error" class="text-sm text-rose-400 hidden"></p>
-                <button type="submit" id="point-submit" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold text-base">Salvar atendimento</button>
+                <button type="submit" id="point-submit" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold text-base sticky bottom-0">Salvar</button>
             </form>
         </div>
     </div>
@@ -767,7 +773,7 @@
     .leaflet-region-select { stroke: #38bdf8; stroke-width: 2; stroke-dasharray: 6 4; fill: rgba(56,189,248,.12); }
     #metrics-panel.open, #marker-drawer.open { transform: translateX(0); }
     #drawer-backdrop.open { opacity: 1; pointer-events: auto; }
-    #visit-modal.open, #point-modal.open, #empty-spot-modal.open, #delete-point-modal.open,
+    #visit-modal.open, #point-modal.open, #delete-point-modal.open,
     #adjust-confirm-modal.open, #post-create-adjust-modal.open, #region-campaign-modal.open,
     #post-visit-modal.open, #seller-day-brief.open, #seller-tips-modal.open { display: flex; }
     #adjust-banner:not(.hidden) { display: block; }
@@ -830,8 +836,12 @@
     #map-search-results button:last-child { border-bottom: 0; }
     #map-search-results .search-hit-meta { font-size: 0.75rem; color: #94a3b8; margin-top: 0.15rem; }
     body.field-seller #map-filters-form { display: none !important; }
-    #basemap-controls { bottom: 5.5rem; }
-    body.field-seller #basemap-controls {
+    #basemap-controls { position: static; }
+    #map-bottom-left-controls {
+        bottom: 5.5rem;
+        left: 0.75rem;
+    }
+    body.field-seller #map-bottom-left-controls {
         bottom: 5.5rem;
         left: 0.75rem;
     }
@@ -842,9 +852,17 @@
         font-size: 10px;
         border-radius: 0.65rem;
     }
+    body.field-seller .field-seller-hide-meta { display: none !important; }
+    body.field-seller #point-gps-label { font-family: inherit !important; }
+    body.field-seller .point-outcome.is-selected,
+    .point-outcome.is-selected {
+        border-color: #38bdf8 !important;
+        background: rgba(14,165,233,.15) !important;
+    }
     @media (min-width: 640px) {
-        body.field-seller #basemap-controls { bottom: 1.5rem; }
+        body.field-seller #map-bottom-left-controls { bottom: 1.5rem; }
         .map-toolbar { padding-top: 1rem !important; }
+        .map-btn-recenter span { display: inline; }
     }
     @media (max-width: 900px) {
         .map-toolbar { padding-top: 4.25rem !important; }
@@ -869,6 +887,18 @@
             min-height: 3rem;
             font-size: 0.95rem;
         }
+        .map-btn-recenter {
+            min-width: 3rem;
+            min-height: 3rem;
+            max-width: min(11.5rem, 46vw);
+            padding-left: 0.65rem;
+            padding-right: 0.65rem;
+            font-size: 0.75rem;
+            line-height: 1.15;
+            white-space: normal;
+            text-align: left;
+        }
+        .map-btn-recenter span { display: inline; }
         body.field-seller #marker-drawer {
             width: min(100vw, 400px);
             max-height: 78dvh;
@@ -878,7 +908,10 @@
             border-left: 0;
             border-top: 1px solid rgb(51 65 85);
         }
-        body.field-seller #basemap-controls { bottom: 5.5rem; }
+        body.field-seller #map-bottom-left-controls { bottom: 5.5rem; }
+        #point-outcome-group {
+            grid-template-columns: 1fr 1fr;
+        }
     }
     body.adjust-mode { cursor: grab; }
     body.adjust-mode .leaflet-marker-draggable { cursor: grabbing; }
@@ -891,5 +924,5 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="{{ asset('js/map-provider.js') }}?v=2"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=42"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=43"></script>
 @endpush

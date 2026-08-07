@@ -49,7 +49,7 @@ class PilotSellerUxTest extends TestCase
             ->assertSee('visit-sale-finalize')
             ->assertSee('Finalizar venda')
             ->assertSee('point-notes')
-            ->assertSee('Resultado do atendimento')
+            ->assertSee('Situação / interesse')
             ->assertSee('Casas visitadas hoje')
             ->assertDontSee('Visão da equipe');
     }

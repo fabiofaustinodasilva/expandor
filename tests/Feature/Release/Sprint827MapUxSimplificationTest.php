@@ -57,7 +57,7 @@ class Sprint827MapUxSimplificationTest extends TestCase
     {
         $js = file_get_contents(public_path('js/operational-map.js'));
 
-        $this->assertStringContainsString('Não foi possível obter sua localização.', $js);
+        $this->assertStringContainsString('Permita o acesso à localização para usar o Meu Local.', $js);
         $this->assertStringContainsString('centerMapOnCoords', $js);
         $this->assertStringContainsString('showDraftLocationMarker', $js);
         $this->assertStringContainsString("textContent = mode === 'edit'", $js);

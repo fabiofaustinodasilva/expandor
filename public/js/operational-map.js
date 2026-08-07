@@ -1628,7 +1628,7 @@
     function getGps() {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
-                reject(new Error('Não foi possível obter sua localização.'));
+                reject(new Error('Permita o acesso à localização para usar o Meu Local.'));
                 return;
             }
             navigator.geolocation.getCurrentPosition(
@@ -1641,7 +1641,7 @@
                     sellerGps = coords;
                     resolve(coords);
                 },
-                () => reject(new Error('Não foi possível obter sua localização.')),
+                () => reject(new Error('Permita o acesso à localização para usar o Meu Local.')),
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
             );
         });
@@ -1690,13 +1690,22 @@
         document.getElementById('point-gps-accuracy').value = lastGpsAccuracy != null ? String(lastGpsAccuracy) : '';
         const title = document.getElementById('point-gps-title');
         if (title) title.textContent = 'Local encontrado.';
-        document.getElementById('point-gps-label').textContent = `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+        const gpsLabel = document.getElementById('point-gps-label');
+        if (gpsLabel) {
+            // Sprint 8.2.8: vendedor não vê lat/lng crus — só confirmação amigável.
+            gpsLabel.textContent = isFieldSeller
+                ? 'Posição pronta para registro'
+                : `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+            gpsLabel.classList.toggle('font-mono', !isFieldSeller);
+        }
         document.getElementById('point-meta-label').textContent = `Você: ${sellerName} · ${nowLabel()}`;
         const accEl = document.getElementById('point-accuracy-label');
         const classEl = document.getElementById('point-accuracy-class');
         if (accEl) {
             accEl.textContent = lastGpsAccuracy != null
-                ? `Precisão: ${Math.round(lastGpsAccuracy)} metros`
+                ? (isFieldSeller
+                    ? (lastGpsAccuracy <= 30 ? 'Boa precisão' : `Precisão ~${Math.round(lastGpsAccuracy)} m`)
+                    : `Precisão: ${Math.round(lastGpsAccuracy)} metros`)
                 : '';
         }
         if (classEl) {
@@ -1796,10 +1805,11 @@
             const gps = await getGps();
             fillPointCoords(gps.latitude, gps.longitude, gps.accuracy);
             centerMapOnCoords(gps.latitude, gps.longitude, 17);
+            toast('Localização obtida');
         } catch (error) {
             if (title) title.textContent = 'Localização indisponível';
-            const friendly = 'Não foi possível obter sua localização.';
-            pointError.textContent = friendly + ' Selecione a posição no mapa ou use Ajustar posição.';
+            const friendly = 'Permita o acesso à localização para usar o Meu Local.';
+            pointError.textContent = friendly + ' Você também pode tocar no mapa para escolher o local.';
             pointError.classList.remove('hidden');
             toast(friendly, 'error');
         }
@@ -2023,9 +2033,12 @@
 
             closePointModal();
             const saleDone = useFirstApproach && status === 'installation_requested';
-            toast(saleDone
+            const saveMsg = saleDone
                 ? saleRegisteredToast
-                : (useFirstApproach ? 'Atendimento registrado' : (mode === 'edit' ? 'Cliente atualizado' : 'Ponto salvo')));
+                : (useFirstApproach
+                    ? 'Ponto registrado'
+                    : (mode === 'edit' ? 'Cliente atualizado' : 'Ponto registrado'));
+            toast(saveMsg);
             await loadMarkers({ fit: false, useBbox: true });
             if (result?.data) {
                 const created = {
@@ -2041,7 +2054,6 @@
                     location_kind: lastGpsAccuracy != null && lastGpsAccuracy > 50 ? 'low_accuracy' : 'gps',
                     updated_at: nowLabel(),
                 };
-                openDrawer(created);
                 if (mode === 'create') {
                     if (useFirstApproach) {
                         visitedInSession.add(Number(result.data.property_id));
@@ -2049,7 +2061,18 @@
                         if (result.data.visit_status === 'interested') bumpDayMetric('interested');
                         if (result.data.visit_status === 'installation_requested') bumpDayMetric('contracts');
                     }
-                    openPostCreateAdjust(result.data.property_id);
+                    // Sprint 8.2.8: vendedor volta ao mapa sem modal de ajuste.
+                    if (isFieldSeller) {
+                        if (created.latitude != null && created.longitude != null) {
+                            centerMapOnCoords(created.latitude, created.longitude, 17);
+                        }
+                        closeDrawer();
+                    } else {
+                        openDrawer(created);
+                        openPostCreateAdjust(result.data.property_id);
+                    }
+                } else {
+                    openDrawer(created);
                 }
             }
         } catch (error) {
@@ -2062,9 +2085,10 @@
                 closePointModal();
                 toast('Sem conexão — ação guardada no celular.');
             } else {
-                pointError.textContent = error.message || 'Erro ao salvar.';
+                const friendlySave = 'Não foi possível salvar. Tente novamente.';
+                pointError.textContent = error.message || friendlySave;
                 pointError.classList.remove('hidden');
-                toast(error.message || 'Erro ao salvar.', 'error');
+                toast(friendlySave, 'error');
             }
         } finally {
             submitBtn.disabled = false;
@@ -2508,6 +2532,24 @@
     document.getElementById('btn-new-point')?.addEventListener('click', () => openPointModal(null));
     document.getElementById('btn-new-point-side')?.addEventListener('click', () => openPointModal(null));
     document.getElementById('btn-empty-add-point')?.addEventListener('click', () => openPointModal(null));
+
+    async function recenterOnMyLocation() {
+        const btn = document.getElementById('btn-recenter-location');
+        if (btn) btn.disabled = true;
+        try {
+            const gps = await getGps();
+            centerMapOnCoords(gps.latitude, gps.longitude, 17);
+            toast('Localização obtida');
+        } catch (error) {
+            toast(error.message || 'Permita o acesso à localização para usar o Meu Local.', 'error');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    document.getElementById('btn-recenter-location')?.addEventListener('click', () => {
+        recenterOnMyLocation().catch(() => {});
+    });
     document.getElementById('point-modal-close')?.addEventListener('click', closePointModal);
     document.getElementById('point-modal-backdrop')?.addEventListener('click', closePointModal);
     pointForm?.addEventListener('submit', submitPoint);
