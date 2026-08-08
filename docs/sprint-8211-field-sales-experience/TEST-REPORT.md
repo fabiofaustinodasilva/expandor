@@ -6,7 +6,7 @@
 .\.tools\php\php.exe artisan test --filter="Sprint8211|Sprint8210|Sprint829|Sprint828|Sprint827|Sprint825|FirstApproach|PilotSeller|MapsModule|SalesApp"
 ```
 
-**63 passed / 0 failed**
+**63 passed / 0 failed** (430 assertions)
 
 Inclui GPS único, cores MapMarkerColor, comissão, produtos Sales App e regressão 8.2.5–8.2.10.
 
