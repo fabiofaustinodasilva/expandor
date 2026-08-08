@@ -17,7 +17,7 @@ class SalesCommissionRepository
     public function query(array $filters = [], ?User $viewer = null): Builder
     {
         $query = SalesCommission::query()
-            ->with(['user', 'product', 'visit.property.address', 'visit.campaign', 'approver', 'payer']);
+            ->with(['user', 'product', 'visit.property.address', 'visit.property.residents', 'visit.sale.resident', 'visit.campaign', 'approver', 'payer']);
 
         if ($viewer !== null && ! $viewer->hasPermission('commissions.manage')) {
             $query->where('user_id', $viewer->id);

@@ -35,6 +35,7 @@ class ProductController extends Controller
                     ->whereDate('earned_at', '>=', $dateFrom)
                     ->whereDate('earned_at', '<=', $dateTo),
             ])
+            ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 
@@ -67,6 +68,7 @@ class ProductController extends Controller
                 'price' => 0,
                 'stock_quantity' => 0,
                 'minimum_stock' => 0,
+                'sort_order' => 0,
             ]),
             'editing' => false,
         ]);

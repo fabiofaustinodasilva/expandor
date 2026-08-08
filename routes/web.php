@@ -60,6 +60,7 @@ use App\Http\Controllers\Web\Security\PrivacyController;
 use App\Http\Controllers\Web\SalesApp\SalesAppCampaignController;
 use App\Http\Controllers\Web\SalesApp\SalesAppDashboardController;
 use App\Http\Controllers\Web\SalesApp\SalesAppFollowUpController;
+use App\Http\Controllers\Web\SalesApp\SalesAppProductController;
 use App\Http\Controllers\Web\SalesApp\SalesAppTrainingController;
 use App\Http\Controllers\Web\Training\TrainingCategoryController;
 use App\Http\Controllers\Web\Training\TrainingContentController;
@@ -265,6 +266,8 @@ Route::middleware([
         Route::post('/campaigns/{campaign}/properties/{property}/visit', [SalesAppCampaignController::class, 'storeVisit'])->name('campaigns.visits.store');
         Route::get('/follow-ups', [SalesAppFollowUpController::class, 'index'])->name('follow-ups.index');
         Route::post('/follow-ups/{followUp}/complete', [SalesAppFollowUpController::class, 'complete'])->name('follow-ups.complete');
+        Route::get('/products', [SalesAppProductController::class, 'index'])->name('products.index');
+        Route::get('/products/{product}', [SalesAppProductController::class, 'show'])->name('products.show');
         Route::get('/training', [SalesAppTrainingController::class, 'index'])->name('training.index');
         Route::get('/training/{content}', [SalesAppTrainingController::class, 'show'])->name('training.show');
         Route::post('/training/{content}/complete', [SalesAppTrainingController::class, 'complete'])->name('training.complete');

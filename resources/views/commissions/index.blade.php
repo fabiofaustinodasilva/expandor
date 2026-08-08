@@ -126,10 +126,9 @@
             <tbody>
             @forelse($commissions as $row)
                 @php
-                    $address = $row->visit?->property?->address;
-                    $client = $address
-                        ? trim(($address->street ?? '').' '.($address->number ?? ''))
-                        : 'Visita #'.$row->visit_id;
+                    $client = $row->visit
+                        ? \App\Domains\Visits\Support\VisitHistoryPresenter::commissionClientLabel($row->visit)
+                        : 'Ponto sem cliente';
                     $statusClass = match ($row->status->value) {
                         'approved' => 'comm-status-approved',
                         'paid' => 'comm-status-paid',
@@ -138,7 +137,7 @@
                 @endphp
                 <tr>
                     @if($isManager)<td>{{ $row->user?->name }}</td>@endif
-                    <td>{{ $client !== '' ? $client : '—' }}</td>
+                    <td>{{ $client }}</td>
                     <td>{{ $row->product_name }}</td>
                     <td>{{ $row->quantity }}</td>
                     <td>R$ {{ number_format((float) $row->commission_amount, 2, ',', '.') }}</td>

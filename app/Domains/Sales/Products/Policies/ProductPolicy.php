@@ -11,13 +11,21 @@ class ProductPolicy
     {
         return $user->hasPermission('commissions.manage')
             || $user->hasPermission('commissions.view_self')
-            || $user->hasPermission('visits.contract');
+            || $user->hasPermission('visits.contract')
+            || $user->hasPermission('sales_app.access');
     }
 
     public function view(User $user, Product $product): bool
     {
-        return (int) $user->company_id === (int) $product->company_id
-            && $this->viewAny($user);
+        if ((int) $user->company_id !== (int) $product->company_id) {
+            return false;
+        }
+
+        if ($user->hasPermission('commissions.manage')) {
+            return true;
+        }
+
+        return $this->viewAny($user) && $product->isActive();
     }
 
     public function create(User $user): bool

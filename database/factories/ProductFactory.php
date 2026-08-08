@@ -16,13 +16,17 @@ class ProductFactory extends Factory
         return [
             'company_id' => Company::factory(),
             'name' => fake()->words(3, true),
+            'category' => null,
             'description' => fake()->sentence(),
+            'benefits' => null,
+            'video_url' => null,
             'price' => fake()->randomFloat(2, 50, 500),
             'commission_amount' => fake()->randomFloat(2, 10, 100),
             'stock_control' => false,
             'stock_quantity' => 0,
             'minimum_stock' => 0,
             'status' => Product::STATUS_ACTIVE,
+            'sort_order' => 0,
             'is_demo' => false,
         ];
     }

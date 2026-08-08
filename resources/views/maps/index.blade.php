@@ -53,14 +53,6 @@
                     <div id="map-search-results" class="hidden absolute left-0 right-0 top-[calc(100%+0.4rem)] z-50 max-h-72 overflow-y-auto rounded-xl border border-slate-700 bg-slate-950 shadow-xl" role="listbox"></div>
                 </div>
                 <div class="flex gap-2 items-center shrink-0">
-                    @if($permissions['properties_manage'])
-                        <button id="btn-new-point" type="button"
-                                class="map-btn-meu-local h-12 md:h-14 px-4 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm md:text-base inline-flex items-center justify-center gap-2 flex-1 sm:flex-none min-w-[9.5rem] shadow-lg"
-                                title="Centralizar o mapa na minha posição GPS">
-                            <i data-lucide="map-pin" class="w-5 h-5 shrink-0" aria-hidden="true"></i>
-                            <span>Meu Local</span>
-                        </button>
-                    @endif
                     <span id="offline-queue-badge" class="hidden h-12 md:h-14 px-3 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold items-center gap-1 shrink-0">
                         <span id="offline-queue-count">0</span> pendente(s)
                     </span>
@@ -183,13 +175,7 @@
     <div id="map-empty-state" class="absolute inset-0 z-10 hidden items-center justify-center pointer-events-none p-6 lg:pr-[316px]">
         <div class="pointer-events-auto max-w-sm w-full rounded-2xl bg-slate-950/95 border border-slate-700 p-5 text-center shadow-xl">
             <div class="text-lg font-semibold mb-1">Nenhuma residência nesta área</div>
-            <p class="text-slate-400 text-sm mb-4">Use Meu Local para se localizar e toque no mapa para registrar um ponto.</p>
-            @if($permissions['properties_manage'])
-                <button type="button" id="btn-empty-add-point" class="map-btn-meu-local w-full h-12 rounded-xl bg-sky-500 text-slate-950 font-bold inline-flex items-center justify-center gap-2">
-                    <i data-lucide="map-pin" class="w-5 h-5" aria-hidden="true"></i>
-                    <span>Meu Local</span>
-                </button>
-            @endif
+            <p class="text-slate-400 text-sm mb-4">Use <strong class="text-slate-200">Minha localização</strong> para se localizar e toque no mapa para registrar um ponto.</p>
         </div>
     </div>
 
@@ -333,12 +319,6 @@
                 <div id="metric-status-breakdown" class="mt-3 space-y-1.5 text-xs"></div>
             </div>
 
-            @if($permissions['properties_manage'])
-                <button id="btn-new-point-side" type="button" class="map-btn-meu-local w-full h-12 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold inline-flex items-center justify-center gap-2">
-                    <i data-lucide="map-pin" class="w-5 h-5" aria-hidden="true"></i>
-                    <span>Meu Local</span>
-                </button>
-            @endif
         </div>
     </aside>
 
@@ -512,11 +492,16 @@
                     </select>
                 </div>
                 <div class="grid grid-cols-1 gap-2" id="visit-quick-group">
-                    <button type="button" class="visit-quick h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm has-active:border-sky-400" data-status="interested">✅ Cliente interessado</button>
-                    <button type="button" class="visit-quick h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="no_interest">❌ Sem interesse</button>
-                    <button type="button" class="visit-quick h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="return_later">🔄 Retornar depois</button>
-                    <button type="button" class="visit-quick h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="not_home">🏠 Não encontrado</button>
-                    <button type="button" class="visit-quick h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="installation_requested">📄 {{ $commercial::saleCompleted() }}</button>
+                    @foreach(($outcomeStatuses ?? []) as $value => $meta)
+                        <button type="button"
+                                class="visit-quick status-chip h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm inline-flex items-center gap-2"
+                                data-status="{{ $value }}"
+                                data-status-color="{{ $meta['color'] }}"
+                                style="--status-color: {{ $meta['color'] }};">
+                            <span class="status-chip-swatch shrink-0" aria-hidden="true">{{ ($meta['mark'] ?? '') !== '' ? $meta['mark'] : '' }}</span>
+                            <span>{{ $meta['label'] }}</span>
+                        </button>
+                    @endforeach
                 </div>
                 @include('partials.sale-finalize-fields', [
                     'prefix' => 'visit',
@@ -618,10 +603,18 @@
                 <div id="point-manager-status" class="{{ !empty($isFieldSeller) ? 'hidden' : '' }}">
                     <label class="text-xs text-slate-400 mb-2 block">Situação</label>
                     <div class="grid grid-cols-2 gap-2" id="point-status-group">
-                        @foreach($quickStatuses as $value => $label)
-                            <label class="flex items-center gap-2 h-12 px-3 rounded-xl border border-slate-700 bg-slate-900 cursor-pointer has-[:checked]:border-sky-400 has-[:checked]:bg-sky-500/10">
-                                <input type="radio" name="status" value="{{ $value }}" class="accent-sky-400" @checked($value === 'interested')>
-                                <span class="text-sm">{{ $label }}</span>
+                        @foreach($quickStatuses as $value => $meta)
+                            @php
+                                $statusLabel = is_array($meta) ? ($meta['label'] ?? $value) : $meta;
+                                $statusColor = is_array($meta) ? ($meta['color'] ?? '#64748b') : '#64748b';
+                                $statusMark = is_array($meta) ? ($meta['mark'] ?? '') : '';
+                            @endphp
+                            <label class="status-chip flex items-center gap-2 h-12 px-3 rounded-xl border border-slate-700 bg-slate-900 cursor-pointer"
+                                   style="--status-color: {{ $statusColor }};"
+                                   data-status-color="{{ $statusColor }}">
+                                <input type="radio" name="status" value="{{ $value }}" class="sr-only peer" @checked($value === 'interested')>
+                                <span class="status-chip-swatch shrink-0" aria-hidden="true">{{ $statusMark !== '' ? $statusMark : '' }}</span>
+                                <span class="text-sm">{{ $statusLabel }}</span>
                             </label>
                         @endforeach
                     </div>
@@ -641,11 +634,16 @@
                         <label class="text-xs text-slate-400 mb-2 block">Situação / interesse</label>
                         <input type="hidden" id="point-visit-status" value="">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 field-seller-outcome-grid" id="point-outcome-group">
-                            <button type="button" class="point-outcome h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="interested">Interessado</button>
-                            <button type="button" class="point-outcome h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="no_interest">Não interessado</button>
-                            <button type="button" class="point-outcome h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="return_later">Retornar depois</button>
-                            <button type="button" class="point-outcome h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm" data-status="installation_requested">{{ $commercial::saleCompleted() }}</button>
-                            <button type="button" class="point-outcome h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm sm:col-span-2" data-status="not_home">Não encontrado</button>
+                            @foreach(($outcomeStatuses ?? []) as $value => $meta)
+                                <button type="button"
+                                        class="point-outcome status-chip h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm inline-flex items-center gap-2 {{ $value === 'not_home' ? 'sm:col-span-2' : '' }}"
+                                        data-status="{{ $value }}"
+                                        data-status-color="{{ $meta['color'] }}"
+                                        style="--status-color: {{ $meta['color'] }};">
+                                    <span class="status-chip-swatch shrink-0" aria-hidden="true">{{ ($meta['mark'] ?? '') !== '' ? $meta['mark'] : '' }}</span>
+                                    <span>{{ $meta['label'] }}</span>
+                                </button>
+                            @endforeach
                         </div>
                     </div>
                     @include('partials.sale-finalize-fields', [
@@ -712,8 +710,8 @@
                 </div>
             </div>
             <div class="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 mb-5">
-                <div class="text-xs uppercase tracking-wide text-slate-500 mb-1">Meu Local</div>
-                <p class="text-sm text-slate-200" id="brief-next-house">Use Meu Local para se localizar. Depois toque no mapa para registrar o ponto.</p>
+                <div class="text-xs uppercase tracking-wide text-slate-500 mb-1">Minha localização</div>
+                <p class="text-sm text-slate-200" id="brief-next-house">Use Minha localização para se localizar. Depois toque no mapa para registrar o ponto.</p>
             </div>
             <button type="button" id="seller-start-route" class="w-full h-16 rounded-2xl bg-sky-500 text-slate-950 font-extrabold text-lg shadow-[0_12px_32px_rgba(14,165,233,0.45)]">
                 Começar no mapa
@@ -729,7 +727,7 @@
             <ol class="space-y-3 mb-6 text-sm text-slate-200">
                 <li class="flex gap-3 items-start">
                     <span class="shrink-0 w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center">1</span>
-                    <span><strong class="text-white">Meu Local</strong> — centraliza o mapa na sua posição GPS.</span>
+                    <span><strong class="text-white">Minha localização</strong> — centraliza o mapa na sua posição GPS.</span>
                 </li>
                 <li class="flex gap-3 items-start">
                     <span class="shrink-0 w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center">2</span>
@@ -828,7 +826,27 @@
     #map-filters-form.open { display: grid !important; }
     #commercial-filters.open { display: block !important; }
     #map-legend-panel.open { display: block !important; }
-    .visit-quick.is-selected { border-color: #38bdf8 !important; background: rgba(14,165,233,.12) !important; }
+    .visit-quick.is-selected,
+    body.field-seller .point-outcome.is-selected,
+    .point-outcome.is-selected,
+    #point-status-group .status-chip:has(:checked) {
+        border-color: var(--status-color, #38bdf8) !important;
+        background: color-mix(in srgb, var(--status-color, #38bdf8) 16%, transparent) !important;
+        box-shadow: inset 3px 0 0 var(--status-color, #38bdf8);
+    }
+    .status-chip-swatch {
+        width: 1.35rem;
+        height: 1.35rem;
+        border-radius: 999px;
+        background: var(--status-color, #64748b);
+        color: #0f172a;
+        font-size: 0.7rem;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
     #map-empty-state { z-index: 10; }
     #offline-queue-badge:not(.hidden) { display: inline-flex; }
 
@@ -901,11 +919,6 @@
     }
     body.field-seller .field-seller-hide-meta { display: none !important; }
     body.field-seller #point-gps-label { font-family: inherit !important; }
-    body.field-seller .point-outcome.is-selected,
-    .point-outcome.is-selected {
-        border-color: #38bdf8 !important;
-        background: rgba(14,165,233,.15) !important;
-    }
     @media (min-width: 640px) {
         body.field-seller #map-bottom-left-controls { bottom: 1.5rem; }
         .map-toolbar { padding-top: 1rem !important; }
@@ -983,5 +996,5 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="{{ asset('js/map-provider.js') }}?v=3"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=46"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=47"></script>
 @endpush

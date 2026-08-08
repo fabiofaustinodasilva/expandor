@@ -23,15 +23,19 @@ class Product extends Model
     protected $fillable = [
         'company_id',
         'name',
+        'category',
         'description',
+        'benefits',
         'image',
         'image_thumb',
+        'video_url',
         'price',
         'commission_amount',
         'stock_control',
         'stock_quantity',
         'minimum_stock',
         'status',
+        'sort_order',
         'is_demo',
     ];
 
@@ -43,7 +47,9 @@ class Product extends Model
             'stock_control' => 'boolean',
             'stock_quantity' => 'integer',
             'minimum_stock' => 'integer',
+            'sort_order' => 'integer',
             'is_demo' => 'boolean',
+            'benefits' => 'array',
         ];
     }
 
@@ -103,5 +109,46 @@ class Product extends Model
     public function imageOriginalUrl(): ?string
     {
         return app(\App\Domains\Media\Services\MediaUploadService::class)->url($this->image);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function benefitList(): array
+    {
+        $benefits = $this->benefits;
+        if (! is_array($benefits)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(
+            static fn ($item) => trim((string) $item),
+            $benefits
+        ), static fn (string $item) => $item !== ''));
+    }
+
+    public function categoryLabel(): string
+    {
+        $category = trim((string) ($this->category ?? ''));
+
+        return $category !== '' ? $category : 'Produto';
+    }
+
+    public function embeddableVideoUrl(): ?string
+    {
+        $url = trim((string) ($this->video_url ?? ''));
+        if ($url === '') {
+            return null;
+        }
+
+        if (preg_match('~(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([A-Za-z0-9_-]{6,})~', $url, $m)) {
+            return 'https://www.youtube.com/embed/'.$m[1];
+        }
+
+        if (preg_match('~vimeo\.com/(?:video/)?(\d+)~', $url, $m)) {
+            return 'https://player.vimeo.com/video/'.$m[1];
+        }
+
+        return $url;
     }
 }

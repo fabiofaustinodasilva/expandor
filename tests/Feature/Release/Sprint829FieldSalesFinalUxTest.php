@@ -22,23 +22,21 @@ class Sprint829FieldSalesFinalUxTest extends TestCase
         $this->seedFoundation();
     }
 
-    public function test_meu_local_wires_to_locate_not_create(): void
+    public function test_locate_wires_to_locate_not_create(): void
     {
         $js = file_get_contents(public_path('js/operational-map.js'));
         $this->assertIsString($js);
 
         $this->assertStringContainsString('function locateMyPosition(', $js);
-        $this->assertStringContainsString("getElementById('btn-new-point')", $js);
+        $this->assertStringContainsString("getElementById('btn-recenter-location')", $js);
         $this->assertMatchesRegularExpression(
-            "/btn-new-point'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*\{\s*locateMyPosition/",
+            "/btn-recenter-location'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*\{\s*locateMyPosition/",
             $js
         );
-        $this->assertDoesNotMatchRegularExpression(
-            "/btn-new-point'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*openPointModal\(null\)/",
-            $js
-        );
+        $this->assertStringNotContainsString("getElementById('btn-new-point')", $js);
         $this->assertStringContainsString('openCreateAtMapTap', $js);
         $this->assertStringContainsString("toast('Localização obtida')", $js);
+        $this->assertStringContainsString('let locateInFlight = false', $js);
     }
 
     public function test_minha_localizacao_also_only_locates(): void
@@ -86,8 +84,9 @@ class Sprint829FieldSalesFinalUxTest extends TestCase
         $js = file_get_contents(public_path('js/operational-map.js'));
 
         $this->assertStringContainsString('function gpsErrorMessage', $js);
-        $this->assertStringContainsString('Verifique a permissão de localização do navegador.', $js);
-        $this->assertStringContainsString('Não foi possível acessar sua localização.', $js);
+        $this->assertStringContainsString('Permissão de localização negada', $js);
+        $this->assertStringContainsString('Tempo esgotado ao obter a localização', $js);
+        $this->assertStringContainsString('Posição indisponível no momento', $js);
         $this->assertStringContainsString('Este navegador não oferece localização.', $js);
         $this->assertStringNotContainsString('Permita o acesso à localização para usar o Meu Local.', $js);
     }
@@ -105,7 +104,7 @@ class Sprint829FieldSalesFinalUxTest extends TestCase
         $this->assertStringContainsString('point-form-actions', $html);
         $this->assertStringContainsString('@media (max-width: 430px)', $html);
         $this->assertStringContainsString('@media (max-width: 320px)', $html);
-        $this->assertStringContainsString('operational-map.js?v=46', $html);
+        $this->assertStringContainsString('operational-map.js?v=47', $html);
     }
 
     public function test_seller_tips_describe_locate_then_tap_flow(): void
@@ -132,6 +131,6 @@ class Sprint829FieldSalesFinalUxTest extends TestCase
         $this->assertStringNotContainsString('/company/users', $html);
         $this->assertStringNotContainsString('/company/permissions', $html);
         $this->assertStringNotContainsString('/company/billing', $html);
-        $this->assertStringContainsString('title="Centralizar o mapa na minha posição GPS"', $html);
+        $this->assertStringContainsString('title="Centralizar no GPS sem criar ponto"', $html);
     }
 }

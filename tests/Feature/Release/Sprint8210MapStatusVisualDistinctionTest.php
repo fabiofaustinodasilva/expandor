@@ -101,7 +101,7 @@ class Sprint8210MapStatusVisualDistinctionTest extends TestCase
 
         $this->assertStringContainsString('id="operational-map"', $html);
         $this->assertStringContainsString('map-provider.js?v=3', $html);
-        $this->assertStringContainsString('operational-map.js?v=46', $html);
+        $this->assertStringContainsString('operational-map.js?v=47', $html);
         $this->assertStringContainsString('leaflet@1.9.4', $html);
 
         $js = file_get_contents(public_path('js/operational-map.js'));
@@ -201,9 +201,10 @@ class Sprint8210MapStatusVisualDistinctionTest extends TestCase
         $this->assertStringContainsString("return_later') return 'R'", $provider);
         $this->assertStringContainsString("no_interest') return '×'", $provider);
         $this->assertMatchesRegularExpression(
-            "/btn-new-point'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*\{\s*locateMyPosition/",
+            "/btn-recenter-location'\)\?\.addEventListener\('click',\s*\(\)\s*=>\s*\{\s*locateMyPosition/",
             $js
         );
+        $this->assertStringNotContainsString("getElementById('btn-new-point')", $js);
     }
 
     public function test_other_status_colors_remain_stable(): void

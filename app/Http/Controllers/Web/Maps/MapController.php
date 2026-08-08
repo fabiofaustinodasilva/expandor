@@ -78,10 +78,54 @@ class MapController extends Controller
         $salePolicy = $this->saleFields->resolveForUser($user);
 
         $quickStatuses = [
-            PropertyStatus::NO_INTEREST->value => CommercialTerminology::propertyStatusLabel(PropertyStatus::NO_INTEREST),
-            PropertyStatus::INTERESTED->value => CommercialTerminology::propertyStatusLabel(PropertyStatus::INTERESTED),
-            PropertyStatus::CUSTOMER->value => CommercialTerminology::propertyStatusLabel(PropertyStatus::CUSTOMER),
-            PropertyStatus::RETURN_LATER->value => CommercialTerminology::propertyStatusLabel(PropertyStatus::RETURN_LATER),
+            PropertyStatus::NO_INTEREST->value => [
+                'label' => CommercialTerminology::propertyStatusLabel(PropertyStatus::NO_INTEREST),
+                'color' => MapMarkerColor::forStatus(PropertyStatus::NO_INTEREST)->value,
+                'mark' => MapMarkerColor::markForStatus(PropertyStatus::NO_INTEREST),
+            ],
+            PropertyStatus::INTERESTED->value => [
+                'label' => CommercialTerminology::propertyStatusLabel(PropertyStatus::INTERESTED),
+                'color' => MapMarkerColor::forStatus(PropertyStatus::INTERESTED)->value,
+                'mark' => MapMarkerColor::markForStatus(PropertyStatus::INTERESTED),
+            ],
+            PropertyStatus::CUSTOMER->value => [
+                'label' => CommercialTerminology::propertyStatusLabel(PropertyStatus::CUSTOMER),
+                'color' => MapMarkerColor::forStatus(PropertyStatus::CUSTOMER)->value,
+                'mark' => MapMarkerColor::markForStatus(PropertyStatus::CUSTOMER),
+            ],
+            PropertyStatus::RETURN_LATER->value => [
+                'label' => CommercialTerminology::propertyStatusLabel(PropertyStatus::RETURN_LATER),
+                'color' => MapMarkerColor::forStatus(PropertyStatus::RETURN_LATER)->value,
+                'mark' => MapMarkerColor::markForStatus(PropertyStatus::RETURN_LATER),
+            ],
+        ];
+
+        $outcomeStatuses = [
+            'interested' => [
+                'label' => 'Interessado',
+                'color' => MapMarkerColor::forStatus(PropertyStatus::INTERESTED)->value,
+                'mark' => MapMarkerColor::markForStatus(PropertyStatus::INTERESTED),
+            ],
+            'no_interest' => [
+                'label' => 'Não interessado',
+                'color' => MapMarkerColor::forStatus(PropertyStatus::NO_INTEREST)->value,
+                'mark' => MapMarkerColor::markForStatus(PropertyStatus::NO_INTEREST),
+            ],
+            'return_later' => [
+                'label' => 'Retornar depois',
+                'color' => MapMarkerColor::forStatus(PropertyStatus::RETURN_LATER)->value,
+                'mark' => MapMarkerColor::markForStatus(PropertyStatus::RETURN_LATER),
+            ],
+            'installation_requested' => [
+                'label' => CommercialTerminology::saleCompleted(),
+                'color' => MapMarkerColor::forStatus(PropertyStatus::INSTALLATION_REQUESTED)->value,
+                'mark' => MapMarkerColor::markForStatus(PropertyStatus::INSTALLATION_REQUESTED),
+            ],
+            'not_home' => [
+                'label' => 'Não encontrado',
+                'color' => MapMarkerColor::GRAY->value,
+                'mark' => '',
+            ],
         ];
 
         $sellerCampaigns = collect();
@@ -94,6 +138,7 @@ class MapController extends Controller
             'sectors' => $this->territory->activeSectors(),
             'statuses' => CommercialTerminology::propertyStatusOptions(),
             'quickStatuses' => $quickStatuses,
+            'outcomeStatuses' => $outcomeStatuses,
             'visitStatuses' => CommercialTerminology::visitStatusOptions(),
             'campaigns' => $this->campaigns->paginate(100)->getCollection(),
             'sellerCampaigns' => $sellerCampaigns,

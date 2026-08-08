@@ -1640,13 +1640,13 @@
         const code = error && typeof error.code === 'number' ? error.code : null;
         // 1 PERMISSION_DENIED, 2 POSITION_UNAVAILABLE, 3 TIMEOUT
         if (code === 1) {
-            return 'Verifique a permissão de localização do navegador.';
+            return 'Permissão de localização negada. Ative no navegador e tente de novo.';
         }
         if (code === 3) {
-            return 'Não foi possível acessar sua localização. Tente de novo.';
+            return 'Tempo esgotado ao obter a localização. Tente de novo.';
         }
         if (code === 2) {
-            return 'Não foi possível acessar sua localização.';
+            return 'Posição indisponível no momento. Verifique o GPS e tente de novo.';
         }
         if (!navigator.geolocation) {
             return 'Este navegador não oferece localização.';
@@ -1671,7 +1671,8 @@
                     resolve(coords);
                 },
                 (err) => reject(new Error(gpsErrorMessage(err))),
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+                // Sprint 8.2.11: slightly fresher fix, still one getCurrentPosition call
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
             );
         });
     }
@@ -1698,7 +1699,7 @@
             fillColor: '#38bdf8',
             fillOpacity: 0.85,
         }).addTo(map);
-        draftLocationMarker.bindTooltip('Meu Local', { permanent: false, direction: 'top' });
+        draftLocationMarker.bindTooltip('Minha localização', { permanent: false, direction: 'top' });
     }
 
     function centerMapOnCoords(lat, lng, zoom = 17) {
@@ -2377,7 +2378,7 @@
         const next = findNextHouse();
         const hint = document.getElementById('brief-next-house');
         if (hint) {
-            hint.textContent = 'Toque em Meu Local para cadastrar com GPS, ou toque no mapa para escolher o local.';
+            hint.textContent = 'Use Minha localização para se localizar. Depois toque no mapa para registrar o ponto.';
         }
         el.classList.add('open');
     }
@@ -2549,20 +2550,32 @@
         metricsPanel.classList.remove('open');
     });
 
-    document.getElementById('btn-new-point')?.addEventListener('click', () => {
-        locateMyPosition({ sourceBtn: document.getElementById('btn-new-point') }).catch(() => {});
-    });
-    document.getElementById('btn-new-point-side')?.addEventListener('click', () => {
-        locateMyPosition({ sourceBtn: document.getElementById('btn-new-point-side') }).catch(() => {});
-    });
-    document.getElementById('btn-empty-add-point')?.addEventListener('click', () => {
-        locateMyPosition({ sourceBtn: document.getElementById('btn-empty-add-point') }).catch(() => {});
-    });
+    /** Sprint 8.2.11: único CTA GPS — Minha localização (não cria ponto). */
+    let locateInFlight = false;
 
-    /** Sprint 8.2.9: Meu Local / Minha localização — só GPS + centralizar (não cria ponto). */
+    function setLocateButtonLoading(btn, loading) {
+        if (!btn) return;
+        btn.disabled = loading;
+        btn.setAttribute('aria-busy', loading ? 'true' : 'false');
+        const label = btn.querySelector('span');
+        if (!label) return;
+        if (loading) {
+            if (!btn.dataset.labelDefault) {
+                btn.dataset.labelDefault = label.textContent || 'Minha localização';
+            }
+            label.textContent = 'Localizando...';
+        } else if (btn.dataset.labelDefault) {
+            label.textContent = btn.dataset.labelDefault;
+        }
+    }
+
     async function locateMyPosition({ sourceBtn } = {}) {
+        if (locateInFlight) {
+            return;
+        }
         const btn = sourceBtn || document.getElementById('btn-recenter-location');
-        if (btn) btn.disabled = true;
+        locateInFlight = true;
+        setLocateButtonLoading(btn, true);
         try {
             const gps = await getGps();
             centerMapOnCoords(gps.latitude, gps.longitude, 17);
@@ -2570,7 +2583,8 @@
         } catch (error) {
             toast(error.message || 'Não foi possível acessar sua localização.', 'error');
         } finally {
-            if (btn) btn.disabled = false;
+            locateInFlight = false;
+            setLocateButtonLoading(btn, false);
         }
     }
 

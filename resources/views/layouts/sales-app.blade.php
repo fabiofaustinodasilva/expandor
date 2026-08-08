@@ -88,7 +88,7 @@
             position: fixed;
             left: 0; right: 0; bottom: 0;
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 0.25rem;
             padding: 0.45rem 0.55rem calc(0.45rem + var(--safe-bottom));
             background: rgba(23, 26, 34, 0.96);
@@ -167,6 +167,7 @@
     <a class="{{ request()->routeIs('sales-app.dashboard') ? 'active' : '' }}" href="{{ route('sales-app.dashboard') }}">Início</a>
     <a class="{{ request()->routeIs('sales-app.campaigns.*') ? 'active' : '' }}" href="{{ route('sales-app.campaigns.index') }}">Campanhas</a>
     <a class="{{ request()->routeIs('sales-app.follow-ups.*') ? 'active' : '' }}" href="{{ route('sales-app.follow-ups.index') }}">Retornos</a>
+    <a class="{{ request()->routeIs('sales-app.products.*') ? 'active' : '' }}" href="{{ route('sales-app.products.index') }}">Produtos</a>
     <a class="{{ request()->routeIs('sales-app.training.*') ? 'active' : '' }}" href="{{ route('sales-app.training.index') }}">Academia</a>
 </nav>
 @include('partials.rc-ux-polish')

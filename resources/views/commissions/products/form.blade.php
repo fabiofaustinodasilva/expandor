@@ -19,9 +19,26 @@
             @error('name')<div class="header-meta" style="color:var(--highlight);">{{ $message }}</div>@enderror
         </div>
 
+        <div class="grid grid-2" style="gap:.75rem;margin-bottom:.75rem;">
+            <div>
+                <label for="category">Categoria</label>
+                <input class="form-control" id="category" name="category" value="{{ old('category', $product->category) }}" maxlength="80" placeholder="Ex.: Móvel, Fibra">
+            </div>
+            <div>
+                <label for="sort_order">Ordem de exibição</label>
+                <input class="form-control" type="number" min="0" id="sort_order" name="sort_order"
+                       value="{{ old('sort_order', $product->sort_order ?? 0) }}">
+            </div>
+        </div>
+
         <div style="margin-bottom:.75rem;">
             <label for="description">Descrição</label>
             <textarea class="form-control" id="description" name="description" rows="3">{{ old('description', $product->description) }}</textarea>
+        </div>
+
+        <div style="margin-bottom:.75rem;">
+            <label for="benefits">Benefícios (um por linha)</label>
+            <textarea class="form-control" id="benefits" name="benefits" rows="4" placeholder="5 GB&#10;Ligações ilimitadas">{{ old('benefits', is_array($product->benefits) ? implode("\n", $product->benefits) : '') }}</textarea>
         </div>
 
         <x-media-upload
@@ -33,6 +50,14 @@
             hint="JPG, PNG ou WEBP até 5MB. Thumbnail gerado automaticamente."
         />
 
+        <div style="margin-bottom:.75rem;">
+            <label for="video_url">Vídeo (URL)</label>
+            <input class="form-control" id="video_url" name="video_url" type="url"
+                   value="{{ old('video_url', $product->video_url) }}"
+                   placeholder="https://… (MP4 direto, YouTube ou Vimeo)">
+            <div class="header-meta">Upload de arquivo de vídeo não está no pipeline de mídia atual — use URL.</div>
+            @error('video_url')<div class="header-meta" style="color:var(--highlight);">{{ $message }}</div>@enderror
+        </div>
         <div class="grid grid-2" style="gap:.75rem;margin-bottom:.75rem;">
             <div>
                 <label for="price">Valor de venda (R$)</label>

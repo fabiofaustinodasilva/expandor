@@ -222,7 +222,7 @@ class FirstApproachTest extends TestCase
             ->assertSee('point-first-approach')
             ->assertSee('Situação / interesse')
             ->assertSee('Toque no mapa')
-            ->assertSee('Meu Local')
+            ->assertSee('Minha localização')
             ->assertDontSee('btn-next-house');
     }
 

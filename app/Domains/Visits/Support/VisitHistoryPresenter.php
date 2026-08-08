@@ -17,6 +17,8 @@ final class VisitHistoryPresenter
 {
     public const GPS_FALLBACK_LABEL = 'Residência cadastrada pelo GPS';
 
+    public const NO_CLIENT_LABEL = 'Ponto sem cliente';
+
     public const NO_NEXT_STEP = 'Sem próximo passo definido';
 
     public static function primaryResident(Visit $visit): ?Resident
@@ -55,6 +57,26 @@ final class VisitHistoryPresenter
         }
 
         return self::displayAddress($visit->property?->address);
+    }
+
+    /**
+     * Label for commissions list: real resident name, else "Ponto sem cliente".
+     * Does not use GPS street placeholders as the client identity.
+     */
+    public static function commissionClientLabel(Visit $visit): string
+    {
+        $resident = self::primaryResident($visit);
+        $name = trim((string) ($resident?->name ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        $saleName = trim((string) ($visit->sale?->resident?->name ?? ''));
+        if ($saleName !== '') {
+            return $saleName;
+        }
+
+        return self::NO_CLIENT_LABEL;
     }
 
     public static function phoneDigits(?Resident $resident): string

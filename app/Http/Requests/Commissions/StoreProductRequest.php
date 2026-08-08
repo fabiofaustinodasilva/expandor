@@ -19,13 +19,17 @@ class StoreProductRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'max:80'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'benefits' => ['nullable', 'string', 'max:4000'],
+            'video_url' => ['nullable', 'url', 'max:500'],
             'image' => app(MediaUploadService::class)->rules(MediaPurpose::ProductImage),
             'price' => ['required', 'numeric', 'min:0'],
             'commission_amount' => ['required', 'numeric', 'min:0'],
             'stock_control' => ['sometimes', 'boolean'],
             'stock_quantity' => ['nullable', 'integer', 'min:0'],
             'minimum_stock' => ['nullable', 'integer', 'min:0'],
+            'sort_order' => ['nullable', 'integer', 'min:0', 'max:99999'],
             'status' => ['required', Rule::in([Product::STATUS_ACTIVE, Product::STATUS_INACTIVE])],
         ];
     }
@@ -36,9 +40,25 @@ class StoreProductRequest extends FormRequest
             [
                 'name.required' => 'Informe o nome do produto.',
                 'price.required' => 'Informe o preço.',
+                'video_url.url' => 'Informe uma URL de vídeo válida.',
             ],
             app(MediaUploadService::class)->validationMessages('image', 'imagem do produto'),
         );
+    }
+
+    public function validated($key = null, $default = null)
+    {
+        $data = parent::validated($key, $default);
+        if ($key !== null) {
+            return $data;
+        }
+
+        $data['benefits'] = \App\Domains\Sales\Products\Services\ProductCatalogService::parseBenefitsInput($data['benefits'] ?? null);
+        $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
+        $data['video_url'] = filled($data['video_url'] ?? null) ? $data['video_url'] : null;
+        $data['category'] = filled($data['category'] ?? null) ? trim((string) $data['category']) : null;
+
+        return $data;
     }
 
     protected function prepareForValidation(): void

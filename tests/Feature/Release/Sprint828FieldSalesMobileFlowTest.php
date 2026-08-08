@@ -23,7 +23,7 @@ class Sprint828FieldSalesMobileFlowTest extends TestCase
         $this->seedFoundation();
     }
 
-    public function test_map_exposes_meu_local_and_minha_localizacao_recenter(): void
+    public function test_map_exposes_single_minha_localizacao_recenter(): void
     {
         $company = $this->makeCompanyWithPlan('Empresa Field Mobile 828');
         $seller = $this->makeUser($company, Role::SELLER, ['email' => 'seller-map@sprint828.test']);
@@ -33,12 +33,12 @@ class Sprint828FieldSalesMobileFlowTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('id="btn-new-point"', $html);
-        $this->assertStringContainsString('Meu Local', $html);
         $this->assertStringContainsString('id="btn-recenter-location"', $html);
         $this->assertStringContainsString('Minha localização', $html);
         $this->assertStringContainsString('title="Centralizar no GPS sem criar ponto"', $html);
-        $this->assertStringContainsString('map-btn-meu-local', $html);
+        $this->assertStringContainsString('map-btn-recenter', $html);
+        $this->assertStringNotContainsString('id="btn-new-point"', $html);
+        $this->assertStringNotContainsString('>Meu Local<', $html);
     }
 
     public function test_map_form_is_direct_without_empty_spot_chooser(): void
@@ -74,14 +74,15 @@ class Sprint828FieldSalesMobileFlowTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('data-status="interested"', $html);
-        $this->assertStringContainsString('>Interessado</button>', $html);
+        $this->assertStringContainsString('Interessado', $html);
         $this->assertStringContainsString('data-status="no_interest"', $html);
-        $this->assertStringContainsString('>Não interessado</button>', $html);
+        $this->assertStringContainsString('Não interessado', $html);
         $this->assertStringContainsString('data-status="return_later"', $html);
-        $this->assertStringContainsString('>Retornar depois</button>', $html);
+        $this->assertStringContainsString('Retornar depois', $html);
         $this->assertStringContainsString('data-status="installation_requested"', $html);
         $this->assertStringContainsString(CommercialTerminology::saleCompleted(), $html);
         $this->assertStringContainsString('data-status="not_home"', $html);
+        $this->assertStringContainsString('data-status-color=', $html);
     }
 
     public function test_seller_does_not_gain_admin_surfaces_from_map(): void
@@ -107,7 +108,7 @@ class Sprint828FieldSalesMobileFlowTest extends TestCase
         $this->assertIsString($js);
 
         $this->assertStringContainsString('Não foi possível acessar sua localização.', $js);
-        $this->assertStringContainsString('Verifique a permissão de localização do navegador.', $js);
+        $this->assertStringContainsString('Permissão de localização negada', $js);
         $this->assertStringContainsString("'Localização obtida'", $js);
         $this->assertStringContainsString("'Ponto registrado'", $js);
         $this->assertStringContainsString('Não foi possível salvar. Tente novamente.', $js);
@@ -139,7 +140,7 @@ class Sprint828FieldSalesMobileFlowTest extends TestCase
         $this->assertStringContainsString('id="btn-recenter-location"', $html);
         $this->assertStringContainsString('map-btn-recenter', $html);
         $this->assertStringContainsString('field-seller-outcome-grid', $html);
-        $this->assertStringContainsString('operational-map.js?v=46', $html);
+        $this->assertStringContainsString('operational-map.js?v=47', $html);
         $this->assertStringContainsString('@media (max-width: 640px)', $html);
     }
 }

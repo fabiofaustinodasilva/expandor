@@ -38,7 +38,8 @@ class MapsModuleTest extends TestCase
             ->assertSee('/api/v1/maps/markers')
             ->assertSee('map-provider')
             ->assertSee('commercial-filters')
-            ->assertSee('Meu Local')
+            ->assertSee('btn-recenter-location', false)
+            ->assertSee('map-btn-recenter', false)
             ->assertDontSee('btn-next-house');
     }
 
@@ -67,7 +68,7 @@ class MapsModuleTest extends TestCase
         $response = $this->actingAs($seller)->get(route('map.index'));
 
         $response->assertOk()
-            ->assertSee('Meu Local')
+            ->assertSee('btn-recenter-location', false)
             ->assertSee('Começar no mapa')
             ->assertSee('Casas visitadas hoje')
             ->assertDontSee('Próxima casa')

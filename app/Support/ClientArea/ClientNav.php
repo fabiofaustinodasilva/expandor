@@ -96,6 +96,7 @@ final class ClientNav
             ['module' => 'customers', 'label' => 'Clientes', 'icon' => 'contact', 'route' => 'customers.index', 'params' => [], 'patterns' => ['customers.*']],
             ['module' => 'dashboard', 'label' => 'Resultado', 'icon' => 'bar-chart-3', 'route' => 'dashboard', 'params' => [], 'patterns' => ['dashboard']],
             ['module' => 'commissions', 'label' => 'Comissão', 'icon' => 'wallet', 'route' => 'commissions.index', 'params' => [], 'patterns' => ['commissions.index']],
+            ['module' => 'sales_app', 'label' => 'Produtos', 'icon' => 'package', 'route' => 'sales-app.products.index', 'params' => [], 'patterns' => ['sales-app.products.*']],
         ];
     }
 
