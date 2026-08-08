@@ -267,6 +267,7 @@ Route::middleware([
         Route::get('/follow-ups', [SalesAppFollowUpController::class, 'index'])->name('follow-ups.index');
         Route::post('/follow-ups/{followUp}/complete', [SalesAppFollowUpController::class, 'complete'])->name('follow-ups.complete');
         Route::get('/products', [SalesAppProductController::class, 'index'])->name('products.index');
+        Route::get('/products/apresentar', [SalesAppProductController::class, 'present'])->name('products.present');
         Route::get('/products/{product}', [SalesAppProductController::class, 'show'])->name('products.show');
         Route::get('/training', [SalesAppTrainingController::class, 'index'])->name('training.index');
         Route::get('/training/{content}', [SalesAppTrainingController::class, 'show'])->name('training.show');
@@ -322,6 +323,7 @@ Route::middleware([
     Route::post('/operacao/configuracoes/produtos', [CommissionProductController::class, 'store'])->name('commissions.products.store');
     Route::get('/operacao/configuracoes/produtos/{product}/editar', [CommissionProductController::class, 'edit'])->name('commissions.products.edit');
     Route::put('/operacao/configuracoes/produtos/{product}', [CommissionProductController::class, 'update'])->name('commissions.products.update');
+    Route::post('/operacao/configuracoes/produtos/{product}/status', [CommissionProductController::class, 'toggleStatus'])->name('commissions.products.toggle-status');
     Route::delete('/operacao/configuracoes/produtos/{product}', [CommissionProductController::class, 'destroy'])->name('commissions.products.destroy');
     Route::post('/operacao/configuracoes/produtos/{product}/estoque/entrada', [CommissionProductController::class, 'stockEntry'])->name('commissions.products.stock.entry');
     Route::post('/operacao/configuracoes/produtos/{product}/estoque/ajuste', [CommissionProductController::class, 'stockAdjust'])->name('commissions.products.stock.adjust');

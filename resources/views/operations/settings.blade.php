@@ -11,9 +11,9 @@
     <div class="grid grid-2">
         @if(!empty($canCommissions))
             <a class="card" href="{{ route('commissions.products.index') }}" style="display:block;">
-                <div class="header-meta">Comercial</div>
-                <strong style="font-size:1.1rem;">Produtos / Estoque</strong>
-                <p class="header-meta" style="margin:.5rem 0 0;">Catálogo, {{ mb_strtolower($commercial::commissionPerSale()) }}, estoque e movimentações.</p>
+                <div class="header-meta">Configurações</div>
+                <strong style="font-size:1.1rem;">Produtos</strong>
+                <p class="header-meta" style="margin:.5rem 0 0;">Cadastro, ativação e materiais de apresentação para o vendedor.</p>
             </a>
             <a class="card" href="{{ route('commissions.index') }}" style="display:block;">
                 <div class="header-meta">Comercial</div>

@@ -96,7 +96,7 @@ final class ClientNav
             ['module' => 'customers', 'label' => 'Clientes', 'icon' => 'contact', 'route' => 'customers.index', 'params' => [], 'patterns' => ['customers.*']],
             ['module' => 'dashboard', 'label' => 'Resultado', 'icon' => 'bar-chart-3', 'route' => 'dashboard', 'params' => [], 'patterns' => ['dashboard']],
             ['module' => 'commissions', 'label' => 'Comissão', 'icon' => 'wallet', 'route' => 'commissions.index', 'params' => [], 'patterns' => ['commissions.index']],
-            ['module' => 'sales_app', 'label' => 'Produtos', 'icon' => 'package', 'route' => 'sales-app.products.index', 'params' => [], 'patterns' => ['sales-app.products.*']],
+            ['module' => 'sales_app', 'label' => 'Apresentar', 'icon' => 'package', 'route' => 'sales-app.products.present', 'params' => [], 'patterns' => ['sales-app.products.*']],
         ];
     }
 
@@ -130,7 +130,7 @@ final class ClientNav
                     ['module' => 'territory', 'label' => 'Cidades', 'route' => 'cities.index', 'params' => [], 'patterns' => ['cities.*']],
                     ['module' => 'territory', 'label' => 'Setores', 'route' => 'sectors.index', 'params' => [], 'patterns' => ['sectors.*']],
                     ['module' => 'commissions', 'label' => 'Comissões', 'route' => 'commissions.index', 'params' => [], 'patterns' => ['commissions.index']],
-                    ['module' => 'stock', 'label' => 'Produtos / Estoque', 'route' => 'commissions.products.index', 'params' => [], 'patterns' => ['commissions.products.*']],
+                    ['module' => 'stock', 'label' => 'Produtos', 'route' => 'commissions.products.index', 'params' => [], 'patterns' => ['commissions.products.*']],
                     ['module' => 'commission_rules', 'label' => 'Regras de comissão', 'route' => 'crm.commissions.index', 'params' => [], 'patterns' => ['crm.commissions.*']],
                 ],
             ],
@@ -141,6 +141,7 @@ final class ClientNav
                 'items' => [
                     ['module' => 'team', 'label' => 'Equipe', 'route' => 'operations.team', 'params' => [], 'patterns' => ['operations.team']],
                     ['module' => 'settings', 'label' => 'Configurações', 'route' => 'operations.settings', 'params' => [], 'patterns' => ['operations.settings', 'operations.settings.*']],
+                    ['module' => 'stock', 'label' => 'Produtos', 'route' => 'commissions.products.index', 'params' => [], 'patterns' => ['commissions.products.*']],
                     ['module' => 'branding', 'label' => 'Identidade visual', 'route' => 'company.branding.edit', 'params' => [], 'patterns' => ['company.branding.*']],
                     ['module' => 'integrations', 'label' => 'Integrações', 'route' => 'operations.integrations', 'params' => [], 'patterns' => ['operations.integrations']],
                     ['module' => 'billing', 'label' => 'Plano e uso', 'route' => 'company.plan.show', 'params' => [], 'patterns' => ['company.plan.*']],

@@ -57,12 +57,21 @@
                         <span id="offline-queue-count">0</span> pendente(s)
                     </span>
                     @unless(!empty($isFieldSeller))
-                    <button id="toggle-filters-manager" type="button" class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-2" title="Filtros">
-                        <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
-                    </button>
-                    <button id="toggle-metrics" type="button" class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-2 lg:hidden" title="Métricas">
-                        <i data-lucide="activity" class="w-5 h-5"></i>
-                    </button>
+                    <details class="map-more-tools relative">
+                        <summary class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-2 cursor-pointer list-none"
+                                 title="Mais ferramentas">
+                            <i data-lucide="more-horizontal" class="w-5 h-5"></i>
+                            <span class="hidden sm:inline text-sm font-semibold">Mais</span>
+                        </summary>
+                        <div class="absolute right-0 top-[calc(100%+0.4rem)] z-50 min-w-[11rem] rounded-xl border border-slate-700 bg-slate-950 shadow-xl p-2 flex flex-col gap-1">
+                            <button id="toggle-filters-manager" type="button" class="h-11 px-3 rounded-lg text-left text-sm text-slate-100 hover:bg-slate-800 inline-flex items-center gap-2">
+                                <i data-lucide="sliders-horizontal" class="w-4 h-4"></i> Filtros
+                            </button>
+                            <button id="toggle-metrics" type="button" class="h-11 px-3 rounded-lg text-left text-sm text-slate-100 hover:bg-slate-800 inline-flex items-center gap-2">
+                                <i data-lucide="activity" class="w-4 h-4"></i> Métricas
+                            </button>
+                        </div>
+                    </details>
                     @endunless
                 </div>
             </div>
@@ -132,6 +141,15 @@
     <div id="operational-map" class="absolute inset-0 z-0" role="application" aria-label="Mapa operacional"></div>
     {{-- Basemap + Minha localização (Sprint 8.2.8) --}}
     <div id="map-bottom-left-controls" class="absolute left-3 bottom-[5.5rem] sm:bottom-6 z-20 flex flex-col gap-2 pointer-events-auto">
+        @if(!empty($isFieldSeller) || auth()->user()?->hasPermission('sales_app.access'))
+            <a href="{{ route('sales-app.products.present') }}"
+               id="btn-present-products"
+               class="map-btn-present h-12 min-w-[3rem] sm:h-14 sm:w-auto sm:px-4 px-3 rounded-2xl bg-sky-500 text-slate-950 shadow-lg inline-flex items-center justify-center gap-2 font-bold text-sm"
+               title="Abrir apresentação comercial para o cliente">
+                <i data-lucide="presentation" class="w-5 h-5 shrink-0" aria-hidden="true"></i>
+                <span>Apresentar produtos</span>
+            </a>
+        @endif
         <button type="button" id="btn-recenter-location"
                 class="map-btn-recenter h-12 min-w-[3rem] sm:h-14 sm:w-auto sm:px-4 px-3 rounded-2xl bg-slate-900/95 border border-slate-600 text-slate-100 shadow-lg inline-flex items-center justify-center gap-2 font-semibold text-sm"
                 title="Centralizar no GPS sem criar ponto" aria-label="Minha localização">
@@ -735,7 +753,11 @@
                 </li>
                 <li class="flex gap-3 items-start">
                     <span class="shrink-0 w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center">3</span>
-                    <span><strong class="text-white">Continue na rua</strong> — volte ao mapa e registre o próximo ponto.</span>
+                    <span><strong class="text-white">Apresentar produtos</strong> — quando o cliente demonstrar interesse, mostre a apresentação.</span>
+                </li>
+                <li class="flex gap-3 items-start">
+                    <span class="shrink-0 w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center">4</span>
+                    <span><strong class="text-white">Continue na rua</strong> — após apresentar, use <strong class="text-white">Voltar ao mapa</strong> e siga o próximo ponto.</span>
                 </li>
             </ol>
             <button type="button" id="seller-tips-continue" class="w-full h-14 rounded-2xl bg-sky-500 text-slate-950 font-bold mb-2">Entendi, vamos lá</button>
@@ -958,7 +980,26 @@
             white-space: normal;
             text-align: left;
         }
-        .map-btn-recenter span { display: inline; }
+        .map-btn-present {
+            min-width: 3rem;
+            min-height: 3rem;
+            max-width: min(12rem, 48vw);
+            padding-left: 0.65rem;
+            padding-right: 0.65rem;
+            font-size: 0.72rem;
+            line-height: 1.15;
+            white-space: normal;
+            text-align: left;
+        }
+        .map-btn-recenter span,
+        .map-btn-present span { display: inline; }
+        .map-more-tools summary::-webkit-details-marker { display: none; }
+        body:not(.field-seller) #map-bottom-left-controls {
+            bottom: 1.5rem;
+        }
+        body:not(.field-seller) #commercial-filters {
+            top: 5.25rem;
+        }
         body.field-seller #marker-drawer {
             width: min(100vw, 400px);
             max-height: 78dvh;
@@ -996,5 +1037,5 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="{{ asset('js/map-provider.js') }}?v=3"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=47"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=48"></script>
 @endpush

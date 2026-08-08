@@ -208,11 +208,12 @@ class Sprint8211FieldSalesExperienceTest extends TestCase
         $this->assertStringNotContainsString('Plano Inativo', $list);
         $this->assertStringNotContainsString('Produto Outra Empresa', $list);
 
-        $show = $this->actingAs($seller)->get(route('sales-app.products.show', $active))->assertOk()->getContent();
-        $this->assertStringContainsString('ÚNICA MÓVEL', $show);
-        $this->assertStringContainsString('5 GB', $show);
-        $this->assertStringContainsString('Informações comerciais', $show);
-        $this->assertStringContainsString('playsinline', $show);
+        $show = $this->actingAs($seller)->get(route('sales-app.products.show', $active))->assertRedirect(route('sales-app.products.present', ['product' => $active->id]));
+        $deck = $this->actingAs($seller)->get(route('sales-app.products.present', ['product' => $active->id]))->assertOk()->getContent();
+        $this->assertStringContainsString('ÚNICA MÓVEL', $deck);
+        $this->assertStringContainsString('5 GB', $deck);
+        $this->assertStringContainsString('Voltar ao mapa', $deck);
+        $this->assertStringContainsString('playsinline', $deck);
 
         $this->actingAs($seller)->get(route('sales-app.products.show', $inactive))->assertForbidden();
         $this->actingAs($seller)->get(route('sales-app.products.show', $other))->assertNotFound();
@@ -225,6 +226,6 @@ class Sprint8211FieldSalesExperienceTest extends TestCase
         $seller = $this->makeUser($company, Role::SELLER, ['email' => 'seller-cache@sprint8211.test']);
 
         $html = $this->actingAs($seller)->get(route('map.index'))->assertOk()->getContent();
-        $this->assertStringContainsString('operational-map.js?v=47', $html);
+        $this->assertStringContainsString('operational-map.js?v=48', $html);
     }
 }

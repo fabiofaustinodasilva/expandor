@@ -36,13 +36,14 @@ class ManagerNavCommissionsIntegrationTest extends TestCase
             ->get(route('operations.more'))
             ->assertOk()
             ->assertSee('Comissões')
-            ->assertSee('Produtos / Estoque')
+            ->assertSee('Produtos')
             ->assertSee(route('commissions.products.index'), false);
+
 
         $this->actingAs($manager)
             ->get(route('operations.settings'))
             ->assertOk()
-            ->assertSee('Produtos / Estoque')
+            ->assertSee('Produtos')
             ->assertSee('Financeiro');
     }
 

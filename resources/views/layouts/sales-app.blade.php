@@ -167,7 +167,7 @@
     <a class="{{ request()->routeIs('sales-app.dashboard') ? 'active' : '' }}" href="{{ route('sales-app.dashboard') }}">Início</a>
     <a class="{{ request()->routeIs('sales-app.campaigns.*') ? 'active' : '' }}" href="{{ route('sales-app.campaigns.index') }}">Campanhas</a>
     <a class="{{ request()->routeIs('sales-app.follow-ups.*') ? 'active' : '' }}" href="{{ route('sales-app.follow-ups.index') }}">Retornos</a>
-    <a class="{{ request()->routeIs('sales-app.products.*') ? 'active' : '' }}" href="{{ route('sales-app.products.index') }}">Produtos</a>
+    <a class="{{ request()->routeIs('sales-app.products.*') ? 'active' : '' }}" href="{{ route('sales-app.products.index') }}">Apresentar</a>
     <a class="{{ request()->routeIs('sales-app.training.*') ? 'active' : '' }}" href="{{ route('sales-app.training.index') }}">Academia</a>
 </nav>
 @include('partials.rc-ux-polish')

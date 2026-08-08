@@ -119,6 +119,18 @@ class ProductController extends Controller
             ->with('success', $message);
     }
 
+    public function toggleStatus(Product $product): RedirectResponse
+    {
+        $this->authorize('update', $product);
+
+        $next = $product->isActive() ? Product::STATUS_INACTIVE : Product::STATUS_ACTIVE;
+        $product->update(['status' => $next]);
+
+        return back()->with('success', $next === Product::STATUS_ACTIVE
+            ? 'Produto ativado.'
+            : 'Produto desativado.');
+    }
+
     public function destroy(Product $product): RedirectResponse
     {
         $this->authorize('delete', $product);

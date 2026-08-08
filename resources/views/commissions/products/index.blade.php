@@ -1,18 +1,25 @@
 @extends('layouts.operational')
 
-@section('title', 'Produtos / Estoque')
+@section('title', 'Produtos')
 
 @section('page')
-    <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem;">
-        <div>
-            <h1 class="page-title" style="margin:0;">Produtos / Estoque</h1>
-            <p class="header-meta" style="margin:.35rem 0 0;">Catálogo comercial, {{ mb_strtolower($commercial::commissionPerSale()) }} e controle de estoque.</p>
+    <div class="products-admin-header" style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1rem;">
+        <div style="min-width:0;flex:1;">
+            <h1 class="page-title" style="margin:0;">Produtos</h1>
+            <p class="header-meta" style="margin:.35rem 0 0;">Configurações → Produtos — catálogo e materiais de apresentação para o campo.</p>
         </div>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
-            <a class="btn btn-ghost" href="{{ route('commissions.index') }}">Ver comissões</a>
-            <a class="btn btn-primary" href="{{ route('commissions.products.create') }}">Novo produto</a>
+        <div class="actions" style="display:flex;gap:.5rem;flex-wrap:wrap;width:100%;max-width:100%;">
+            <a class="btn btn-ghost" href="{{ route('operations.settings') }}" style="min-height:44px;">← Configurações</a>
+            <a class="btn btn-primary" id="btn-new-product" href="{{ route('commissions.products.create') }}" style="min-height:44px;flex:1 1 12rem;">+ Novo produto</a>
         </div>
     </div>
+
+    @if($products->isEmpty())
+        <div class="card" style="text-align:center;padding:2rem 1.25rem;margin-bottom:1.25rem;">
+            <p style="margin:0 0 1rem;color:var(--muted);">Nenhum produto cadastrado ainda.</p>
+            <a class="btn btn-primary" href="{{ route('commissions.products.create') }}" style="min-height:48px;display:inline-flex;">+ Novo produto</a>
+        </div>
+    @endif
 
     @if($lowStock->isNotEmpty())
         <div class="alert alert-warning" style="margin-bottom:1rem;">
@@ -33,18 +40,17 @@
             <input class="form-control" type="date" id="date_to" name="date_to" value="{{ $dateTo }}">
         </div>
         <button class="btn btn-ghost" type="submit">Atualizar</button>
+        <a class="btn btn-ghost" href="{{ route('commissions.index') }}">Ver comissões</a>
     </form>
 
     <div class="card" style="overflow-x:auto;margin-bottom:1.25rem;">
-        <table class="table" style="width:100%;">
+        <table class="table client-data-table--responsive" style="width:100%;">
             <thead>
             <tr>
                 <th>Produto</th>
+                <th>Categoria</th>
                 <th>Preço (R$)</th>
-                <th>Comissão (R$)</th>
-                <th>Estoque atual</th>
-                <th>Estoque mínimo</th>
-                <th>Vendidos (período)</th>
+                <th>Estoque</th>
                 <th>Status</th>
                 <th>Ações</th>
             </tr>
@@ -52,62 +58,67 @@
             <tbody>
             @forelse($products as $product)
                 <tr>
-                    <td>
+                    <td data-label="Produto">
                         <div style="display:flex; gap:.65rem; align-items:center;">
                             @if($product->imageUrl())
                                 <img src="{{ $product->imageUrl() }}" alt="" style="width:40px;height:40px;border-radius:.55rem;object-fit:cover;border:1px solid var(--border);">
                             @endif
                             <div>
                                 <strong>{{ $product->name }}</strong>
-                                @if($product->stock_control)
-                                    <div class="header-meta">Controla estoque</div>
-                                @else
-                                    <div class="header-meta">Sem controle de estoque</div>
+                                @if($product->benefitList() !== [])
+                                    <div class="header-meta">{{ $product->benefitList()[0] }}</div>
                                 @endif
                             </div>
                         </div>
                     </td>
-                    <td>R$ {{ number_format((float) $product->price, 2, ',', '.') }}</td>
-                    <td>R$ {{ number_format((float) $product->commission_amount, 2, ',', '.') }}</td>
-                    <td>{{ $product->stock_control ? $product->stock_quantity : 'Sem controle' }}</td>
-                    <td>{{ $product->stock_control ? $product->minimum_stock : '—' }}</td>
-                    <td>{{ $product->sold_in_period }}</td>
-                    <td>{{ $product->status === 'active' ? 'Ativo' : 'Inativo' }}</td>
-                    <td style="white-space:nowrap;">
-                        <a class="btn btn-ghost" href="{{ route('commissions.products.edit', $product) }}">Editar</a>
-                        @if($product->stock_control)
-                            <details style="display:inline-block;margin-left:.25rem;">
-                                <summary class="btn btn-ghost" style="cursor:pointer;">Estoque</summary>
-                                <div class="card" style="position:absolute;z-index:5;min-width:220px;margin-top:.35rem;">
-                                    <form method="POST" action="{{ route('commissions.products.stock.entry', $product) }}" style="margin-bottom:.5rem;">
-                                        @csrf
-                                        <label>Entrada (+)</label>
-                                        <input class="form-control" type="number" name="quantity" min="1" required>
-                                        <input class="form-control" type="text" name="notes" placeholder="Obs." style="margin-top:.35rem;">
-                                        <button class="btn btn-primary" type="submit" style="margin-top:.35rem;">Registrar</button>
-                                    </form>
-                                    <form method="POST" action="{{ route('commissions.products.stock.adjust', $product) }}">
-                                        @csrf
-                                        <label>Ajuste (+/-)</label>
-                                        <input class="form-control" type="number" name="quantity" required>
-                                        <input class="form-control" type="text" name="notes" placeholder="Obs." style="margin-top:.35rem;">
-                                        <button class="btn btn-ghost" type="submit" style="margin-top:.35rem;">Ajustar</button>
-                                    </form>
-                                </div>
-                            </details>
-                        @endif
-                        @unless($product->hasLinkedSales())
-                            <form method="POST" action="{{ route('commissions.products.destroy', $product) }}" style="display:inline;"
-                                  onsubmit="return confirm('Excluir este produto?');">
+                    <td data-label="Categoria">{{ $product->category ?: '—' }}</td>
+                    <td data-label="Preço">R$ {{ number_format((float) $product->price, 2, ',', '.') }}</td>
+                    <td data-label="Estoque">{{ $product->stock_control ? $product->stock_quantity : 'Sem controle' }}</td>
+                    <td data-label="Status">{{ $product->status === 'active' ? 'Ativo' : 'Inativo' }}</td>
+                    <td data-label="Ações" style="white-space:nowrap;">
+                        <div class="actions" style="flex-wrap:wrap;">
+                            <a class="btn btn-ghost" href="{{ route('commissions.products.edit', $product) }}" style="min-height:44px;">Editar</a>
+                            <form method="POST" action="{{ route('commissions.products.toggle-status', $product) }}" style="display:inline;">
                                 @csrf
-                                @method('DELETE')
-                                <button class="btn btn-ghost" type="submit">Excluir</button>
+                                <button class="btn btn-ghost" type="submit" style="min-height:44px;">
+                                    {{ $product->isActive() ? 'Desativar' : 'Ativar' }}
+                                </button>
                             </form>
-                        @endunless
+                            <a class="btn btn-ghost" href="{{ route('sales-app.products.present', ['product' => $product->id]) }}" style="min-height:44px;">Ver apresentação</a>
+                            @if($product->stock_control)
+                                <details style="display:inline-block;">
+                                    <summary class="btn btn-ghost" style="cursor:pointer;min-height:44px;">Estoque</summary>
+                                    <div class="card" style="position:absolute;z-index:5;min-width:220px;margin-top:.35rem;">
+                                        <form method="POST" action="{{ route('commissions.products.stock.entry', $product) }}" style="margin-bottom:.5rem;">
+                                            @csrf
+                                            <label>Entrada (+)</label>
+                                            <input class="form-control" type="number" name="quantity" min="1" required>
+                                            <input class="form-control" type="text" name="notes" placeholder="Obs." style="margin-top:.35rem;">
+                                            <button class="btn btn-primary" type="submit" style="margin-top:.35rem;">Registrar</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('commissions.products.stock.adjust', $product) }}">
+                                            @csrf
+                                            <label>Ajuste (+/-)</label>
+                                            <input class="form-control" type="number" name="quantity" required>
+                                            <input class="form-control" type="text" name="notes" placeholder="Obs." style="margin-top:.35rem;">
+                                            <button class="btn btn-ghost" type="submit" style="margin-top:.35rem;">Ajustar</button>
+                                        </form>
+                                    </div>
+                                </details>
+                            @endif
+                            @unless($product->hasLinkedSales())
+                                <form method="POST" action="{{ route('commissions.products.destroy', $product) }}" style="display:inline;"
+                                      onsubmit="return confirm('Excluir este produto?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-ghost" type="submit" style="min-height:44px;">Excluir</button>
+                                </form>
+                            @endunless
+                        </div>
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="8">Nenhum produto cadastrado.</td></tr>
+                <tr><td colspan="6">Nenhum produto cadastrado.</td></tr>
             @endforelse
             </tbody>
         </table>

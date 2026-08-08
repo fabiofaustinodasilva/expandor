@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\SalesApp;
 use App\Domains\Sales\Products\Models\Product;
 use App\Domains\Sales\Products\Services\ProductCatalogService;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -14,6 +15,9 @@ class SalesAppProductController extends Controller
         protected ProductCatalogService $catalog,
     ) {}
 
+    /**
+     * Entry: list + CTA into presentation mode.
+     */
     public function index(Request $request): View
     {
         $this->authorizeSalesApp($request);
@@ -28,28 +32,61 @@ class SalesAppProductController extends Controller
         ]);
     }
 
-    public function show(Request $request, Product $product): View
+    /**
+     * Full-screen commercial presentation (swipe deck).
+     * Loads catalog once as JSON — navigation is client-side.
+     */
+    public function present(Request $request): View
     {
+        $this->authorizeSalesApp($request);
+        $this->authorize('viewAny', Product::class);
+
+        $products = $this->catalog->activeCatalogForSeller();
+        $startId = (int) $request->query('product', 0);
+        $startIndex = 0;
+        if ($startId > 0) {
+            $found = $products->search(fn (Product $p) => (int) $p->id === $startId);
+            if ($found !== false) {
+                $startIndex = (int) $found;
+            }
+        }
+
+        $payload = $products->values()->map(fn (Product $p) => [
+            'id' => $p->id,
+            'name' => $p->name,
+            'category' => $p->categoryLabel(),
+            'description' => (string) ($p->description ?? ''),
+            'benefits' => $p->benefitList(),
+            'price' => number_format((float) $p->price, 2, ',', '.'),
+            'image' => $p->imageOriginalUrl() ?: $p->imageUrl(),
+            'video' => $p->embeddableVideoUrl(),
+            'video_embed' => $p->embeddableVideoUrl() !== null
+                && (str_contains((string) $p->embeddableVideoUrl(), 'youtube.com/embed')
+                    || str_contains((string) $p->embeddableVideoUrl(), 'player.vimeo.com')),
+        ])->all();
+
+        return view('sales-app.products.present', [
+            'deck' => $payload,
+            'startIndex' => $startIndex,
+            'mapUrl' => route('map.index'),
+        ]);
+    }
+
+    public function show(Request $request, Product $product): RedirectResponse
+    {
+        // Prefer presentation deck; keep show as redirect into present for deep links.
         $this->authorizeSalesApp($request);
         $this->authorize('view', $product);
 
-        $siblings = $this->catalog->activeCatalogForSeller();
-        $ids = $siblings->pluck('id')->values();
-        $index = $ids->search($product->id);
-        $prev = $index !== false && $index > 0 ? $siblings[$index - 1] : null;
-        $next = $index !== false && $index < $siblings->count() - 1 ? $siblings[$index + 1] : null;
-
-        return view('sales-app.products.show', [
-            'product' => $product,
-            'prev' => $prev,
-            'next' => $next,
-        ]);
+        return redirect()->route('sales-app.products.present', ['product' => $product->id]);
     }
 
     protected function authorizeSalesApp(Request $request): void
     {
+        $user = $request->user();
         abort_unless(
-            $request->user()?->hasPermission('sales_app.access') ?? false,
+            ($user?->hasPermission('sales_app.access') ?? false)
+            || ($user?->hasPermission('commissions.manage') ?? false),
             403,
             'Access denied.'
         );
