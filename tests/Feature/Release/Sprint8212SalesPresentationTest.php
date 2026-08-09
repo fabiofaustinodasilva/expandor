@@ -154,7 +154,7 @@ class Sprint8212SalesPresentationTest extends TestCase
         $this->assertStringContainsString('Apresentar produtos', $html);
         $this->assertStringContainsString('id="btn-recenter-location"', $html);
         $this->assertStringContainsString('openCreateAtMapTap', $js);
-        $this->assertStringContainsString('operational-map.js?v=48', $html);
+        $this->assertStringContainsString('operational-map.js?v=49', $html);
         $this->assertStringContainsString('Voltar ao mapa', file_get_contents(resource_path('views/sales-app/products/present.blade.php')));
     }
 

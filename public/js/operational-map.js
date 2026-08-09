@@ -40,6 +40,7 @@
     try { saleRequiredFields = JSON.parse(page.dataset.saleRequiredFields || '[]'); } catch (e) { saleRequiredFields = []; }
     try { saleFieldLabels = JSON.parse(page.dataset.saleFieldLabels || '{}'); } catch (e) { saleFieldLabels = {}; }
     const openNewPointOnLoad = page.dataset.openNewPoint === '1';
+    const CONTRACT_PRODUCT_KEY = 'expandor.contract_product';
 
     let pointDetails = null;
     let lastGpsAccuracy = null;
@@ -850,6 +851,71 @@
             quantity: 1,
         });
         renderSaleCart(prefix);
+    }
+
+    /** Prefill cart with a known sellable product (presentation → Contratar). */
+    function seedSaleCartWithProduct(prefix, productId) {
+        const pid = Number(productId);
+        if (!pid) return false;
+        const product = findProduct(prefix, pid);
+        if (!product || product.available === false) {
+            toast('Produto indisponível para contratação.', 'error');
+            return false;
+        }
+        if (!saleCarts[prefix]) saleCarts[prefix] = [];
+        saleCarts[prefix] = [{
+            uid: `${prefix}-contract-${pid}`,
+            productId: pid,
+            quantity: 1,
+        }];
+        renderSaleCart(prefix);
+        return true;
+    }
+
+    function rememberContractProduct(productId) {
+        const pid = Number(productId);
+        if (!pid) return;
+        try { sessionStorage.setItem(CONTRACT_PRODUCT_KEY, String(pid)); } catch (e) {}
+    }
+
+    function clearRememberedContractProduct() {
+        try { sessionStorage.removeItem(CONTRACT_PRODUCT_KEY); } catch (e) {}
+    }
+
+    function pendingContractProductId() {
+        try {
+            return Number(sessionStorage.getItem(CONTRACT_PRODUCT_KEY) || 0) || 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    function applyPendingContractProduct() {
+        if (!isFieldSeller) return;
+        const pid = pendingContractProductId();
+        if (!pid) return;
+        const statusEl = document.getElementById('point-visit-status');
+        if (statusEl) statusEl.value = 'installation_requested';
+        syncPointOutcomeUi('installation_requested');
+        seedSaleCartWithProduct('point', pid);
+    }
+
+    function markPointGpsPending() {
+        const title = document.getElementById('point-gps-title');
+        if (title) title.textContent = 'Obtendo localização...';
+        const gpsLabel = document.getElementById('point-gps-label');
+        if (gpsLabel) {
+            gpsLabel.textContent = 'Aguarde a localização GPS';
+            gpsLabel.classList.remove('font-mono');
+        }
+        const latEl = document.getElementById('point-latitude');
+        const lngEl = document.getElementById('point-longitude');
+        if (latEl) latEl.value = '';
+        if (lngEl) lngEl.value = '';
+        const accEl = document.getElementById('point-gps-accuracy');
+        if (accEl) accEl.value = '';
+        const adjustOnMap = document.getElementById('point-adjust-on-map');
+        if (adjustOnMap) adjustOnMap.classList.add('hidden');
     }
 
     function collectSaleFinalizeFields(prefix) {
@@ -1821,11 +1887,64 @@
             centerMapOnCoords(coords.latitude, coords.longitude, 17);
             pointModal.classList.add('open');
             if (window.lucide) window.lucide.createIcons();
+            applyPendingContractProduct();
             return;
         }
 
         // Sprint 8.2.9: sem coords = não abre cadastro (Meu Local só localiza).
+        // Sprint 8.2.13: contratação a partir da apresentação abre e obtém GPS em seguida.
         return;
+    }
+
+    /**
+     * Sprint 8.2.13 — Contratar from presentation deck.
+     * Reuses FirstApproach modal + sale finalize; auto GPS via existing getGps().
+     */
+    async function openContractRegistration(productId) {
+        if (!canCreatePoint || !pointModal) return;
+        const pid = Number(productId);
+        if (!pid) return;
+
+        rememberContractProduct(pid);
+
+        pointError.classList.add('hidden');
+        pointForm.reset();
+        document.getElementById('point-mode').value = 'create';
+        document.getElementById('point-modal-title').textContent = 'Contratar produto';
+        document.getElementById('point-submit').textContent = 'Confirmar venda';
+
+        const managerStatus = document.getElementById('point-manager-status');
+        const firstApproach = document.getElementById('point-first-approach');
+        managerStatus?.classList.add('hidden');
+        firstApproach?.classList.remove('hidden');
+        prepareSellerCampaignSelect();
+        if (sellerCampaigns.length === 0) {
+            pointError.textContent = noCampaignMessage;
+            pointError.classList.remove('hidden');
+        }
+
+        markPointGpsPending();
+        document.getElementById('point-visit-status').value = 'installation_requested';
+        syncPointOutcomeUi('installation_requested');
+        seedSaleCartWithProduct('point', pid);
+        document.getElementById('point-meta-label').textContent = `Você: ${sellerName} · ${nowLabel()}`;
+        pointModal.classList.add('open');
+        if (window.lucide) window.lucide.createIcons();
+
+        try {
+            const gps = await getGps();
+            fillPointCoords(gps.latitude, gps.longitude, gps.accuracy);
+            centerMapOnCoords(gps.latitude, gps.longitude, 17);
+            pointError.classList.add('hidden');
+        } catch (err) {
+            const msg = err?.message || 'Não foi possível obter a localização.';
+            pointError.textContent = `${msg} Feche e toque no mapa para marcar o ponto, ou use Minha localização.`;
+            pointError.classList.remove('hidden');
+            const title = document.getElementById('point-gps-title');
+            if (title) title.textContent = 'Localização não obtida';
+            const gpsLabel = document.getElementById('point-gps-label');
+            if (gpsLabel) gpsLabel.textContent = 'GPS negado ou indisponível';
+        }
     }
 
     function closePointModal() {
@@ -1989,6 +2108,13 @@
             pointSubmitting = false;
             return;
         }
+        if (!payload.latitude || !payload.longitude) {
+            pointError.textContent = 'Aguarde a localização GPS ou toque no mapa para marcar o ponto.';
+            pointError.classList.remove('hidden');
+            submitBtn.disabled = false;
+            pointSubmitting = false;
+            return;
+        }
         if (!payload.city_id && citySelect.value) {
             payload.city_id = citySelect.value;
             document.getElementById('point-city-id').value = citySelect.value;
@@ -2045,9 +2171,10 @@
 
             closePointModal();
             clearDraftLocationMarker();
+            clearRememberedContractProduct();
             const saleDone = useFirstApproach && status === 'installation_requested';
             const saveMsg = saleDone
-                ? saleRegisteredToast
+                ? (saleRegisteredToast || 'Cadastro salvo')
                 : (useFirstApproach
                     ? 'Ponto registrado'
                     : (mode === 'edit' ? 'Cliente atualizado' : 'Ponto registrado'));
@@ -2686,7 +2813,22 @@
         }
     }
 
+    function consumeContractProductDeepLink() {
+        const params = new URLSearchParams(window.location.search);
+        const raw = params.get('contract_product');
+        if (!raw) return 0;
+        const pid = Number(raw);
+        if (!pid) return 0;
+        rememberContractProduct(pid);
+        params.delete('contract_product');
+        const next = params.toString();
+        const clean = `${window.location.pathname}${next ? `?${next}` : ''}${window.location.hash || ''}`;
+        try { window.history.replaceState({}, '', clean); } catch (e) {}
+        return pid;
+    }
+
     applyDeepLinkFilters();
+    const contractProductOnLoad = consumeContractProductDeepLink();
 
     setTimeout(() => {
         map.invalidateSize();
@@ -2702,7 +2844,7 @@
                     }
                 }
             }
-            if (isFieldSeller) {
+            if (isFieldSeller && !contractProductOnLoad) {
                 if (!tipsSeen()) {
                     openSellerTips();
                 } else if (!routeStarted()) {
@@ -2721,6 +2863,9 @@
                 campaignEl.selectedIndex = 1;
                 campaignSelect.value = campaignEl.value;
             }
+        }
+        if (contractProductOnLoad) {
+            openContractRegistration(contractProductOnLoad).catch(() => {});
         }
         updateOfflineBadge();
         flushOfflineQueue({ silent: true }).catch(() => {});

@@ -1037,5 +1037,5 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="{{ asset('js/map-provider.js') }}?v=3"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=48"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=49"></script>
 @endpush
