@@ -2,6 +2,7 @@
 
 namespace App\Domains\Maps\Repositories;
 
+use App\Domains\Campaigns\Models\Campaign;
 use App\Domains\Maps\DTOs\MapFiltersDTO;
 use App\Domains\Maps\Enums\MapCommercialGroup;
 use App\Domains\Sales\Properties\Models\Property;
@@ -118,15 +119,44 @@ class MapRepository
             )
             ->when(
                 $filters->campaign_id,
-                fn (Builder $query) => $query->whereHas(
-                    'visits',
-                    fn (Builder $visitQuery) => $visitQuery->where('campaign_id', $filters->campaign_id)
-                )
+                function (Builder $query) use ($filters): void {
+                    $this->applyCampaignTerritory($query, (int) $filters->campaign_id);
+                }
             )
             ->when(
                 $filters->hasTextSearch(),
                 fn (Builder $query) => $this->applyTextSearch($query, (string) $filters->q)
             );
+    }
+
+    /**
+     * Território da campanha: cidade obrigatória; setores do pivot se houver;
+     * pivot vazio = cidade inteira (todos os setores). Sem setor fake.
+     *
+     * @param  Builder<Property>  $query
+     */
+    protected function applyCampaignTerritory(Builder $query, int $campaignId): void
+    {
+        $campaign = Campaign::query()
+            ->select(['id', 'city_id', 'company_id'])
+            ->with(['sectors:id'])
+            ->find($campaignId);
+
+        if ($campaign === null) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $sectorIds = $campaign->sectors->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        $query->whereHas('address', function (Builder $addressQuery) use ($campaign, $sectorIds): void {
+            $addressQuery->where('city_id', $campaign->city_id);
+
+            if ($sectorIds !== []) {
+                $addressQuery->whereIn('sector_id', $sectorIds);
+            }
+        });
     }
 
     /**

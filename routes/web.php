@@ -352,6 +352,7 @@ Route::middleware([
 
     Route::get('/campaigns', [CampaignController::class, 'index'])->name('campaigns.index');
     Route::get('/campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
+    Route::get('/campaigns/sectors-for-city', [CampaignController::class, 'sectorsForCity'])->name('campaigns.sectors-for-city');
     Route::post('/campaigns', [CampaignController::class, 'store'])->name('campaigns.store');
     Route::get('/campaigns/{campaign}/edit', [CampaignController::class, 'edit'])->name('campaigns.edit');
     Route::put('/campaigns/{campaign}', [CampaignController::class, 'update'])->name('campaigns.update');

@@ -6,12 +6,20 @@ use App\Domains\Campaigns\Enums\CampaignStatus;
 use App\Tenancy\TenantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreCampaignRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('territory_mode') === 'all') {
+            $this->merge(['sector_ids' => []]);
+        }
     }
 
     public function rules(): array
@@ -35,11 +43,33 @@ class StoreCampaignRequest extends FormRequest
                 'integer',
                 Rule::exists('users', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
             ],
-            'sector_ids' => ['nullable', 'array'],
+            'territory_mode' => ['nullable', Rule::in(['all', 'sectors'])],
+            'sector_ids' => [
+                Rule::requiredIf(fn () => $this->input('territory_mode') === 'sectors'),
+                'nullable',
+                'array',
+            ],
             'sector_ids.*' => [
                 'integer',
                 Rule::exists('sectors', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
             ],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($this->input('territory_mode') !== 'sectors') {
+                return;
+            }
+
+            $ids = collect($this->input('sector_ids', []))->filter()->values();
+            if ($ids->isEmpty()) {
+                $validator->errors()->add(
+                    'sector_ids',
+                    'Selecione ao menos um setor ou escolha Todos os setores.'
+                );
+            }
+        });
     }
 }

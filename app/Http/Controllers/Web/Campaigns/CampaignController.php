@@ -11,8 +11,11 @@ use App\Domains\Campaigns\Repositories\CampaignRepository;
 use App\Domains\Campaigns\Requests\StoreCampaignRequest;
 use App\Domains\Campaigns\Requests\UpdateCampaignRequest;
 use App\Domains\Campaigns\Services\CampaignService;
+use App\Domains\Sales\Territory\Models\City;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class CampaignController extends Controller
@@ -35,7 +38,34 @@ class CampaignController extends Controller
     {
         $this->authorize('create', Campaign::class);
 
-        return view('campaigns.create', $this->formData());
+        $cityId = old('city_id') ? (int) old('city_id') : null;
+
+        return view('campaigns.create', $this->formData($cityId));
+    }
+
+    /**
+     * Setores ativos da cidade (tenant) — carregamento dependente no formulário.
+     */
+    public function sectorsForCity(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Campaign::class);
+
+        $data = $request->validate([
+            'city_id' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $city = City::query()->findOrFail((int) $data['city_id']);
+
+        $sectors = $this->repository->sectorOptions($city->id)->map(fn ($sector) => [
+            'id' => $sector->id,
+            'city_id' => $sector->city_id,
+            'name' => $sector->name,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $sectors,
+        ]);
     }
 
     public function store(StoreCampaignRequest $request): RedirectResponse
@@ -55,7 +85,9 @@ class CampaignController extends Controller
 
         $campaign->load(['users:id', 'sectors:id']);
 
-        return view('campaigns.edit', array_merge($this->formData(), [
+        $cityId = old('city_id') ? (int) old('city_id') : (int) $campaign->city_id;
+
+        return view('campaigns.edit', array_merge($this->formData($cityId), [
             'campaign' => $campaign,
         ]));
     }
@@ -107,13 +139,16 @@ class CampaignController extends Controller
     /**
      * @return array<string, mixed>
      */
-    protected function formData(): array
+    protected function formData(?int $cityId = null): array
     {
         return [
             'cities' => $this->repository->cityOptions(),
-            'sectors' => $this->repository->sectorOptions(),
+            'sectors' => $cityId
+                ? $this->repository->sectorOptions($cityId)
+                : new \Illuminate\Database\Eloquent\Collection,
             'sellers' => $this->repository->sellerOptions(),
             'statuses' => CampaignStatus::options(),
+            'sectorsForCityUrl' => route('campaigns.sectors-for-city'),
         ];
     }
 }
