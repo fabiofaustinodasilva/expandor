@@ -261,7 +261,8 @@ class Sprint8221IntegrationsFoundationTest extends TestCase
         $resolver->forget($pro);
         $decision = $resolver->resolve($pro);
         $this->assertTrue($decision->usesGoogleMaps());
-        $this->assertSame(IntegrationProviders::LEAFLET_OSM, $decision->visualProvider());
+        // 8.2.22: visualProvider follows logical provider (GoogleMutant over Leaflet host).
+        $this->assertSame(IntegrationProviders::GOOGLE_MAPS, $decision->visualProvider());
     }
 
     public function test_downgrade_forces_leaflet_without_deleting_credentials(): void
@@ -321,7 +322,7 @@ class Sprint8221IntegrationsFoundationTest extends TestCase
         $this->assertTrue(app(MapIntegrationResolver::class)->resolve($company)->usesDefaultLeaflet());
     }
 
-    public function test_mercado_pago_platform_settings_untouched_and_map_stays_leaflet(): void
+    public function test_mercado_pago_platform_settings_untouched(): void
     {
         PaymentGatewaySetting::query()->create([
             'provider' => PaymentGatewaySetting::PROVIDER_MERCADOPAGO,
@@ -343,25 +344,6 @@ class Sprint8221IntegrationsFoundationTest extends TestCase
         $this->actingAs($platform)
             ->get(route('platform.marketplace.mercadopago.edit'))
             ->assertOk();
-
-        $company = $this->makeCompanyWithPlan('Map Co', 'professional');
-        $admin = $this->makeUser($company, Role::ADMINISTRATOR);
-        app(TenantContext::class)->set($company, $admin);
-
-        CompanyIntegration::query()->create([
-            'company_id' => $company->id,
-            'provider' => IntegrationProviders::GOOGLE_MAPS,
-            'category' => IntegrationProviders::CATEGORY_MAPS,
-            'enabled' => true,
-            'status' => CompanyIntegrationStatus::Connected,
-            'credentials' => ['browser_api_key' => self::VALID_KEY],
-        ]);
-
-        $this->actingAs($admin)
-            ->get(route('map.index'))
-            ->assertOk()
-            ->assertSee('leaflet', false)
-            ->assertDontSee(self::VALID_KEY, false);
     }
 
     public function test_browser_restriction_counts_as_valid_for_web_key(): void

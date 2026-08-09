@@ -3,10 +3,11 @@
  *
  * Separates basemap provider concerns from commercial layers (markers, clusters, filters).
  *
- * Current: Leaflet + OpenStreetMap (street) with Esri World Imagery (satellite fallback).
- * Future adapters (do not implement here): Google Maps Platform, Mapbox.
+ * Providers:
+ * - leaflet_osm: OpenStreetMap street + Esri World Imagery satellite (fallback absoluto)
+ * - google_maps: Leaflet host + GoogleMutant (official Maps JavaScript API tiles — ToS-safe)
  *
- * Swap point: ExpandorMapProvider.create(map, { provider: 'google' | 'mapbox' | 'leaflet_osm' })
+ * Swap point: ExpandorMapProvider.create(map, { provider: 'google_maps' | 'leaflet_osm' })
  */
 (function (global) {
     'use strict';
@@ -18,12 +19,11 @@
             attribution: hideAttribution ? '' : '&copy; OpenStreetMap',
         });
 
-        // Prepared satellite basemap — not a provider swap. Replace with Google/Mapbox tiles later.
         const satellite = L.tileLayer(
             'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
             {
                 maxZoom: 19,
-                attribution: hideAttribution ? '' : 'Tiles &copy; Esri — satélite provisório até Google/Mapbox',
+                attribution: hideAttribution ? '' : 'Tiles &copy; Esri',
             }
         );
 
@@ -34,7 +34,7 @@
             id: 'leaflet_osm',
             label: 'Leaflet + OpenStreetMap',
             supportsSatellite: true,
-            satelliteNote: 'Satélite provisório (Esri). Troca futura: Google Maps Platform ou Mapbox via ExpandorMapProvider.',
+            satelliteNote: 'Satélite (Esri) no provider padrão.',
             getBasemap() {
                 return current;
             },
@@ -51,22 +51,103 @@
                 current = next;
                 return current;
             },
+            destroy() {
+                try { map.removeLayer(street); } catch (e) { /* noop */ }
+                try { map.removeLayer(satellite); } catch (e) { /* noop */ }
+            },
+        };
+    }
+
+    function googleMutantFactory() {
+        if (typeof L === 'undefined') return null;
+        if (typeof L.gridLayer?.googleMutant === 'function') {
+            return L.gridLayer.googleMutant.bind(L.gridLayer);
+        }
+        if (typeof L.GridLayer?.GoogleMutant === 'function') {
+            return function (opts) {
+                return new L.GridLayer.GoogleMutant(opts);
+            };
+        }
+        return null;
+    }
+
+    function createGoogleMapsProvider(map, options) {
+        if (typeof google === 'undefined' || !google.maps) {
+            throw new Error('google_maps_unavailable');
+        }
+        const factory = googleMutantFactory();
+        if (!factory) {
+            throw new Error('googlemutant_unavailable');
+        }
+
+        // Google branding/attribution must remain visible (ToS). Do not strip for sellers.
+        const street = factory({ type: 'roadmap', maxZoom: 21 });
+        const satellite = factory({ type: 'satellite', maxZoom: 21 });
+
+        let current = 'street';
+        street.addTo(map);
+
+        return {
+            id: 'google_maps',
+            label: 'Google Maps (Leaflet + GoogleMutant)',
+            supportsSatellite: true,
+            satelliteNote: 'Satélite Google (Maps JavaScript API via GoogleMutant).',
+            getBasemap() {
+                return current;
+            },
+            setBasemap(mode) {
+                const next = mode === 'satellite' ? 'satellite' : 'street';
+                if (next === current) return current;
+                if (next === 'satellite') {
+                    map.removeLayer(street);
+                    satellite.addTo(map);
+                } else {
+                    map.removeLayer(satellite);
+                    street.addTo(map);
+                }
+                current = next;
+                return current;
+            },
+            destroy() {
+                try { map.removeLayer(street); } catch (e) { /* noop */ }
+                try { map.removeLayer(satellite); } catch (e) { /* noop */ }
+            },
         };
     }
 
     global.ExpandorMapProvider = {
         /**
          * @param {L.Map} map
-         * @param {{ provider?: string }} [options]
+         * @param {{ provider?: string, hideAttribution?: boolean }} [options]
          */
         create(map, options) {
             const provider = options?.provider || 'leaflet_osm';
-            if (provider === 'leaflet_osm') {
-                return createLeafletOsmProvider(map, options);
+            if (provider === 'google_maps') {
+                return createGoogleMapsProvider(map, options || {});
             }
-            // Future: google / mapbox adapters register here.
+            if (provider === 'leaflet_osm') {
+                return createLeafletOsmProvider(map, options || {});
+            }
             console.warn('[ExpandorMapProvider] Provider não disponível:', provider, '— usando leaflet_osm.');
-            return createLeafletOsmProvider(map, options);
+            return createLeafletOsmProvider(map, options || {});
+        },
+
+        waitForGoogleMaps(timeoutMs) {
+            const timeout = timeoutMs || 12000;
+            return new Promise((resolve, reject) => {
+                const started = Date.now();
+                (function poll() {
+                    if (typeof google !== 'undefined' && google.maps && googleMutantFactory()) {
+                        resolve(true);
+                        return;
+                    }
+                    if (Date.now() - started > timeout) {
+                        reject(new Error('google_maps_timeout'));
+                        return;
+                    }
+                    setTimeout(poll, 50);
+                })();
+            });
         },
     };
 
@@ -82,7 +163,6 @@
             no_interest: { label: 'Sem interesse', color: '#64748b', mark: '×' },
             new: { label: 'Novo', color: '#ef4444', mark: '' },
         },
-        /** Filter/cluster group — return_later + no_interest stay "visited". */
         groupOf(marker) {
             return marker?.commercial_group
                 || (marker?.status === 'customer' || marker?.status === 'installation_requested'

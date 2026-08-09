@@ -7,7 +7,7 @@ use App\Domains\Integrations\Support\IntegrationProviders;
 final class MapProviderDecision
 {
     /**
-     * @param  array<string, mixed>  $publicConfig  Never include server secrets. Browser key only when authorized + connected.
+     * @param  array<string, mixed>  $publicConfig  Never include secrets. Browser key is attached later via MapFrontendConfigBuilder.
      */
     public function __construct(
         public readonly string $provider,
@@ -28,10 +28,10 @@ final class MapProviderDecision
     }
 
     /**
-     * Visual map engine for this sprint: always Leaflet until adapter sprint.
+     * Visual basemap provider for the map page (Leaflet host + GoogleMutant when google_maps).
      */
     public function visualProvider(): string
     {
-        return IntegrationProviders::LEAFLET_OSM;
+        return $this->provider;
     }
 }

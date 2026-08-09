@@ -36,6 +36,7 @@ use App\Http\Controllers\Web\Dashboard\DashboardController;
 use App\Http\Controllers\Web\Maps\MapController;
 use App\Http\Controllers\Web\Maps\MapFirstApproachController;
 use App\Http\Controllers\Web\Maps\MapPointController;
+use App\Http\Controllers\Web\Maps\MapProviderFallbackController;
 use App\Http\Controllers\Web\Maps\MapVisitController;
 use App\Http\Controllers\Web\Operations\IntegrationsController;
 use App\Http\Controllers\Web\Operations\GoogleMapsIntegrationController;
@@ -292,6 +293,9 @@ Route::middleware([
     Route::put('/training/contents/{content}', [TrainingContentController::class, 'update'])->name('training.contents.update');
 
     Route::get('/map', [MapController::class, 'index'])->name('map.index');
+    Route::post('/map/provider-fallback', MapProviderFallbackController::class)
+        ->middleware('throttle:20,1')
+        ->name('map.provider-fallback');
     Route::post('/map/first-approach', [MapFirstApproachController::class, 'store'])->name('map.first-approach');
     Route::post('/map/campaigns/{campaign}/visits', [MapVisitController::class, 'store'])->name('map.visits.store');
     Route::post('/map/points', [MapPointController::class, 'store'])->name('map.points.store');

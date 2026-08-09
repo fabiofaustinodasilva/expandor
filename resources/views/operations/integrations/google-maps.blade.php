@@ -78,10 +78,12 @@
                         >
                     </label>
 
-                    <p class="header-meta" style="margin:0;">
-                        Use uma chave de navegador com restrição HTTP referrer. Não cole chaves de servidor com poderes amplos.
-                        Nesta fase o mapa visual permanece Leaflet; a conexão prepara a próxima sprint do adapter.
-                    </p>
+                    <div class="header-meta" style="margin:0; display:grid; gap:.45rem;">
+                        <p style="margin:0;">Use uma <strong>API Key de navegador</strong> com restrição por HTTP referrers (não use chave de servidor).</p>
+                        <p style="margin:0;">Ex.: <code>https://seu-dominio/*</code> e, em local, <code>http://localhost/*</code> / <code>http://127.0.0.1/*</code>.</p>
+                        <p style="margin:0;">No Google Cloud, habilite ao menos <strong>Maps JavaScript API</strong> (mapa visual). Billing e quotas são da conta Google da empresa.</p>
+                        <p style="margin:0;">“Testar conexão” valida a chave via Geocoding no servidor. Chaves só com restrição de referrer podem falhar nesse teste e ainda assim funcionar no mapa do navegador — confirme no mapa após salvar.</p>
+                    </div>
 
                     <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
                         <button type="submit" class="btn btn-primary">Salvar e ativar</button>

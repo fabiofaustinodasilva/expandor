@@ -55,16 +55,15 @@ class MapIntegrationResolver
             return $this->leaflet('missing_key', entitled: true, configured: false);
         }
 
-        // Logical provider is Google; visual stays Leaflet until adapter sprint.
         return new MapProviderDecision(
             provider: IntegrationProviders::GOOGLE_MAPS,
             reason: 'connected',
             entitled: true,
             configured: true,
             publicConfig: [
-                // Intentionally NOT exposing browser key to map views in this sprint.
                 'provider' => IntegrationProviders::GOOGLE_MAPS,
-                'ready_for_adapter' => true,
+                'fallback' => IntegrationProviders::LEAFLET_OSM,
+                // Browser key is attached live by MapFrontendConfigBuilder (not cached).
             ],
         );
     }

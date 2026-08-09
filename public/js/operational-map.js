@@ -138,8 +138,14 @@
     const postVisitModal = document.getElementById('post-visit-modal');
     const sellersMeta = JSON.parse(page.dataset.sellers || '[]');
 
+    const desiredMapProvider = page.dataset.mapProvider || 'leaflet_osm';
+    const forceGoogleFailure = page.dataset.mapForceGoogleFailure === '1';
+    const providerFallbackUrl = page.dataset.mapProviderFallbackUrl || '';
+    const wantsGoogleVisual = desiredMapProvider === 'google_maps' && !forceGoogleFailure;
+
     const map = L.map('operational-map', {
         zoomControl: false,
+        // Seller: Leaflet attribution control off. GoogleMutant keeps Google branding in its own pane (ToS).
         attributionControl: !isFieldSeller,
         preferCanvas: true,
     }).setView([-14.235, -51.9253], 4);
@@ -159,18 +165,114 @@
         });
     }
 
-    const mapProvider = (window.ExpandorMapProvider
-        ? window.ExpandorMapProvider.create(map, {
-            provider: 'leaflet_osm',
-            hideAttribution: isFieldSeller,
-        })
-        : null);
-    if (!mapProvider) {
+    let mapProvider = null;
+    let basemapInitToken = 0;
+
+    function createLeafletFallbackTiles() {
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: isFieldSeller ? '' : '&copy; OpenStreetMap',
         }).addTo(map);
     }
+
+    function destroyCurrentProvider() {
+        if (mapProvider && typeof mapProvider.destroy === 'function') {
+            try { mapProvider.destroy(); } catch (e) { /* noop */ }
+        }
+        mapProvider = null;
+    }
+
+    function attachLeafletProvider() {
+        destroyCurrentProvider();
+        if (window.ExpandorMapProvider) {
+            mapProvider = window.ExpandorMapProvider.create(map, {
+                provider: 'leaflet_osm',
+                hideAttribution: isFieldSeller,
+            });
+        } else {
+            createLeafletFallbackTiles();
+        }
+        return mapProvider;
+    }
+
+    function reportProviderFallback(code, message) {
+        if (!providerFallbackUrl) return;
+        try {
+            fetch(providerFallbackUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-XSRF-TOKEN': xsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    code: String(code || 'runtime_error').slice(0, 64),
+                    message: String(message || 'runtime_fallback').slice(0, 300),
+                }),
+            }).catch(() => { /* noop */ });
+        } catch (e) { /* noop */ }
+    }
+
+    function activateLeafletFallback(code, message, notify) {
+        const token = ++basemapInitToken;
+        destroyCurrentProvider();
+        attachLeafletProvider();
+        if (token !== basemapInitToken) return;
+        if (notify) {
+            toast('Mapa padrão ativado temporariamente.', 'success');
+        }
+        reportProviderFallback(code, message);
+    }
+
+    function initBasemapProvider() {
+        const token = ++basemapInitToken;
+
+        if (forceGoogleFailure && desiredMapProvider === 'google_maps') {
+            activateLeafletFallback('forced_failure', 'dev_force_google_failure', true);
+            return;
+        }
+
+        if (!wantsGoogleVisual) {
+            attachLeafletProvider();
+            return;
+        }
+
+        if (!window.ExpandorMapProvider?.waitForGoogleMaps) {
+            activateLeafletFallback('adapter_missing', 'ExpandorMapProvider unavailable', true);
+            return;
+        }
+
+        window.ExpandorMapProvider.waitForGoogleMaps(12000)
+            .then(() => {
+                if (token !== basemapInitToken) return;
+                destroyCurrentProvider();
+                try {
+                    mapProvider = window.ExpandorMapProvider.create(map, {
+                        provider: 'google_maps',
+                        hideAttribution: false,
+                    });
+                } catch (err) {
+                    activateLeafletFallback(
+                        err?.message || 'google_init_error',
+                        String(err?.message || err || 'google_init_error'),
+                        true
+                    );
+                }
+            })
+            .catch((err) => {
+                if (token !== basemapInitToken) return;
+                activateLeafletFallback(
+                    err?.message || 'google_maps_timeout',
+                    String(err?.message || err || 'google_maps_timeout'),
+                    true
+                );
+            });
+    }
+
+    // initBasemapProvider() is invoked after toast/csrf helpers exist (below).
 
     const clusterGroup = L.markerClusterGroup({
         showCoverageOnHover: false,
@@ -218,6 +320,8 @@
         clearTimeout(toast._t);
         toast._t = setTimeout(() => toastEl.classList.remove('show'), 2800);
     }
+
+    initBasemapProvider();
 
     function debounce(fn, wait) {
         let t;
@@ -2345,8 +2449,8 @@
         mapProvider.setBasemap(mode);
         document.getElementById('basemap-street')?.classList.toggle('is-active', mode === 'street');
         document.getElementById('basemap-satellite')?.classList.toggle('is-active', mode === 'satellite');
-        if (mode === 'satellite' && mapProvider.satelliteNote) {
-            toast('Satélite provisório ativo. Google/Mapbox virá depois.');
+        if (mode === 'satellite' && mapProvider.id === 'leaflet_osm' && mapProvider.satelliteNote) {
+            toast(mapProvider.satelliteNote);
         }
     }
     document.getElementById('basemap-street')?.addEventListener('click', () => setBasemap('street'));

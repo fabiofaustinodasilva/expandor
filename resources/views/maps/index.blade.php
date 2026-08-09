@@ -41,6 +41,13 @@
     data-legend='@json($legend)'
     data-commercial-legend='@json($commercialLegend)'
     data-sellers='@json($sellers->map(fn ($s) => ["id" => $s->id, "name" => $s->name])->values())'
+    data-map-provider="{{ $mapFrontendConfig->provider }}"
+    data-map-fallback="{{ $mapFrontendConfig->fallback }}"
+    data-map-provider-reason="{{ $mapFrontendConfig->reason }}"
+    @if(!empty($mapFrontendConfig->forceFailure))
+    data-map-force-google-failure="1"
+    @endif
+    data-map-provider-fallback-url="{{ $mapProviderFallbackUrl }}"
 >
     <header class="absolute top-0 inset-x-0 z-30 pointer-events-none p-3 pt-[4.25rem] md:p-4 md:pt-4 lg:pr-[316px] map-toolbar">
         <div class="pointer-events-auto flex flex-col gap-2">
@@ -1165,7 +1172,11 @@
 @push('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
-<script src="{{ asset('js/map-provider.js') }}?v=3"></script>
+@if($mapFrontendConfig->usesGoogleVisual())
+<script src="https://maps.googleapis.com/maps/api/js?key={{ urlencode($mapFrontendConfig->browserKey()) }}&v=weekly" async defer></script>
+<script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.1/Leaflet.GoogleMutant.js" crossorigin=""></script>
+@endif
+<script src="{{ asset('js/map-provider.js') }}?v=4"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=51"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=52"></script>
 @endpush

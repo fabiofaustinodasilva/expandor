@@ -7,6 +7,7 @@ use App\Domains\Analytics\Services\DashboardMetricsService;
 use App\Domains\Campaigns\Repositories\CampaignRepository;
 use App\Domains\Company\Support\FieldOps\FieldOpsPolicyResolver;
 use App\Domains\CRM\Models\SalesGoal;
+use App\Domains\Integrations\Services\MapFrontendConfigBuilder;
 use App\Domains\Maps\Enums\MapMarkerColor;
 use App\Domains\Sales\Products\Services\ProductCatalogService;
 use App\Domains\Sales\Properties\Enums\PropertyStatus;
@@ -30,6 +31,7 @@ class MapController extends Controller
         protected ProductCatalogService $products,
         protected SaleFieldsPolicyResolver $saleFields,
         protected VisitRepository $visits,
+        protected MapFrontendConfigBuilder $mapFrontend,
     ) {}
 
     public function index(): View
@@ -37,9 +39,17 @@ class MapController extends Controller
         $this->authorizeAccess();
 
         $user = auth()->user();
-        $user?->loadMissing(['role.permissions', 'permissionOverrides']);
+        $user?->loadMissing(['role.permissions', 'permissionOverrides', 'company']);
         $today = now()->toDateString();
         $isFieldSeller = $user?->role?->slug === \App\Domains\Company\Models\Role::SELLER;
+
+        $forceFailure = app()->environment(['local', 'testing'])
+            && request()->boolean('force_google_failure');
+
+        $mapFrontendConfig = $this->mapFrontend->forCompany(
+            $user?->company,
+            $forceFailure,
+        );
 
         $dayMetrics = $this->metrics->metrics(new AnalyticsFiltersDTO(
             date_from: $today,
@@ -189,6 +199,8 @@ class MapController extends Controller
             'isFieldSeller' => $isFieldSeller,
             'fieldOps' => $fieldPolicy?->toArray(),
             'noCampaignMessage' => RegisterFirstApproachAction::NO_CAMPAIGN_MESSAGE,
+            'mapFrontendConfig' => $mapFrontendConfig,
+            'mapProviderFallbackUrl' => route('map.provider-fallback'),
         ]);
     }
 
