@@ -7,10 +7,15 @@ use App\Domains\Company\Models\Role;
 use Illuminate\Database\Seeder;
 
 /**
- * Hotfix 8.2.21.1 — grants aditivos (nunca sync destrutivo).
+ * Hotfix 8.2.21.1 / 8.2.22 — grants aditivos (nunca sync destrutivo).
  *
- * Garante integrations.* e reancora dashboard.view nas roles de tenant,
- * cobrindo ambientes onde um sync incompleto removeu o pivot.
+ * Garante integrations.view + integrations.manage e reancora dashboard.view
+ * nas roles de tenant, cobrindo ambientes onde:
+ * - migration anterior já rodou e não reexecuta;
+ * - RolePermissionSeeder sync incompleto removeu o pivot;
+ * - Administrator vê a Central (view) mas cai em "Somente visualização" (sem manage).
+ *
+ * Seguro chamar mais de uma vez: syncWithoutDetaching.
  */
 class EnsureIntegrationsPermissionsSeeder extends Seeder
 {
