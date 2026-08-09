@@ -6,9 +6,13 @@
 @php
     $moreUser = auth()->user();
     $moreSections = $moreUser ? \App\Support\ClientArea\ClientNav::sections($moreUser) : [];
+    $isSellerMais = $moreUser && \App\Support\ClientArea\ClientNav::isFieldSeller($moreUser);
 @endphp
 
-<x-client.page-header title="Mais opções" description="Telas administrativas e avançadas — fora do fluxo diário.">
+<x-client.page-header
+    title="Mais opções"
+    :description="$isSellerMais ? 'Atalhos úteis do dia a dia — perfil, academia e demais funções do vendedor.' : 'Telas administrativas e avançadas — fora do fluxo diário.'"
+>
     <x-client.secondary-button :href="route('profile.edit')">Meu perfil</x-client.secondary-button>
 </x-client.page-header>
 

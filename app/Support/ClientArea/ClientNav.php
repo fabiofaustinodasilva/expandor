@@ -38,6 +38,10 @@ final class ClientNav
         foreach (self::rawSections($user) as $section) {
             $items = self::visible($user, $section['items']);
 
+            if (self::isFieldSeller($user)) {
+                $items = self::filterSellerMaisItems($items);
+            }
+
             if ($items === []) {
                 continue;
             }
@@ -56,6 +60,39 @@ final class ClientNav
     public static function isFieldSeller(User $user): bool
     {
         return $user->role?->slug === Role::SELLER;
+    }
+
+    /**
+     * Sprint 8.2.16 — esconde superfícies administrativas/duplicadas do Mais seller.
+     * Rotas/backend permanecem; só a superfície de navegação é filtrada.
+     *
+     * @param  list<array<string, mixed>>  $items
+     * @return list<array<string, mixed>>
+     */
+    private static function filterSellerMaisItems(array $items): array
+    {
+        $denyRoutes = [
+            'crm.dashboard',
+            'crm.commissions.index',
+            'properties.index',
+            'cities.index',
+            'sectors.index',
+            'sales-app.dashboard',
+            'reports.index',
+            'operations.team',
+            'operations.settings',
+            'operations.integrations',
+            'company.branding.edit',
+            'company.plan.show',
+            'company.subscription.show',
+            'company.audit.index',
+            'commissions.products.index',
+        ];
+
+        return array_values(array_filter(
+            $items,
+            fn (array $item): bool => ! in_array($item['route'] ?? '', $denyRoutes, true)
+        ));
     }
 
     /**
