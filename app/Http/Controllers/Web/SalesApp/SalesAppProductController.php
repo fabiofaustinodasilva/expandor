@@ -69,6 +69,8 @@ class SalesAppProductController extends Controller
             'deck' => $payload,
             'startIndex' => $startIndex,
             'mapUrl' => route('map.index'),
+            // Deep-link into existing map FirstApproach / sale finalize (no parallel form).
+            'contractUrlBase' => route('map.index').'?contract_product=',
         ]);
     }
 
