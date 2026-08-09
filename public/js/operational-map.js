@@ -227,29 +227,49 @@
         reportProviderFallback(code, message);
     }
 
+    function keepLeafletAndWarn(code, message) {
+        // Leaflet already mounted — do not destroy/recreate (avoids blank canvas).
+        toast('Mapa padrão ativado temporariamente.', 'success');
+        reportProviderFallback(code, message);
+    }
+
     function initBasemapProvider() {
         const token = ++basemapInitToken;
 
+        // CRITICAL: always mount Leaflet+OSM first so the canvas never stays blank
+        // while Google script/Mutant loads, times out, or fails auth silently.
+        attachLeafletProvider();
+
         if (forceGoogleFailure && desiredMapProvider === 'google_maps') {
-            activateLeafletFallback('forced_failure', 'dev_force_google_failure', true);
+            keepLeafletAndWarn('forced_failure', 'dev_force_google_failure');
             return;
         }
 
         if (!wantsGoogleVisual) {
-            attachLeafletProvider();
             return;
         }
 
         if (!window.ExpandorMapProvider?.waitForGoogleMaps) {
-            activateLeafletFallback('adapter_missing', 'ExpandorMapProvider unavailable', true);
+            keepLeafletAndWarn('adapter_missing', 'ExpandorMapProvider unavailable');
             return;
         }
+
+        const previousGmAuthFailure = window.gm_authFailure;
+        window.gm_authFailure = function gmAuthFailureExpandor() {
+            try {
+                if (typeof previousGmAuthFailure === 'function') {
+                    previousGmAuthFailure();
+                }
+            } catch (e) { /* noop */ }
+            activateLeafletFallback('gm_auth_failure', 'Google Maps authentication failed', true);
+        };
 
         window.ExpandorMapProvider.waitForGoogleMaps(12000)
             .then(() => {
                 if (token !== basemapInitToken) return;
-                destroyCurrentProvider();
                 try {
+                    // Swap: remove provisional OSM, mount GoogleMutant.
+                    destroyCurrentProvider();
                     mapProvider = window.ExpandorMapProvider.create(map, {
                         provider: 'google_maps',
                         hideAttribution: false,
@@ -264,10 +284,10 @@
             })
             .catch((err) => {
                 if (token !== basemapInitToken) return;
-                activateLeafletFallback(
+                // Provisional Leaflet remains active — only warn.
+                keepLeafletAndWarn(
                     err?.message || 'google_maps_timeout',
-                    String(err?.message || err || 'google_maps_timeout'),
-                    true
+                    String(err?.message || err || 'google_maps_timeout')
                 );
             });
     }

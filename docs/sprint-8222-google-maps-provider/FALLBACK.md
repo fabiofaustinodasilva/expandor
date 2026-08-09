@@ -7,11 +7,22 @@ Se o resolver / `MapFrontendConfig` retornar `leaflet_osm`:
 - Nenhuma browser key no HTML
 
 ## Runtime
-Se o provider desejado for `google_maps` e falhar (timeout, script, init, QA force):
-1. `destroyCurrentProvider()` limpa layers GoogleMutant
-2. Anexa `leaflet_osm`
-3. Toast: “Mapa padrão ativado temporariamente.”
-4. POST throttled em `/map/provider-fallback` (sem key)
+Sempre monta **Leaflet+OSM primeiro** (canvas nunca fica sem base layer).
+
+Se o provider desejado for `google_maps`:
+1. OSM provisório já está no mapa
+2. Aguarda Maps JS + GoogleMutant
+3. Em sucesso: destroy OSM → monta GoogleMutant
+4. Em timeout/script/init error: **mantém OSM** + toast + report
+5. Em `gm_authFailure` (key/referrer/billing): destroy Google → remonta OSM + toast
+
+Toast: “Mapa padrão ativado temporariamente.”
+POST throttled em `/map/provider-fallback` (sem key)
+
+## Causa de blank canvas (pré-fix)
+Com Google desejado, o init antigo **esperava** o script Google **sem** base layer.
+Se Mutant era criado sem throw mas tiles falhavam (auth), o mapa ficava azul-escuro
+permanentemente sem fallback.
 
 ## Anti double-init
 - Token `basemapInitToken` invalida callbacks atrasados

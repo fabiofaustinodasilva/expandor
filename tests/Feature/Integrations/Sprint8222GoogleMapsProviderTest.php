@@ -220,6 +220,10 @@ class Sprint8222GoogleMapsProviderTest extends TestCase
         $this->assertStringContainsString('activateLeafletFallback', $opsJs);
         $this->assertStringContainsString('Mapa padrão ativado temporariamente.', $opsJs);
         $this->assertStringContainsString('waitForGoogleMaps', $providerJs);
+        // Leaflet-first: canvas must never wait blank for Google.
+        $this->assertStringContainsString('always mount Leaflet+OSM first', $opsJs);
+        $this->assertStringContainsString('gm_authFailure', $opsJs);
+        $this->assertStringContainsString('keepLeafletAndWarn', $opsJs);
     }
 
     public function test_13_fallback_avoids_double_init_guard(): void

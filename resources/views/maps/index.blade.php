@@ -1176,7 +1176,7 @@
 <script src="https://maps.googleapis.com/maps/api/js?key={{ urlencode($mapFrontendConfig->browserKey()) }}&v=weekly" async defer></script>
 <script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.1/Leaflet.GoogleMutant.js" crossorigin=""></script>
 @endif
-<script src="{{ asset('js/map-provider.js') }}?v=4"></script>
+<script src="{{ asset('js/map-provider.js') }}?v=5"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=52"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=53"></script>
 @endpush
