@@ -12,7 +12,7 @@
         :description="$isManager ? 'Comissões da equipe, aprovações e pagamentos' : 'Suas vendas e comissão acumulada no período'"
     >
         @if($isManager)
-            <x-client.secondary-button :href="route('commissions.products.index')">Produtos / Estoque</x-client.secondary-button>
+            <x-client.secondary-button id="finance-shortcut-products" :href="route('commissions.products.index')">Produtos</x-client.secondary-button>
         @endif
     </x-client.page-header>
 

@@ -50,6 +50,11 @@
                 <i data-lucide="wallet" class="w-4 h-4"></i> Comissões
             </a>
         @endif
+        @if($hubUser && \App\Support\ClientArea\NavVisibility::can($hubUser, 'stock'))
+            <a class="client-hub-tab" id="team-shortcut-products" href="{{ route('commissions.products.index') }}">
+                <i data-lucide="package" class="w-4 h-4"></i> Produtos
+            </a>
+        @endif
     </nav>
 
     <x-client.section-card title="Funções da equipe" description="O que cada perfil pode fazer na operação.">
