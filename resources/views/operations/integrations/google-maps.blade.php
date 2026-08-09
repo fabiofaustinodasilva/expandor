@@ -63,9 +63,15 @@
 
         @if($canManage)
             <div class="card">
+                {{--
+                  Shared form for Save + Test.
+                  Do NOT emit a hidden Laravel method-spoof field for PUT on this form:
+                  it would convert the Test submit into PUT /google-maps/test → 405
+                  (route is POST-only). Save carries _method=PUT on its own submit button;
+                  Test is a plain POST via formaction/formmethod.
+                --}}
                 <form method="post" action="{{ route('operations.integrations.google-maps.update') }}" style="display:grid; gap:1rem;">
                     @csrf
-                    @method('PUT')
 
                     <label>
                         <span>API Key Web</span>
@@ -86,8 +92,13 @@
                     </div>
 
                     <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
-                        <button type="submit" class="btn btn-primary">Salvar e ativar</button>
-                        <button type="submit" class="btn btn-ghost" formaction="{{ route('operations.integrations.google-maps.test') }}" formmethod="post">Testar conexão</button>
+                        <button type="submit" class="btn btn-primary" name="_method" value="PUT">Salvar e ativar</button>
+                        <button
+                            type="submit"
+                            class="btn btn-ghost"
+                            formaction="{{ route('operations.integrations.google-maps.test') }}"
+                            formmethod="post"
+                        >Testar conexão</button>
                     </div>
                 </form>
 
