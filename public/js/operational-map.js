@@ -143,11 +143,18 @@
     const providerFallbackUrl = page.dataset.mapProviderFallbackUrl || '';
     const wantsGoogleVisual = desiredMapProvider === 'google_maps' && !forceGoogleFailure;
 
+    // maxZoom must be set on the map itself (not only on tile layers).
+    // MarkerCluster reads map.getMaxZoom() on addLayer; without this it throws
+    // "Map has no maxZoom specified" and aborts boot before tiles load.
+    // Value 19 matches existing OSM/Esri tileLayer maxZoom in map-provider.js
+    // (GoogleMutant layer maxZoom 21 is capped by this map ceiling — intentional
+    // parity with the Leaflet fallback absolute provider).
     const map = L.map('operational-map', {
         zoomControl: false,
         // Seller: Leaflet attribution control off. GoogleMutant keeps Google branding in its own pane (ToS).
         attributionControl: !isFieldSeller,
         preferCanvas: true,
+        maxZoom: 19,
     }).setView([-14.235, -51.9253], 4);
 
     // Seller: sem botões +/- . Manager: zoom bottom-left (área livre — legenda/filtros sob demanda).
@@ -236,9 +243,8 @@
     function initBasemapProvider() {
         const token = ++basemapInitToken;
 
-        // CRITICAL: always mount Leaflet+OSM first so the canvas never stays blank
-        // while Google script/Mutant loads, times out, or fails auth silently.
-        attachLeafletProvider();
+        // Leaflet+OSM must already be mounted before MarkerCluster (see boot order below).
+        // This function only handles optional Google upgrade / failure paths.
 
         if (forceGoogleFailure && desiredMapProvider === 'google_maps') {
             keepLeafletAndWarn('forced_failure', 'dev_force_google_failure');
@@ -268,7 +274,7 @@
             .then(() => {
                 if (token !== basemapInitToken) return;
                 try {
-                    // Swap: remove provisional OSM, mount GoogleMutant.
+                    // Swap: remove provisional OSM, mount GoogleMutant (map.maxZoom already set).
                     destroyCurrentProvider();
                     mapProvider = window.ExpandorMapProvider.create(map, {
                         provider: 'google_maps',
@@ -292,7 +298,13 @@
             });
     }
 
-    // initBasemapProvider() is invoked after toast/csrf helpers exist (below).
+    // BOOT ORDER (required):
+    // 1) L.map with explicit maxZoom
+    // 2) Leaflet+OSM base layer addTo(map)
+    // 3) MarkerCluster addTo(map)
+    // 4) helpers / toast
+    // 5) async Google upgrade (base layer swap only)
+    attachLeafletProvider();
 
     const clusterGroup = L.markerClusterGroup({
         showCoverageOnHover: false,

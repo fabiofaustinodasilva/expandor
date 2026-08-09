@@ -1178,5 +1178,5 @@
 @endif
 <script src="{{ asset('js/map-provider.js') }}?v=5"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=53"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=54"></script>
 @endpush

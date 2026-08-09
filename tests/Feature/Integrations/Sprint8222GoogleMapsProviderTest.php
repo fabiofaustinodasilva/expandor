@@ -220,10 +220,32 @@ class Sprint8222GoogleMapsProviderTest extends TestCase
         $this->assertStringContainsString('activateLeafletFallback', $opsJs);
         $this->assertStringContainsString('Mapa padrão ativado temporariamente.', $opsJs);
         $this->assertStringContainsString('waitForGoogleMaps', $providerJs);
-        // Leaflet-first: canvas must never wait blank for Google.
-        $this->assertStringContainsString('always mount Leaflet+OSM first', $opsJs);
         $this->assertStringContainsString('gm_authFailure', $opsJs);
         $this->assertStringContainsString('keepLeafletAndWarn', $opsJs);
+        $this->assertStringContainsString('BOOT ORDER (required)', $opsJs);
+    }
+
+    public function test_map_has_explicit_max_zoom_before_marker_cluster_initialization(): void
+    {
+        $opsJs = file_get_contents(public_path('js/operational-map.js'));
+
+        $mapPos = strpos($opsJs, "L.map('operational-map'");
+        $this->assertNotFalse($mapPos);
+        $mapBlock = substr($opsJs, $mapPos, 450);
+        $this->assertStringContainsString('maxZoom: 19', $mapBlock, 'L.map options must include explicit maxZoom: 19');
+
+        $this->assertMatchesRegularExpression(
+            '/BOOT ORDER \(required\):[\s\S]*?attachLeafletProvider\(\);[\s\S]*?L\.markerClusterGroup\(\{[\s\S]*?map\.addLayer\(clusterGroup\)/',
+            $opsJs,
+            'Boot order must be: attachLeafletProvider → markerClusterGroup → addLayer(cluster)'
+        );
+
+        $this->assertStringContainsString('disableClusteringAtZoom: 18', $opsJs);
+        $this->assertStringContainsString('spiderfyOnMaxZoom: true', $opsJs);
+
+        $blade = file_get_contents(resource_path('views/maps/index.blade.php'));
+        $this->assertStringContainsString("js/operational-map.js') }}?v=54", $blade);
+        $this->assertStringContainsString("js/map-provider.js') }}?v=5", $blade);
     }
 
     public function test_13_fallback_avoids_double_init_guard(): void
