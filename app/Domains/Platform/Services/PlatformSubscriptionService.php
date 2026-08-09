@@ -6,6 +6,7 @@ use App\Domains\Company\Models\Company;
 use App\Domains\Company\Models\Plan;
 use App\Domains\Company\Models\Subscription;
 use App\Domains\Company\Models\User;
+use App\Domains\Integrations\Services\MapIntegrationResolver;
 use App\Domains\Platform\Models\SubscriptionEvent;
 use App\Domains\Security\Services\SecurityService;
 use Illuminate\Support\Collection;
@@ -71,6 +72,8 @@ class PlatformSubscriptionService
         $oldPlanId = $subscription->plan_id;
 
         $subscription->forceFill(['plan_id' => $plan->id])->save();
+
+        app(MapIntegrationResolver::class)->forget($company);
 
         $this->record($company, $subscription, $actor, 'plan.changed', [
             'plan_id' => $plan->id,

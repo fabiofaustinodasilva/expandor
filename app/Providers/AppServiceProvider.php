@@ -23,6 +23,8 @@ use App\Domains\Company\Models\Company;
 use App\Domains\Company\Models\User;
 use App\Domains\Company\Policies\CompanyPolicy;
 use App\Domains\Company\Policies\UserPolicy;
+use App\Domains\Integrations\Models\CompanyIntegration;
+use App\Domains\Integrations\Policies\CompanyIntegrationPolicy;
 use App\Domains\Onboarding\DTOs\SaasOnboardingBanner;
 use App\Domains\Onboarding\Events\OnboardingBrandingCompleted;
 use App\Domains\Onboarding\Events\OnboardingCompanyCompleted;
@@ -133,6 +135,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CommissionRule::class, CommissionRulePolicy::class);
         Gate::policy(SalesCommission::class, SalesCommissionPolicy::class);
         Gate::policy(Product::class, ProductPolicy::class);
+        Gate::policy(CompanyIntegration::class, CompanyIntegrationPolicy::class);
 
         Gate::define('billing.view', [BillingPolicy::class, 'view']);
         Gate::define('billing.manage', [BillingPolicy::class, 'manage']);

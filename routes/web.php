@@ -38,12 +38,14 @@ use App\Http\Controllers\Web\Maps\MapFirstApproachController;
 use App\Http\Controllers\Web\Maps\MapPointController;
 use App\Http\Controllers\Web\Maps\MapVisitController;
 use App\Http\Controllers\Web\Operations\IntegrationsController;
+use App\Http\Controllers\Web\Operations\GoogleMapsIntegrationController;
 use App\Http\Controllers\Web\Operations\MoreController;
 use App\Http\Controllers\Web\Operations\FieldOperationsSettingsController;
 use App\Http\Controllers\Web\Operations\SaleSettingsController;
 use App\Http\Controllers\Web\Operations\SettingsController;
 use App\Http\Controllers\Web\Operations\TeamController;
 use App\Http\Controllers\Web\Platform\FeatureFlagController;
+use App\Http\Controllers\Web\Platform\PlatformIntegrationsController;
 use App\Http\Controllers\Web\Platform\SaasHealthController;
 use App\Http\Controllers\Web\Platform\SaasIntelligenceController;
 use App\Http\Controllers\Web\Platform\HealthScoreController;
@@ -189,6 +191,7 @@ Route::middleware([
         Route::post('/companies/{company}/impersonate', [ImpersonationController::class, 'store'])->name('impersonation.store');
         Route::get('/flags', [FeatureFlagController::class, 'index'])->name('flags.index');
         Route::post('/companies/{company}/flags', [FeatureFlagController::class, 'update'])->name('flags.update');
+        Route::get('/integrations', PlatformIntegrationsController::class)->name('integrations.index');
         Route::get('/health', [HealthScoreController::class, 'index'])->name('health.index');
         Route::post('/health/recalculate', [HealthScoreController::class, 'recalculateAll'])->name('health.recalculate-all');
         Route::post('/companies/{company}/health', [HealthScoreController::class, 'recalculate'])->name('health.recalculate');
@@ -310,6 +313,10 @@ Route::middleware([
     Route::get('/operacao/configuracoes/operacao-de-campo', [FieldOperationsSettingsController::class, 'edit'])->name('operations.settings.field');
     Route::put('/operacao/configuracoes/operacao-de-campo', [FieldOperationsSettingsController::class, 'update'])->name('operations.settings.field.update');
     Route::get('/operacao/integracoes', IntegrationsController::class)->name('operations.integrations');
+    Route::get('/operacao/integracoes/google-maps', [GoogleMapsIntegrationController::class, 'edit'])->name('operations.integrations.google-maps.edit');
+    Route::put('/operacao/integracoes/google-maps', [GoogleMapsIntegrationController::class, 'update'])->name('operations.integrations.google-maps.update');
+    Route::post('/operacao/integracoes/google-maps/test', [GoogleMapsIntegrationController::class, 'test'])->name('operations.integrations.google-maps.test');
+    Route::post('/operacao/integracoes/google-maps/disconnect', [GoogleMapsIntegrationController::class, 'disconnect'])->name('operations.integrations.google-maps.disconnect');
     Route::get('/operacao/mais', MoreController::class)->name('operations.more');
     Route::get('/operacao/minhas-visitas', \App\Http\Controllers\Web\Operations\MyVisitsController::class)->name('operations.my-visits');
 

@@ -16,6 +16,7 @@ class FeatureFlagSeeder extends Seeder
             ['key' => 'branding.custom_css', 'name' => 'CSS personalizado', 'description' => 'Permite CSS white-label avançado.', 'default_enabled' => false],
             ['key' => 'billing.self_serve', 'name' => 'Self-serve billing', 'description' => 'Permite upgrade/downgrade pelo cliente.', 'default_enabled' => true],
             ['key' => 'onboarding.required', 'name' => 'Onboarding obrigatório', 'description' => 'Força wizard de implantação.', 'default_enabled' => true],
+            ['key' => 'integrations.google_maps', 'name' => 'Google Maps (integração)', 'description' => 'Permite conectar Google Maps por empresa quando o plano incluir a feature.', 'default_enabled' => true],
         ];
 
         foreach ($flags as $flag) {

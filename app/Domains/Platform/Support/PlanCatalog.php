@@ -17,6 +17,7 @@ final class PlanCatalog
             'finance',
             'api',
             'white_label',
+            'google_maps',
         ];
     }
 
@@ -33,6 +34,7 @@ final class PlanCatalog
             'finance' => 'Financeiro',
             'api' => 'API',
             'white_label' => 'White Label',
+            'google_maps' => 'Google Maps',
         ];
     }
 
@@ -62,6 +64,7 @@ final class PlanCatalog
                     'stock', 'estoque' => 'stock',
                     'finance', 'financeiro' => 'finance',
                     'white_label', 'whitelabel' => 'white_label',
+                    'google_maps', 'google-maps', 'maps_premium' => 'google_maps',
                     default => null,
                 };
                 if ($key !== null) {

@@ -36,6 +36,7 @@ class PlanSeeder extends Seeder
                     'finance' => false,
                     'api' => false,
                     'white_label' => false,
+                    'google_maps' => false,
                 ]),
             ],
             [
@@ -62,6 +63,7 @@ class PlanSeeder extends Seeder
                     'finance' => true,
                     'api' => false,
                     'white_label' => false,
+                    'google_maps' => true,
                 ]),
             ],
             [
@@ -88,6 +90,7 @@ class PlanSeeder extends Seeder
                     'finance' => true,
                     'api' => true,
                     'white_label' => true,
+                    'google_maps' => true,
                 ]),
             ],
         ];

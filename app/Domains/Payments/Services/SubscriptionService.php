@@ -56,11 +56,17 @@ class SubscriptionService
 
     public function upgrade(Subscription $subscription, Plan $plan): Subscription
     {
-        return $this->upgradeAction->execute($subscription, $plan);
+        $updated = $this->upgradeAction->execute($subscription, $plan);
+        app(\App\Domains\Integrations\Services\MapIntegrationResolver::class)->forget((int) $updated->company_id);
+
+        return $updated;
     }
 
     public function downgrade(Subscription $subscription, Plan $plan): Subscription
     {
-        return $this->downgradeAction->execute($subscription, $plan);
+        $updated = $this->downgradeAction->execute($subscription, $plan);
+        app(\App\Domains\Integrations\Services\MapIntegrationResolver::class)->forget((int) $updated->company_id);
+
+        return $updated;
     }
 }

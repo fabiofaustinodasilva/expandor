@@ -112,9 +112,9 @@
         @endcan
     @endcan
 
-    @canany(['platform.manageFeatureFlags', 'platform.viewHealth'])
-        <div class="nav-section {{ $navOpen('platform.flags.*', 'platform.health.*') ? 'is-open' : '' }}" data-nav-section>
-            <button type="button" class="nav-section-toggle" aria-expanded="{{ $navOpen('platform.flags.*', 'platform.health.*') ? 'true' : 'false' }}">
+    @canany(['platform.manageFeatureFlags', 'platform.viewHealth', 'platform.managePlans'])
+        <div class="nav-section {{ $navOpen('platform.flags.*', 'platform.health.*', 'platform.integrations.*') ? 'is-open' : '' }}" data-nav-section>
+            <button type="button" class="nav-section-toggle" aria-expanded="{{ $navOpen('platform.flags.*', 'platform.health.*', 'platform.integrations.*') ? 'true' : 'false' }}">
                 <span class="nav-section-left">
                     <span class="nav-ico" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -124,6 +124,9 @@
                 <span class="nav-chevron" aria-hidden="true"></span>
             </button>
             <div class="nav-section-body">
+                @can('platform.managePlans')
+                    <a class="nav-link {{ request()->routeIs('platform.integrations.*') ? 'active' : '' }}" href="{{ route('platform.integrations.index') }}">Integrações</a>
+                @endcan
                 @can('platform.manageFeatureFlags')
                     <a class="nav-link {{ request()->routeIs('platform.flags.*') ? 'active' : '' }}" href="{{ route('platform.flags.index') }}">Recursos experimentais</a>
                 @endcan
