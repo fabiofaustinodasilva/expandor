@@ -24,10 +24,13 @@ Após Contratar / FirstApproach com `installation_requested`, JSON inclui:
 
 ## Som
 
-- Arquivo local Expandor: `/sounds/commission-coins.mp3` (fallback Web Audio se falhar)
-- Volume discreto; uma vez por operação confirmada
+- Arquivo local Expandor: `/sounds/commission-coins.wav` (sem CDN)
+- Fallback: Web Audio API (beeps) se o arquivo falhar / autoplay restringir
+- Volume discreto (~0.35); uma vez por operação confirmada
 - Falha de áudio **nunca** afeta a venda
 - Autoplay: só após gesto do usuário (submit do formulário)
+
+Preferência Sons Ativado/Desativado: estrutura futura — documentada, não implementada nesta sprint.
 
 ## Idempotência do feedback
 

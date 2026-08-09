@@ -388,8 +388,8 @@
 
     function playCommissionCoinSound() {
         try {
-            const audio = new Audio('/sounds/commission-coins.mp3');
-            audio.volume = 0.45;
+            const audio = new Audio('/sounds/commission-coins.wav');
+            audio.volume = 0.35;
             const playPromise = audio.play();
             if (playPromise && typeof playPromise.catch === 'function') {
                 playPromise.catch(() => playCommissionCoinBeepFallback());

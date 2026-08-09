@@ -7,7 +7,8 @@
 - `ProductCommissionCalculator` (fixed / percentage, HALF_UP)
 - UI de comissão no cadastro de produto com preview
 - Payload `commission_awarded` nas respostas de mapa pós-Contratar
-- Feedback visual + som local pós-confirmação (idempotente por visit_id)
+- Feedback visual + som local (`/sounds/commission-coins.wav` + Web Audio fallback) pós-confirmação (idempotente por visit_id)
+- `Sprint8223CommissionsV2Test` (15 testes)
 
 ## Changed
 
