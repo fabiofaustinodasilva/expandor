@@ -19,7 +19,7 @@
 
 <div class="team-hub">
     <x-client.page-header
-        title="Equipe"
+        title="Equipe Comercial"
         description="Crie, acompanhe e libere sua equipe de vendas."
     >
       @if($canManage)
@@ -75,6 +75,12 @@
         </div>
     @endif
 
+    <div class="team-presence-filters" role="navigation" aria-label="Filtro de presença">
+        <a class="team-filter-chip {{ empty($presenceFilter) ? 'is-active' : '' }}" href="{{ route('operations.team') }}">Todos</a>
+        <a class="team-filter-chip {{ ($presenceFilter ?? null) === 'online' ? 'is-active' : '' }}" href="{{ route('operations.team', ['presence' => 'online']) }}">Online</a>
+        <a class="team-filter-chip {{ ($presenceFilter ?? null) === 'offline' ? 'is-active' : '' }}" href="{{ route('operations.team', ['presence' => 'offline']) }}">Offline</a>
+    </div>
+
     @if($errors->any())
         <div class="alert alert-error">
             <ul style="margin:0;padding-left:1.1rem;">
@@ -88,14 +94,21 @@
     <div id="team-grid" class="team-grid">
         @forelse($cards as $card)
             @php $u = $card['user']; @endphp
-            <article class="team-card {{ $u->status !== User::STATUS_ACTIVE ? 'is-inactive' : '' }}" data-member-id="{{ $u->id }}">
+            <article class="team-card {{ $u->status !== User::STATUS_ACTIVE ? 'is-inactive' : '' }}" data-member-id="{{ $u->id }}" data-online="{{ !empty($card['online']) ? '1' : '0' }}">
                 <div class="team-card-top">
-                    <div class="team-avatar" aria-hidden="true">
-                        {{ strtoupper(mb_substr($u->name, 0, 1)) }}
-                    </div>
+                    @if(!empty($card['photo_url']))
+                        <img class="team-avatar team-avatar-img" src="{{ $card['photo_url'] }}" alt="" width="48" height="48" loading="lazy">
+                    @else
+                        <div class="team-avatar" aria-hidden="true">{{ $card['initials'] ?? strtoupper(mb_substr($u->name, 0, 1)) }}</div>
+                    @endif
                     <div class="team-card-id">
                         <h2>{{ $u->name }}</h2>
                         <div class="team-meta-line">{{ $card['profile'] }} · {{ $statusLabels[$u->status] ?? $u->status }}</div>
+                        <div class="team-presence-line">
+                            <span class="team-dot {{ !empty($card['online']) ? 'is-online' : 'is-offline' }}" aria-hidden="true"></span>
+                            <span>{{ $card['presence_label'] ?? 'Offline' }}</span>
+                            <span class="team-access-hint">· {{ $card['access_label'] ?? '—' }}</span>
+                        </div>
                         @php $sum = $card['permission_summary'] ?? ['mode' => 'role_default', 'label' => 'Perfil padrão', 'overrides_count' => 0]; @endphp
                         <div class="team-perm-badge {{ $sum['mode'] === 'customized' ? 'is-custom' : 'is-default' }}">
                             {{ $sum['label'] }}
@@ -105,6 +118,29 @@
                         </div>
                     </div>
                 </div>
+
+                @if(!empty($card['last_visit']))
+                    <div class="team-activity-block">
+                        <div class="team-activity-label">Última atividade</div>
+                        <div class="team-activity-title">{{ $card['last_visit']['client'] }}</div>
+                        <div class="team-activity-meta">
+                            {{ optional($card['last_visit']['at'])->timezone(config('app.timezone'))->format('H:i') ?? '—' }}
+                            · Visita
+                            · {{ $card['last_visit']['result'] }}
+                        </div>
+                    </div>
+                @endif
+
+                @if(!empty($card['last_sale']))
+                    <div class="team-activity-block">
+                        <div class="team-activity-label">Última venda</div>
+                        <div class="team-activity-title">{{ $card['last_sale']['client'] }}</div>
+                        <div class="team-activity-meta">
+                            {{ optional($card['last_sale']['at'])->timezone(config('app.timezone'))->format('H:i') ?? '—' }}
+                            · {{ $card['last_sale']['product'] }}
+                        </div>
+                    </div>
+                @endif
 
                 <dl class="team-facts">
                     <div><dt>Cidade</dt><dd>{{ $card['city'] }}</dd></div>
@@ -295,39 +331,99 @@
     </div>
 </div>
 
-{{-- Drawer: desempenho --}}
+{{-- Drawer: desempenho / presença / atividade --}}
 @if(!empty($performance))
 <div id="drawer-performance" class="team-drawer is-open">
     <div class="team-drawer-backdrop" onclick="window.location='{{ route('operations.team') }}'"></div>
     <div class="team-drawer-panel" role="dialog" aria-labelledby="perf-title">
-        <header>
-            <h2 id="perf-title">Desempenho · {{ $performance['user']->name }}</h2>
+        <header class="team-perf-header">
+            <div class="team-perf-identity">
+                @if(!empty($performance['photo_url']))
+                    <img class="team-avatar team-avatar-img team-avatar-lg" src="{{ $performance['photo_url'] }}" alt="" width="56" height="56">
+                @else
+                    <div class="team-avatar team-avatar-lg" aria-hidden="true">{{ $performance['initials'] ?? '?' }}</div>
+                @endif
+                <div>
+                    <h2 id="perf-title" style="margin:0;">{{ $performance['user']->name }}</h2>
+                    <div class="team-meta-line">{{ $performance['profile'] ?? 'Vendedor' }}</div>
+                    <div class="team-presence-line">
+                        <span class="team-dot {{ !empty($performance['online']) ? 'is-online' : 'is-offline' }}" aria-hidden="true"></span>
+                        <span>{{ $performance['presence_label'] ?? 'Offline' }}</span>
+                    </div>
+                </div>
+            </div>
             <a class="team-icon-btn" href="{{ route('operations.team') }}" aria-label="Fechar"><i data-lucide="x" class="w-4 h-4"></i></a>
         </header>
+
+        <dl class="team-facts" style="margin-top:.75rem;">
+            <div><dt>Última atividade</dt><dd>{{ $performance['access_label'] ?? '—' }}</dd></div>
+            <div><dt>Último login</dt><dd>{{ $performance['last_login_at']?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—' }}</dd></div>
+        </dl>
+
+        <h3 class="team-section-title">Resumo de hoje</h3>
         <div class="team-metrics team-metrics-lg">
-            <div><span>{{ $performance['visits_today'] }}</span><small>Visitas hoje</small></div>
-            <div><span>{{ $performance['visits_week'] }}</span><small>Visitas na semana</small></div>
+            <div><span>{{ $performance['visits_today'] }}</span><small>Visitas</small></div>
             <div><span>{{ $performance['interested'] }}</span><small>Interessados</small></div>
             <div><span>{{ $performance['contracts'] }}</span><small>{{ $commercial::sales() }}</small></div>
-            <div><span>{{ number_format($performance['conversion'], 1) }}%</span><small>Conversão</small></div>
+            <div><span>{{ number_format($performance['conversion'], 1) }}%</span><small>Conversão (semana)</small></div>
         </div>
-        <dl class="team-facts" style="margin-top:1rem;">
-            <div><dt>Último login</dt><dd>{{ $performance['last_login_at']?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—' }}</dd></div>
-            <div><dt>Última atividade</dt><dd>{{ $performance['last_activity_at']?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—' }}</dd></div>
-            <div>
-                <dt>Última localização</dt>
-                <dd>
-                    @if($performance['last_location'])
-                        {{ number_format($performance['last_location']['latitude'], 5) }},
-                        {{ number_format($performance['last_location']['longitude'], 5) }}
-                        <div class="header-meta">{{ $performance['last_location']['at']?->format('d/m/Y H:i') }}</div>
-                    @else
-                        —
-                    @endif
-                </dd>
+
+        @if(!empty($performance['last_visit']))
+            <h3 class="team-section-title">Última visita</h3>
+            <div class="team-activity-block is-solid">
+                <div class="team-activity-title">{{ $performance['last_visit']['client'] }}</div>
+                <div class="team-activity-meta">
+                    {{ optional($performance['last_visit']['at'])->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—' }}
+                    · {{ $performance['last_visit']['result'] }}
+                </div>
             </div>
-        </dl>
-        <a class="team-btn-primary" style="margin-top:1rem;width:100%;" href="{{ $performance['map_url'] }}">Abrir mapa das visitas</a>
+        @endif
+
+        @if(!empty($performance['last_sale']))
+            <h3 class="team-section-title">Última venda</h3>
+            <div class="team-activity-block is-solid">
+                <div class="team-activity-title">{{ $performance['last_sale']['client'] }}</div>
+                <div class="team-activity-meta">
+                    {{ optional($performance['last_sale']['at'])->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—' }}
+                    · {{ $performance['last_sale']['product'] }}
+                    @if(!empty($performance['last_sale']['amount']))
+                        · {{ $performance['last_sale']['amount'] }}
+                    @endif
+                </div>
+            </div>
+        @endif
+
+        <h3 class="team-section-title">Atividade recente</h3>
+        <div class="team-timeline">
+            @forelse(($performance['timeline'] ?? []) as $event)
+                <div class="team-timeline-item">
+                    <div class="team-timeline-time">{{ optional($event['at'])->timezone(config('app.timezone'))->format('H:i') ?? '—' }}</div>
+                    <div>
+                        <div class="team-timeline-kind">{{ $event['kind_label'] }}</div>
+                        <div class="team-activity-title">{{ $event['client'] }}</div>
+                        @if(!empty($event['detail']))
+                            <div class="team-activity-meta">{{ $event['detail'] }}</div>
+                        @endif
+                    </div>
+                </div>
+            @empty
+                <p class="header-meta">Nenhuma atividade recente.</p>
+            @endforelse
+        </div>
+
+        <h3 class="team-section-title">Conexões</h3>
+        <div class="team-timeline">
+            @forelse(($performance['connections'] ?? []) as $conn)
+                <div class="team-timeline-item">
+                    <div class="team-timeline-time">{{ $conn['at']->timezone(config('app.timezone'))->format('d/m H:i') }}</div>
+                    <div class="team-activity-meta">{{ $conn['label'] }}</div>
+                </div>
+            @empty
+                <p class="header-meta">Nenhuma sessão registrada no histórico.</p>
+            @endforelse
+        </div>
+
+        <a class="team-btn-primary" style="margin-top:1rem;width:100%;" href="{{ $performance['map_url'] }}">Abrir mapa</a>
     </div>
 </div>
 @endif
@@ -351,7 +447,36 @@
         background: rgba(56,189,248,.18); color:#e0f2fe;
         display:grid; place-items:center; font-weight:800; font-size:1.1rem;
         border:1px solid rgba(56,189,248,.35);
+        overflow:hidden; flex-shrink:0; object-fit:cover;
     }
+    .team-avatar-img { padding:0; display:block; }
+    .team-avatar-lg { width:3.5rem; height:3.5rem; font-size:1.2rem; }
+    .team-presence-filters { display:flex; flex-wrap:wrap; gap:.45rem; margin:0 0 1rem; }
+    .team-filter-chip {
+        display:inline-flex; align-items:center; padding:.45rem .85rem; border-radius:999px;
+        border:1px solid #334155; color:#cbd5e1; text-decoration:none; font-size:.82rem; font-weight:700;
+        background: rgba(15,23,42,.6);
+    }
+    .team-filter-chip.is-active { border-color:#38bdf8; color:#e0f2fe; background:rgba(56,189,248,.12); }
+    .team-presence-line { display:flex; align-items:center; gap:.35rem; flex-wrap:wrap; margin-top:.2rem; font-size:.8rem; color:#94a3b8; }
+    .team-dot { width:.55rem; height:.55rem; border-radius:999px; display:inline-block; }
+    .team-dot.is-online { background:#34d399; box-shadow:0 0 0 3px rgba(52,211,153,.2); }
+    .team-dot.is-offline { background:#64748b; }
+    .team-access-hint { color:#64748b; font-weight:500; }
+    .team-activity-block { border-top:1px solid #1e293b; padding-top:.65rem; }
+    .team-activity-block.is-solid {
+        border:1px solid #1e293b; border-radius:.85rem; padding:.7rem .8rem; background:rgba(15,23,42,.55);
+    }
+    .team-activity-label { font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:#64748b; font-weight:700; margin-bottom:.2rem; }
+    .team-activity-title { font-weight:700; font-size:.92rem; color:#f1f5f9; }
+    .team-activity-meta { color:#94a3b8; font-size:.8rem; margin-top:.15rem; }
+    .team-section-title { margin:1.1rem 0 .55rem; font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; color:#64748b; }
+    .team-perf-header { display:flex; justify-content:space-between; gap:.75rem; align-items:flex-start; }
+    .team-perf-identity { display:flex; gap:.75rem; align-items:center; min-width:0; }
+    .team-timeline { display:grid; gap:.65rem; }
+    .team-timeline-item { display:grid; grid-template-columns:3.6rem 1fr; gap:.55rem; align-items:start; }
+    .team-timeline-time { font-size:.75rem; color:#64748b; font-weight:700; padding-top:.15rem; }
+    .team-timeline-kind { font-size:.68rem; font-weight:800; letter-spacing:.05em; color:#38bdf8; }
     .team-card-id h2 { margin:0; font-size:1.05rem; }
     .team-meta-line { color:#94a3b8; font-size:.82rem; margin-top:.15rem; }
     .team-facts { display:grid; gap:.35rem; margin:0; }

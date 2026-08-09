@@ -7,15 +7,16 @@ use App\Domains\Analytics\Services\DashboardMetricsService;
 use App\Domains\Campaigns\Models\Campaign;
 use App\Domains\Company\Models\Role;
 use App\Domains\Company\Models\User;
+use App\Domains\Company\Services\TeamPresenceActivityService;
 use App\Domains\Company\Services\UserService;
 use App\Domains\Company\Support\CommercialProfileCatalog;
-use App\Domains\Visits\Models\Visit;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Operations\StoreTeamMemberRequest;
 use App\Http\Requests\Operations\UpdateTeamMemberRequest;
 use App\Http\Requests\Operations\UpdateTeamPermissionsRequest;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class TeamController extends Controller
@@ -24,9 +25,10 @@ class TeamController extends Controller
         protected UserService $users,
         protected DashboardMetricsService $metrics,
         protected TenantContext $tenant,
+        protected TeamPresenceActivityService $presence,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', User::class);
 
@@ -48,12 +50,28 @@ class TeamController extends Controller
             ->orderBy('name')
             ->get();
 
-        $cards = $members->map(function (User $member) use ($productivity) {
+        $summary = $this->presence->summarizeForMembers($members);
+        $presenceFilter = $request->query('presence');
+        if (! in_array($presenceFilter, ['online', 'offline'], true)) {
+            $presenceFilter = null;
+        }
+
+        $cards = $members->map(function (User $member) use ($productivity, $summary) {
             $campaign = $member->campaigns->first();
             $row = $productivity->get($member->id);
+            $id = (int) $member->id;
+            $pres = $summary['presence'][$id] ?? [
+                'online' => false,
+                'last_seen_at' => null,
+                'last_login_at' => $member->last_login_at,
+                'access_label' => 'Sem acesso registrado',
+                'presence_label' => 'Offline',
+            ];
 
             return [
                 'user' => $member,
+                'photo_url' => $member->photoUrl(),
+                'initials' => $this->presence->initials($member->name),
                 'profile' => CommercialProfileCatalog::labelForSlug($member->role?->slug),
                 'city' => $campaign?->city
                     ? ($campaign->city->name.($campaign->city->state ? '/'.$campaign->city->state : ''))
@@ -64,18 +82,30 @@ class TeamController extends Controller
                 'visits_today' => (int) ($row['visits'] ?? 0),
                 'interested_today' => (int) ($row['interested'] ?? 0),
                 'contracts_today' => (int) ($row['installations'] ?? 0),
+                'online' => (bool) ($pres['online'] ?? false),
+                'presence_label' => (string) ($pres['presence_label'] ?? 'Offline'),
+                'access_label' => (string) ($pres['access_label'] ?? '—'),
+                'last_visit' => $summary['last_visits'][$id] ?? null,
+                'last_sale' => $summary['last_sales'][$id] ?? null,
                 'permissions' => CommercialProfileCatalog::describeEffectiveForUser($member),
                 'permission_summary' => CommercialProfileCatalog::overrideSummary($member),
                 'permissions_url' => route('operations.team.permissions', $member),
             ];
         });
 
-        $focusId = (int) request('member', 0);
+        if ($presenceFilter === 'online') {
+            $cards = $cards->filter(fn (array $c) => $c['online'])->values();
+        } elseif ($presenceFilter === 'offline') {
+            $cards = $cards->filter(fn (array $c) => ! $c['online'])->values();
+        }
+
+        $focusId = (int) $request->query('member', 0);
         $performance = null;
         if ($focusId > 0) {
             $focus = $members->firstWhere('id', $focusId);
             if ($focus) {
-                $performance = $this->buildPerformance($focus);
+                $this->authorize('view', $focus);
+                $performance = $this->buildPerformance($focus, $summary);
             }
         }
 
@@ -95,7 +125,9 @@ class TeamController extends Controller
             'canToggleStatus' => ($actor?->hasPermission('users.deactivate') || $actor?->hasPermission('users.manage')) ?? false,
             'focusId' => $focusId,
             'performance' => $performance,
-            'openPanel' => request('panel'),
+            'openPanel' => $request->query('panel'),
+            'presenceFilter' => $presenceFilter,
+            'onlineWindowMinutes' => TeamPresenceActivityService::ONLINE_WINDOW_MINUTES,
         ]);
     }
 
@@ -186,9 +218,10 @@ class TeamController extends Controller
     }
 
     /**
+     * @param  array<string, mixed>  $summary
      * @return array<string, mixed>
      */
-    protected function buildPerformance(User $user): array
+    protected function buildPerformance(User $user, array $summary): array
     {
         $today = now()->toDateString();
         $weekStart = now()->startOfWeek()->toDateString();
@@ -204,27 +237,36 @@ class TeamController extends Controller
             user_id: $user->id,
         ));
 
-        $lastVisit = Visit::query()
-            ->where('user_id', $user->id)
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->latest('id')
-            ->first(['id', 'latitude', 'longitude', 'created_at', 'status']);
+        $id = (int) $user->id;
+        $pres = $summary['presence'][$id] ?? [
+            'online' => false,
+            'last_seen_at' => null,
+            'last_login_at' => $user->last_login_at,
+            'access_label' => 'Sem acesso registrado',
+            'presence_label' => 'Offline',
+        ];
 
         return [
             'user' => $user,
+            'photo_url' => $user->photoUrl(),
+            'initials' => $this->presence->initials($user->name),
+            'profile' => CommercialProfileCatalog::labelForSlug($user->role?->slug),
             'visits_today' => $todayMetrics->visits_total,
             'visits_week' => $weekMetrics->visits_total,
-            'interested' => $weekMetrics->interested_total,
-            'contracts' => $weekMetrics->installations_total,
+            'interested' => $todayMetrics->interested_total,
+            'interested_week' => $weekMetrics->interested_total,
+            'contracts' => $todayMetrics->installations_total,
+            'contracts_week' => $weekMetrics->installations_total,
             'conversion' => $weekMetrics->conversion_rate,
+            'online' => (bool) ($pres['online'] ?? false),
+            'presence_label' => (string) ($pres['presence_label'] ?? 'Offline'),
+            'access_label' => (string) ($pres['access_label'] ?? '—'),
             'last_login_at' => $user->last_login_at,
-            'last_activity_at' => $lastVisit?->created_at ?? $user->last_login_at,
-            'last_location' => $lastVisit ? [
-                'latitude' => (float) $lastVisit->latitude,
-                'longitude' => (float) $lastVisit->longitude,
-                'at' => $lastVisit->created_at,
-            ] : null,
+            'last_seen_at' => $pres['last_seen_at'] ?? null,
+            'last_visit' => $summary['last_visits'][$id] ?? null,
+            'last_sale' => $summary['last_sales'][$id] ?? null,
+            'timeline' => $this->presence->recentActivityTimeline($user),
+            'connections' => $this->presence->connectionHistory($user),
             'map_url' => route('map.index'),
         ];
     }
