@@ -67,6 +67,37 @@ class Sprint8215ProductsPrimaryNavTest extends TestCase
         $this->assertTrue($produtosPos < $financeiroPos);
     }
 
+    public function test_dashboard_rail_shows_products_even_when_plan_stock_feature_is_false(): void
+    {
+        // Reproduz o caso real: plano com features ativas (crm=true) e stock=false.
+        $company = $this->makeCompanyWithPlan('Empresa 8215 Free Stock Off', 'free');
+        $admin = $this->makeUser($company, Role::ADMINISTRATOR, ['email' => 'admin-free@sprint8215.test']);
+        $manager = $this->makeUser($company, Role::MANAGER, ['email' => 'mgr-free@sprint8215.test']);
+
+        foreach ([$admin, $manager] as $user) {
+            $this->assertTrue($user->hasPermission('commissions.manage'));
+            $this->assertTrue(\App\Support\ClientArea\NavVisibility::can($user, 'stock'));
+
+            $labels = array_column(ClientNav::railItems($user), 'label');
+            $this->assertContains('Produtos', $labels, 'Rail must show Produtos for '.$user->email);
+            $this->assertSame(
+                array_search('Equipe', $labels, true) + 1,
+                array_search('Produtos', $labels, true)
+            );
+            $this->assertSame(
+                array_search('Produtos', $labels, true) + 1,
+                array_search('Financeiro', $labels, true)
+            );
+
+            $html = $this->actingAs($user)->get(route('dashboard'))->assertOk()->getContent();
+            $this->assertStringContainsString('id="op-nav-drawer"', $html);
+            $this->assertStringContainsString('>Produtos</span>', $html);
+            $this->assertStringContainsString(route('commissions.products.index'), $html);
+            $this->assertTrue(strpos($html, '>Equipe</span>') < strpos($html, '>Produtos</span>'));
+            $this->assertTrue(strpos($html, '>Produtos</span>') < strpos($html, '>Financeiro</span>'));
+        }
+    }
+
     public function test_seller_does_not_get_admin_products_rail_or_crud(): void
     {
         $company = $this->makeCompanyWithPlan('Empresa 8215 Seller');

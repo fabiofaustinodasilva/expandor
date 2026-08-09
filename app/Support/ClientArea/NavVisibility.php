@@ -40,7 +40,10 @@ final class NavVisibility
         'crm' => ['permissions' => ['crm.view'], 'plan_feature' => 'crm'],
         'commissions' => ['permissions' => ['commissions.manage', 'commissions.view_self']],
         'commission_rules' => ['permissions' => ['crm.view']],
-        'stock' => ['permissions' => ['commissions.manage'], 'plan_feature' => 'stock'],
+        // Catálogo comercial (Produtos): mesma regra do ProductPolicy — commissions.manage.
+        // NÃO amarrar a plan_feature "stock": isso escondia o rail mesmo com CRUD acessível
+        // (ex.: plano Free com stock=false mas crm=true ativa o gate de features).
+        'stock' => ['permissions' => ['commissions.manage']],
         'reports' => ['permissions' => ['reports.view']],
         'branding' => ['permissions' => ['branding.manage']],
         'integrations' => ['permissions' => ['integrations.view']],
