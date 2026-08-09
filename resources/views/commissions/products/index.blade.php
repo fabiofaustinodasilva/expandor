@@ -6,10 +6,9 @@
     <div class="products-admin-header" style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1rem;">
         <div style="min-width:0;flex:1;">
             <h1 class="page-title" style="margin:0;">Produtos</h1>
-            <p class="header-meta" style="margin:.35rem 0 0;">Configurações → Produtos — catálogo e materiais de apresentação para o campo.</p>
+            <p class="header-meta" style="margin:.35rem 0 0;">Área da Empresa → Produtos — catálogo comercial exibido pelo vendedor no campo.</p>
         </div>
         <div class="actions" style="display:flex;gap:.5rem;flex-wrap:wrap;width:100%;max-width:100%;">
-            <a class="btn btn-ghost" href="{{ route('operations.settings') }}" style="min-height:44px;">← Configurações</a>
             <a class="btn btn-primary" id="btn-new-product" href="{{ route('commissions.products.create') }}" style="min-height:44px;flex:1 1 12rem;">+ Novo produto</a>
         </div>
     </div>

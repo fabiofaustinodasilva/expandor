@@ -3,8 +3,7 @@
 ## ISSUE-8214-01 — Produtos ausente do rail principal da gestão
 
 **Severidade:** Alta (descoberta / UX da Área da Empresa)  
-**Status:** Aberto — implementar na **Sprint 8.2.15**  
-**Não corrigido em 8.2.14** (auditoria apenas).
+**Status:** Resolvido na **Sprint 8.2.15** (ver `docs/sprint-8215-products-primary-nav/`).
 
 ### Descrição
 
@@ -45,7 +44,7 @@ Admin precisa descobrir Produtos via Mais, Configurações, ou atalhos dentro de
 ## ISSUE-8214-02 — Copy reforça “Configurações → Produtos”
 
 **Severidade:** Média (mensagem / mental model)  
-**Status:** Aberto — 8.2.15
+**Status:** Resolvido na **Sprint 8.2.15**.
 
 ### Descrição
 
@@ -66,7 +65,7 @@ Isso sugere que Produtos é subpágina de settings, não catálogo comercial de 
 ## ISSUE-8214-03 — Produtos duplicado em seções Mais (Comercial + Empresa)
 
 **Severidade:** Baixa (higiene de navegação)  
-**Status:** Aberto — 8.2.15
+**Status:** Resolvido na **Sprint 8.2.15** (mantido só em Comercial).
 
 ### Descrição
 

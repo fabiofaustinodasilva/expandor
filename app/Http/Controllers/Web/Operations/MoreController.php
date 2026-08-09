@@ -37,7 +37,7 @@ class MoreController extends Controller
         }
         if ($user?->hasPermission('commissions.manage')) {
             $links[] = ['group' => 'Comercial', 'label' => '💰 Comissões', 'href' => route('commissions.index')];
-            $links[] = ['group' => 'Comercial', 'label' => 'Produtos', 'href' => route('commissions.products.index')];
+            // Produtos está no rail principal; não duplicar aqui.
         } elseif ($user?->hasPermission('commissions.view_self')) {
             $links[] = ['group' => 'Comercial', 'label' => '💰 Minha comissão', 'href' => route('commissions.index')];
         }

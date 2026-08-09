@@ -81,6 +81,7 @@ final class ClientNav
             ['module' => 'campaigns', 'label' => 'Campanhas', 'icon' => 'target', 'route' => 'campaigns.index', 'params' => [], 'patterns' => ['campaigns.*']],
             ['module' => 'customers', 'label' => 'Clientes', 'icon' => 'contact', 'route' => 'customers.index', 'params' => [], 'patterns' => ['customers.*']],
             ['module' => 'team', 'label' => 'Equipe', 'icon' => 'users', 'route' => 'operations.team', 'params' => [], 'patterns' => ['operations.team']],
+            ['module' => 'stock', 'label' => 'Produtos', 'icon' => 'package', 'route' => 'commissions.products.index', 'params' => [], 'patterns' => ['commissions.products.*']],
             ['module' => 'commissions', 'label' => 'Financeiro', 'icon' => 'wallet', 'route' => 'commissions.index', 'params' => [], 'patterns' => ['commissions.index']],
         ];
     }
@@ -141,7 +142,7 @@ final class ClientNav
                 'items' => [
                     ['module' => 'team', 'label' => 'Equipe', 'route' => 'operations.team', 'params' => [], 'patterns' => ['operations.team']],
                     ['module' => 'settings', 'label' => 'Configurações', 'route' => 'operations.settings', 'params' => [], 'patterns' => ['operations.settings', 'operations.settings.*']],
-                    ['module' => 'stock', 'label' => 'Produtos', 'route' => 'commissions.products.index', 'params' => [], 'patterns' => ['commissions.products.*']],
+                    // Produtos fica no rail principal + seção Comercial (evitar duplicata Empresa).
                     ['module' => 'branding', 'label' => 'Identidade visual', 'route' => 'company.branding.edit', 'params' => [], 'patterns' => ['company.branding.*']],
                     ['module' => 'integrations', 'label' => 'Integrações', 'route' => 'operations.integrations', 'params' => [], 'patterns' => ['operations.integrations']],
                     ['module' => 'billing', 'label' => 'Plano e uso', 'route' => 'company.plan.show', 'params' => [], 'patterns' => ['company.plan.*']],

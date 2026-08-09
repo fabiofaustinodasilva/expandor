@@ -96,7 +96,7 @@ class Sprint8212SalesPresentationTest extends TestCase
         $this->assertStringContainsString('+ Novo produto', $html);
         $this->assertStringContainsString('id="btn-new-product"', $html);
         $this->assertStringContainsString(route('commissions.products.create'), $html);
-        $this->assertStringContainsString('Configurações → Produtos', $html);
+        $this->assertStringContainsString('Área da Empresa → Produtos', $html);
     }
 
     public function test_company_can_create_edit_and_toggle_product(): void

@@ -23,14 +23,27 @@ class ManagerNavCommissionsIntegrationTest extends TestCase
         $company = $this->makeCompanyWithPlan('Empresa Nav Manager');
         $manager = $this->makeUser($company, Role::MANAGER, ['email' => 'nav-mgr@comm.test']);
 
-        // Sprint 8.2.2: o hub da Equipe passou a ter abas próprias (Usuários,
-        // Funções, Permissões, Metas, Comissões) — o link de Produtos/Estoque
-        // agora vive apenas em "Mais opções".
+        // Sprint 8.2.15: Produtos no rail principal entre Equipe e Financeiro.
+        $labels = array_column(\App\Support\ClientArea\ClientNav::railItems($manager), 'label');
+        $this->assertContains('Produtos', $labels);
+        $this->assertContains('Equipe', $labels);
+        $this->assertContains('Financeiro', $labels);
+        $this->assertSame(
+            array_search('Equipe', $labels, true) + 1,
+            array_search('Produtos', $labels, true)
+        );
+        $this->assertSame(
+            array_search('Produtos', $labels, true) + 1,
+            array_search('Financeiro', $labels, true)
+        );
+
         $this->actingAs($manager)
             ->get(route('operations.team'))
             ->assertOk()
             ->assertSee('Comissões')
-            ->assertSee(route('commissions.index'), false);
+            ->assertSee('Produtos')
+            ->assertSee(route('commissions.index'), false)
+            ->assertSee(route('commissions.products.index'), false);
 
         $this->actingAs($manager)
             ->get(route('operations.more'))
@@ -38,7 +51,6 @@ class ManagerNavCommissionsIntegrationTest extends TestCase
             ->assertSee('Comissões')
             ->assertSee('Produtos')
             ->assertSee(route('commissions.products.index'), false);
-
 
         $this->actingAs($manager)
             ->get(route('operations.settings'))
