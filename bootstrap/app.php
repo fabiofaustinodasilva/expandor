@@ -14,7 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo('/login');
-        $middleware->redirectUsersTo('/dashboard');
+        $middleware->redirectUsersTo(function () {
+            $user = auth()->user();
+            if ($user instanceof \App\Domains\Company\Models\User && $user->isPlatformAdmin()) {
+                return '/platform';
+            }
+
+            return '/dashboard';
+        });
 
         $middleware->validateCsrfTokens(except: [
             'webhooks/*',

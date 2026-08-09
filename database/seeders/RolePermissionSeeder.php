@@ -326,9 +326,21 @@ class RolePermissionSeeder extends Seeder
                 ]
             );
 
+            $expected = array_values(array_unique($data['permissions']));
             $permissionIds = Permission::query()
-                ->whereIn('slug', $data['permissions'])
+                ->whereIn('slug', $expected)
                 ->pluck('id');
+
+            // Guard: sync([]) would DETACH every permission and lock tenants out of /dashboard.
+            if ($permissionIds->count() !== count($expected)) {
+                $found = Permission::query()->whereIn('slug', $expected)->pluck('slug')->all();
+                $missing = array_values(array_diff($expected, $found));
+
+                throw new \RuntimeException(
+                    'RolePermissionSeeder refused destructive sync for role ['.$slug.
+                    ']: missing permission rows: '.implode(', ', $missing)
+                );
+            }
 
             $role->permissions()->sync($permissionIds);
         }

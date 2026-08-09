@@ -14,6 +14,7 @@ use App\Domains\Platform\Services\ActivationIntelligenceService;
 use App\Domains\Sales\Territory\Repositories\TerritoryRepository;
 use App\Http\Controllers\Controller;
 use App\Support\CommercialTerminology;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -28,16 +29,22 @@ class DashboardController extends Controller
         protected AnalyticsRepository $analytics,
     ) {}
 
-    public function __invoke(DashboardFiltersRequest $request): View
+    public function __invoke(DashboardFiltersRequest $request): View|RedirectResponse
     {
+        $user = $request->user();
+
+        // Platform owners must not hit the tenant dashboard gate (no dashboard.view on platform_admin).
+        if ($user?->isPlatformAdmin()) {
+            return redirect()->route('platform.dashboard');
+        }
+
         abort_unless(
-            $request->user()?->hasPermission('dashboard.view') ?? false,
+            $user?->hasPermission('dashboard.view') ?? false,
             403,
             'Access denied.'
         );
 
         /** @var \App\Domains\Company\Models\User $user */
-        $user = $request->user();
         $user->loadMissing(['role.permissions', 'permissionOverrides', 'company']);
         $isSeller = $user->role?->slug === Role::SELLER;
 
