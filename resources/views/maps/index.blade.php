@@ -67,19 +67,38 @@
                         <span id="offline-queue-count">0</span> pendente(s)
                     </span>
                     @unless(!empty($isFieldSeller))
-                    <details class="map-more-tools relative">
+                    <button type="button" id="btn-map-filters"
+                            class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-2 shrink-0"
+                            aria-expanded="false" aria-controls="map-company-filters-panel" title="Filtros do mapa">
+                        <i data-lucide="sliders-horizontal" class="w-5 h-5 shrink-0"></i>
+                        <span class="text-sm font-semibold">
+                            <span id="map-filters-label">Filtros</span><span id="map-filters-count-wrap" class="hidden"> · <span id="map-filters-count">0</span></span>
+                        </span>
+                    </button>
+                    <button type="button" id="btn-map-legend"
+                            class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-2 shrink-0"
+                            aria-expanded="false" aria-controls="map-legend-panel" title="Legenda">
+                        <i data-lucide="map" class="w-5 h-5 shrink-0"></i>
+                        <span class="hidden sm:inline text-sm font-semibold">Legenda</span>
+                    </button>
+                    <details class="map-more-tools relative" id="map-more-tools">
                         <summary class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-2 cursor-pointer list-none"
                                  title="Mais ferramentas">
                             <i data-lucide="more-horizontal" class="w-5 h-5"></i>
                             <span class="hidden sm:inline text-sm font-semibold">Mais</span>
                         </summary>
-                        <div class="absolute right-0 top-[calc(100%+0.4rem)] z-50 min-w-[11rem] rounded-xl border border-slate-700 bg-slate-950 shadow-xl p-2 flex flex-col gap-1">
-                            <button id="toggle-filters-manager" type="button" class="h-11 px-3 rounded-lg text-left text-sm text-slate-100 hover:bg-slate-800 inline-flex items-center gap-2">
-                                <i data-lucide="sliders-horizontal" class="w-4 h-4"></i> Filtros
-                            </button>
+                        <div class="absolute right-0 top-[calc(100%+0.4rem)] z-50 min-w-[13rem] rounded-xl border border-slate-700 bg-slate-950 shadow-xl p-2 flex flex-col gap-1">
                             <button id="toggle-metrics" type="button" class="h-11 px-3 rounded-lg text-left text-sm text-slate-100 hover:bg-slate-800 inline-flex items-center gap-2">
-                                <i data-lucide="activity" class="w-4 h-4"></i> Métricas
+                                <i data-lucide="users" class="w-4 h-4"></i> Equipe
                             </button>
+                            @if(auth()->user()?->hasPermission('sales_app.access'))
+                                <a href="{{ route('sales-app.products.present') }}"
+                                   class="h-11 px-3 rounded-lg text-left text-sm text-slate-100 hover:bg-slate-800 inline-flex items-center gap-2 no-underline">
+                                    <i data-lucide="presentation" class="w-4 h-4"></i> Apresentar produtos
+                                </a>
+                            @endif
+                            {{-- Compat: id antigo usado em testes/handlers --}}
+                            <button id="toggle-filters-manager" type="button" class="sr-only" tabindex="-1" aria-hidden="true">Filtros</button>
                         </div>
                     </details>
                     @endunless
@@ -87,40 +106,68 @@
             </div>
 
             @unless(!empty($isFieldSeller))
-            <form id="map-filters-form" class="hidden md:grid grid-cols-2 lg:grid-cols-5 gap-2 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2">
-                <select id="filter-city" name="city_id" class="h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm px-2 text-slate-100">
-                    <option value="">Cidade</option>
-                    @foreach($cities as $city)
-                        <option value="{{ $city->id }}">{{ $city->name }}/{{ $city->state }}</option>
-                    @endforeach
-                </select>
-                <select id="filter-sector" name="sector_id" class="h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm px-2 text-slate-100">
-                    <option value="">Setor</option>
-                    @foreach($sectors as $sector)
-                        <option value="{{ $sector->id }}" data-city-id="{{ $sector->city_id }}">{{ $sector->name }}</option>
-                    @endforeach
-                </select>
-                <select id="filter-campaign" name="campaign_id" class="h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm px-2 text-slate-100">
-                    <option value="">Campanha</option>
-                    @foreach($campaigns as $campaign)
-                        <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
-                    @endforeach
-                </select>
-                <select id="filter-seller" name="user_id" class="h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm px-2 text-slate-100">
-                    <option value="">Vendedor</option>
-                    @foreach($sellers as $seller)
-                        <option value="{{ $seller->id }}">{{ $seller->name }}</option>
-                    @endforeach
-                </select>
-                <select id="filter-status" name="property_status" class="h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm px-2 text-slate-100">
-                    <option value="">Situação</option>
-                    @foreach($statuses as $value => $label)
-                        <option value="{{ $value }}">{{ $label }}</option>
-                    @endforeach
-                </select>
-            </form>
+            <div id="map-company-filters-panel"
+                 class="map-company-overlay hidden"
+                 role="dialog" aria-label="Filtros do mapa" aria-hidden="true">
+                <div class="map-company-overlay-card">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <div class="text-sm font-semibold text-slate-100">Filtros</div>
+                        <button type="button" id="close-map-filters" class="p-2 rounded-lg text-slate-400 hover:bg-slate-800" aria-label="Fechar filtros">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <form id="map-filters-form" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <select id="filter-city" name="city_id" class="h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm px-2 text-slate-100">
+                            <option value="">Cidade</option>
+                            @foreach($cities as $city)
+                                <option value="{{ $city->id }}">{{ $city->name }}/{{ $city->state }}</option>
+                            @endforeach
+                        </select>
+                        <select id="filter-sector" name="sector_id" class="h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm px-2 text-slate-100">
+                            <option value="">Bairro / Setor</option>
+                            @foreach($sectors as $sector)
+                                <option value="{{ $sector->id }}" data-city-id="{{ $sector->city_id }}">{{ $sector->name }}</option>
+                            @endforeach
+                        </select>
+                        <select id="filter-campaign" name="campaign_id" class="h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm px-2 text-slate-100">
+                            <option value="">Campanha</option>
+                            @foreach($campaigns as $campaign)
+                                <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
+                            @endforeach
+                        </select>
+                        <select id="filter-seller" name="user_id" class="h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm px-2 text-slate-100">
+                            <option value="">Vendedor</option>
+                            @foreach($sellers as $seller)
+                                <option value="{{ $seller->id }}">{{ $seller->name }}</option>
+                            @endforeach
+                        </select>
+                        <select id="filter-status" name="property_status" class="h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm px-2 text-slate-100 sm:col-span-2">
+                            <option value="">Situação</option>
+                            @foreach($statuses as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+
+                    <div id="commercial-filters" class="mt-4 pt-3 border-t border-slate-700">
+                        <div class="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Mostrar no mapa</div>
+                        <div class="space-y-2 text-xs text-slate-100">
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="commercial-filter accent-emerald-400" data-group="customer" checked> Clientes</label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="commercial-filter accent-blue-400" data-group="interested" checked> Interessados</label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="commercial-filter accent-amber-400" data-group="visited" checked> Visitados</label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="commercial-filter accent-rose-400" data-group="new" checked> Novos pontos</label>
+                            <label class="manager-only flex items-center gap-2 cursor-pointer pt-1 border-t border-slate-700"><input type="checkbox" id="filter-my-team" class="accent-sky-400"> Minha equipe</label>
+                        </div>
+                        @if(!empty($permissions['campaigns_manage']) || empty($isFieldSeller))
+                            <button type="button" id="btn-select-region" class="mt-3 w-full h-10 rounded-xl border border-dashed border-slate-600 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-300">
+                                Selecionar área · campanha
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            </div>
             @else
-            {{-- Seller: filtros de cidade/setor ficam fora da UI (API/manager). Selects stub para JS. --}}
+            {{-- Seller: filtros fora da UI; stubs para JS. --}}
             <form id="map-filters-form" class="hidden" aria-hidden="true">
                 <select id="filter-city" name="city_id"><option value="">Cidade</option>
                     @foreach($cities as $city)
@@ -149,9 +196,9 @@
     </header>
 
     <div id="operational-map" class="absolute inset-0 z-0" role="application" aria-label="Mapa operacional"></div>
-    {{-- Basemap + Minha localização (Sprint 8.2.8) --}}
+    {{-- Basemap + Minha localização. Apresentar (azul) só no seller — no manager fica em Mais (evita sobreposição). --}}
     <div id="map-bottom-left-controls" class="absolute left-3 bottom-[5.5rem] sm:bottom-6 z-20 flex flex-col gap-2 pointer-events-auto">
-        @if(!empty($isFieldSeller) || auth()->user()?->hasPermission('sales_app.access'))
+        @if(!empty($isFieldSeller) && auth()->user()?->hasPermission('sales_app.access'))
             <a href="{{ route('sales-app.products.present') }}"
                id="btn-present-products"
                class="map-btn-present h-12 min-w-[3rem] sm:h-14 sm:w-auto sm:px-4 px-3 rounded-2xl bg-sky-500 text-slate-950 shadow-lg inline-flex items-center justify-center gap-2 font-bold text-sm"
@@ -172,31 +219,17 @@
         </div>
     </div>
 
-    {{-- Filtros comerciais — manager sempre; seller: DOM oculto (JS mantém checkboxes) --}}
-    <div id="commercial-filters"
-         class="absolute left-3 top-[5.5rem] md:top-[6.25rem] z-20 w-[200px] max-w-[46vw] pointer-events-auto{{ !empty($isFieldSeller) ? ' hidden' : '' }}"
-         @if(!empty($isFieldSeller)) aria-hidden="true" @endif>
-        <div class="bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3 shadow-xl">
-            <div class="flex items-center justify-between gap-2 mb-2">
-                <div class="text-[11px] uppercase tracking-wide text-slate-400">Mostrar</div>
-                <button type="button" id="close-layers" class="field-seller-only hidden p-1 rounded-lg text-slate-400 hover:bg-slate-800" title="Fechar" aria-label="Fechar camadas">
-                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                </button>
-            </div>
-            <div class="space-y-2 text-xs text-slate-100">
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="commercial-filter accent-emerald-400" data-group="customer" checked> Clientes</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="commercial-filter accent-blue-400" data-group="interested" checked> Interessados</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="commercial-filter accent-amber-400" data-group="visited" checked> Visitados</label>
-                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="commercial-filter accent-rose-400" data-group="new" checked> Novos pontos</label>
-                <label class="manager-only flex items-center gap-2 cursor-pointer pt-1 border-t border-slate-700"><input type="checkbox" id="filter-my-team" class="accent-sky-400" @checked(!empty($isFieldSeller))> Minha equipe</label>
-            </div>
-            @if(!empty($permissions['campaigns_manage']) || empty($isFieldSeller))
-                <button type="button" id="btn-select-region" class="mt-3 w-full h-9 rounded-xl border border-dashed border-slate-600 text-[11px] text-slate-300 hover:border-sky-500 hover:text-sky-300">
-                    Selecionar área · campanha
-                </button>
-            @endif
-        </div>
+    @if(!empty($isFieldSeller))
+    {{-- Seller: checkboxes comerciais ocultos (JS). --}}
+    <div id="commercial-filters" class="hidden" aria-hidden="true">
+        <input type="checkbox" class="commercial-filter" data-group="customer" checked>
+        <input type="checkbox" class="commercial-filter" data-group="interested" checked>
+        <input type="checkbox" class="commercial-filter" data-group="visited" checked>
+        <input type="checkbox" class="commercial-filter" data-group="new" checked>
+        <input type="checkbox" id="filter-my-team" checked>
+        <button type="button" id="close-layers" class="field-seller-only hidden"></button>
     </div>
+    @endif
 
     {{-- Sprint 8.2.7: CTA de rota removida — fluxo via Meu Local --}}
 
@@ -207,15 +240,18 @@
         </div>
     </div>
 
-    <div id="map-legend-panel" class="map-legend-panel absolute z-20 pointer-events-none{{ !empty($isFieldSeller) ? ' is-field-seller is-collapsed' : ' hidden sm:block' }}"
+    <div id="map-legend-panel" class="map-legend-panel map-company-overlay{{ !empty($isFieldSeller) ? ' is-field-seller is-collapsed hidden' : ' is-collapsed hidden' }}"
+         aria-hidden="true"
          @if(!empty($isFieldSeller)) data-collapsible="1" @endif>
-        <div class="pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-xl overflow-hidden">
-            <button type="button" id="toggle-legend" class="map-legend-toggle w-full flex items-center justify-between gap-2 px-3 py-2 text-left"
-                    aria-expanded="{{ !empty($isFieldSeller) ? 'false' : 'true' }}" aria-controls="map-legend-body">
+        <div class="pointer-events-auto map-company-overlay-card map-legend-card">
+            <div class="flex items-center justify-between gap-2 mb-2">
                 <span class="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">Legenda</span>
-                <i data-lucide="chevron-down" class="map-legend-chevron w-3.5 h-3.5 text-slate-400 shrink-0" aria-hidden="true"></i>
-            </button>
-            <div id="map-legend-body" class="map-legend-body px-3 pb-3">
+                <button type="button" id="toggle-legend" class="map-legend-toggle p-1.5 rounded-lg text-slate-400 hover:bg-slate-800"
+                        aria-expanded="false" aria-controls="map-legend-body" title="Fechar legenda">
+                    <i data-lucide="x" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div id="map-legend-body" class="map-legend-body">
                 <ul class="space-y-1.5" id="map-legend-list">
                     @foreach($commercialLegend as $item)
                         <li class="flex items-center gap-2 text-xs text-slate-200">
@@ -817,17 +853,30 @@
         text-shadow: 0 0 2px rgba(0,0,0,.8);
     }
     .map-legend-panel {
-        right: 0.75rem;
-        left: auto;
-        bottom: 5.5rem;
-        max-width: min(11.5rem, 42vw);
+        position: absolute;
+        z-index: 35;
+        pointer-events: none;
+        top: auto;
+        left: 0.75rem;
+        right: auto;
+        bottom: auto;
+        max-width: min(16rem, calc(100vw - 1.5rem));
     }
-    @media (min-width: 640px) {
-        .map-legend-panel:not(.is-field-seller) {
+    body:not(.field-seller) .map-legend-panel:not(.hidden) {
+        /* Ancorado sob a toolbar, não sobre Minha localização */
+        top: 5.75rem;
+        left: 0.75rem;
+        bottom: auto;
+        right: auto;
+    }
+    @media (min-width: 768px) {
+        body:not(.field-seller) .map-legend-panel:not(.hidden) {
+            top: 5.25rem;
+        }
+    }
+    @media (min-width: 1024px) {
+        body:not(.field-seller) .map-legend-panel:not(.hidden) {
             left: 0.75rem;
-            right: auto;
-            bottom: 0.75rem;
-            max-width: 12.5rem;
         }
     }
     body.field-seller .map-legend-panel {
@@ -837,9 +886,63 @@
         z-index: 25;
     }
     .map-legend-panel.is-collapsed .map-legend-body { display: none; }
-    .map-legend-panel.is-collapsed .map-legend-chevron { transform: rotate(-90deg); }
-    .map-legend-chevron { transition: transform .15s ease; }
-    .map-legend-toggle { min-height: 2.5rem; }
+    .map-company-overlay.hidden { display: none !important; }
+    .map-company-overlay:not(.hidden) { display: block; }
+    .map-company-overlay-card {
+        pointer-events: auto;
+        background: rgba(15, 23, 42, 0.96);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgb(51 65 85 / 0.9);
+        border-radius: 1rem;
+        box-shadow: 0 12px 40px rgba(2, 6, 23, 0.55);
+        padding: 0.85rem;
+        max-height: min(70dvh, 32rem);
+        overflow: auto;
+    }
+    #map-company-filters-panel {
+        position: absolute;
+        z-index: 35;
+        left: 0.75rem;
+        right: 0.75rem;
+        top: 5.75rem;
+        max-width: 28rem;
+        pointer-events: none;
+    }
+    @media (min-width: 768px) {
+        #map-company-filters-panel {
+            top: 5.25rem;
+            left: 1rem;
+            right: auto;
+            width: 26rem;
+        }
+    }
+    @media (min-width: 1024px) {
+        #map-company-filters-panel {
+            top: 5rem;
+        }
+    }
+    @media (max-width: 767px) {
+        #map-company-filters-panel {
+            left: 0.5rem;
+            right: 0.5rem;
+            top: auto;
+            bottom: 0;
+            max-width: none;
+            width: auto;
+        }
+        #map-company-filters-panel .map-company-overlay-card {
+            border-radius: 1.25rem 1.25rem 0 0;
+            max-height: min(78dvh, 36rem);
+        }
+        body:not(.field-seller) .map-legend-panel:not(.hidden) {
+            top: auto;
+            bottom: 5.75rem;
+            left: 0.5rem;
+            right: auto;
+        }
+    }
+    .map-legend-card { padding-bottom: 0.85rem; }
+    .map-legend-toggle { min-height: auto; }
     .map-marker-ring {
         position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; pointer-events: none;
     }
@@ -868,6 +971,13 @@
     #map-filters-form.open { display: grid !important; }
     #commercial-filters.open { display: block !important; }
     #map-legend-panel.open { display: block !important; }
+    #map-legend-panel:not(.hidden) { pointer-events: none; }
+    #map-legend-panel:not(.hidden) .map-company-overlay-card { pointer-events: auto; }
+    body:not(.field-seller) #map-filters-form { display: grid; }
+    .sr-only {
+        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
     .visit-quick.is-selected,
     body.field-seller .point-outcome.is-selected,
     .point-outcome.is-selected,
@@ -1057,5 +1167,5 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="{{ asset('js/map-provider.js') }}?v=3"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=50"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=51"></script>
 @endpush

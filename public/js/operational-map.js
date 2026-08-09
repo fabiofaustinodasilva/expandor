@@ -144,7 +144,7 @@
         preferCanvas: true,
     }).setView([-14.235, -51.9253], 4);
 
-    // Seller: sem botões +/- (zoom por gesto / scroll / duplo clique). Manager: zoom UI.
+    // Seller: sem botões +/- . Manager: zoom bottom-left (área livre — legenda/filtros sob demanda).
     if (!isFieldSeller) {
         L.control.zoom({ position: 'bottomleft' }).addTo(map);
     } else {
@@ -2375,6 +2375,7 @@
     }
 
     document.getElementById('btn-select-region')?.addEventListener('click', () => {
+        setCompanyFiltersOpen(false);
         if (regionSelectMode) {
             stopRegionSelect();
             toast('Seleção de área cancelada.');
@@ -2721,13 +2722,103 @@
     document.getElementById('toggle-layers')?.addEventListener('click', () => toggleSellerPanel('layers'));
     document.getElementById('close-layers')?.addEventListener('click', () => setSellerPanel('layers', false));
 
-    document.getElementById('toggle-legend')?.addEventListener('click', () => {
+    /** Sprint 8.2.19 — painéis empresa: Filtros / Legenda / Mais exclusivos. */
+    function closeMapMoreTools() {
+        const more = document.getElementById('map-more-tools');
+        if (more) more.open = false;
+    }
+
+    function setCompanyFiltersOpen(open) {
+        const panel = document.getElementById('map-company-filters-panel');
+        const btn = document.getElementById('btn-map-filters');
+        if (!panel || !btn) return;
+        panel.classList.toggle('hidden', !open);
+        panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.classList.toggle('ring-1', open);
+        btn.classList.toggle('ring-sky-500/60', open);
+    }
+
+    function setCompanyLegendOpen(open) {
         const panel = document.getElementById('map-legend-panel');
-        const btn = document.getElementById('toggle-legend');
+        const btn = document.getElementById('btn-map-legend');
+        const closeBtn = document.getElementById('toggle-legend');
         if (!panel) return;
-        const collapsed = panel.classList.toggle('is-collapsed');
-        btn?.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        panel.classList.toggle('hidden', !open);
+        panel.classList.toggle('is-collapsed', !open);
+        panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+        btn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+        closeBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn?.classList.toggle('ring-1', open);
+        btn?.classList.toggle('ring-sky-500/60', open);
+    }
+
+    function closeCompanyMapOverlays(except = null) {
+        if (except !== 'filters') setCompanyFiltersOpen(false);
+        if (except !== 'legend') setCompanyLegendOpen(false);
+        if (except !== 'mais') closeMapMoreTools();
+    }
+
+    function countActiveMapFilters() {
+        const ids = ['filter-city', 'filter-sector', 'filter-campaign', 'filter-seller', 'filter-status'];
+        return ids.reduce((n, id) => {
+            const el = document.getElementById(id);
+            return n + (el && String(el.value || '').trim() !== '' ? 1 : 0);
+        }, 0);
+    }
+
+    function refreshMapFiltersBadge() {
+        const count = countActiveMapFilters();
+        const wrap = document.getElementById('map-filters-count-wrap');
+        const countEl = document.getElementById('map-filters-count');
+        if (countEl) countEl.textContent = String(count);
+        if (wrap) wrap.classList.toggle('hidden', count === 0);
+    }
+
+    document.getElementById('btn-map-filters')?.addEventListener('click', () => {
+        const panel = document.getElementById('map-company-filters-panel');
+        const willOpen = panel?.classList.contains('hidden');
+        closeCompanyMapOverlays(willOpen ? 'filters' : null);
+        setCompanyFiltersOpen(!!willOpen);
     });
+    document.getElementById('close-map-filters')?.addEventListener('click', () => setCompanyFiltersOpen(false));
+    document.getElementById('btn-map-legend')?.addEventListener('click', () => {
+        const panel = document.getElementById('map-legend-panel');
+        const willOpen = panel?.classList.contains('hidden');
+        closeCompanyMapOverlays(willOpen ? 'legend' : null);
+        setCompanyLegendOpen(!!willOpen);
+    });
+    document.getElementById('toggle-legend')?.addEventListener('click', () => setCompanyLegendOpen(false));
+
+    document.getElementById('map-more-tools')?.addEventListener('toggle', () => {
+        const more = document.getElementById('map-more-tools');
+        if (more?.open) {
+            setCompanyFiltersOpen(false);
+            setCompanyLegendOpen(false);
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || isFieldSeller) return;
+        closeCompanyMapOverlays();
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+        if (isFieldSeller) return;
+        const t = event.target;
+        if (!(t instanceof Element)) return;
+        const insideFilters = t.closest('#map-company-filters-panel, #btn-map-filters');
+        const insideLegend = t.closest('#map-legend-panel, #btn-map-legend');
+        const insideMais = t.closest('#map-more-tools');
+        if (!insideFilters) setCompanyFiltersOpen(false);
+        if (!insideLegend) setCompanyLegendOpen(false);
+        if (!insideMais) closeMapMoreTools();
+    });
+
+    ['filter-city', 'filter-sector', 'filter-campaign', 'filter-seller', 'filter-status'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('change', refreshMapFiltersBadge);
+    });
+    refreshMapFiltersBadge();
 
     if (isFieldSeller) {
         map.on('click', () => closeAllSellerPanels());
@@ -2737,12 +2828,14 @@
     }
 
     document.getElementById('toggle-filters-manager')?.addEventListener('click', () => {
-        form.classList.toggle('open');
-        form.classList.toggle('hidden');
+        closeCompanyMapOverlays('filters');
+        setCompanyFiltersOpen(true);
     });
 
     document.getElementById('toggle-metrics')?.addEventListener('click', () => {
+        closeCompanyMapOverlays('mais');
         metricsPanel.classList.add('open');
+        closeMapMoreTools();
     });
     document.getElementById('close-metrics')?.addEventListener('click', () => {
         metricsPanel.classList.remove('open');

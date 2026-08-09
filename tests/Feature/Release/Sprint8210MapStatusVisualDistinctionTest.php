@@ -101,7 +101,7 @@ class Sprint8210MapStatusVisualDistinctionTest extends TestCase
 
         $this->assertStringContainsString('id="operational-map"', $html);
         $this->assertStringContainsString('map-provider.js?v=3', $html);
-        $this->assertStringContainsString('operational-map.js?v=50', $html);
+        $this->assertStringContainsString('operational-map.js?v=51', $html);
         $this->assertStringContainsString('leaflet@1.9.4', $html);
 
         $js = file_get_contents(public_path('js/operational-map.js'));
