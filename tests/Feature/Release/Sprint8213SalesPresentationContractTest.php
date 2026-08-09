@@ -49,6 +49,8 @@ class Sprint8213SalesPresentationContractTest extends TestCase
         $this->assertStringContainsString(route('map.index'), $html);
         $this->assertStringContainsString('id="deck-contract"', $html);
         $this->assertStringContainsString('Contratar', $html);
+        $this->assertStringContainsString('id="deck-details"', $html);
+        $this->assertStringContainsString('Detalhes', $html);
         $this->assertStringContainsString('contract_product=', $html);
         $this->assertStringContainsString((string) $product->id, $html);
         $this->assertStringContainsString('ÚNICA MÓVEL 5GB', $html);
@@ -57,6 +59,55 @@ class Sprint8213SalesPresentationContractTest extends TestCase
         $this->assertStringContainsString('deck-next', $html);
         $this->assertStringContainsString('touchstart', $html);
         $this->assertStringContainsString('touchmove', $html);
+    }
+
+    public function test_details_panel_opens_over_presentation_without_leaving(): void
+    {
+        $company = $this->makeCompanyWithPlan('Empresa 8213 Details');
+        $seller = $this->makeUser($company, Role::SELLER, ['email' => 'seller-details@sprint8213.test']);
+        $product = Product::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'ÚNICA MÓVEL 5GB',
+            'category' => 'Móvel',
+            'description' => 'Plano completo para campo',
+            'benefits' => ['5 GB', 'Ligações ilimitadas'],
+            'price' => 79.9,
+            'status' => Product::STATUS_ACTIVE,
+        ]);
+
+        $html = $this->actingAs($seller)
+            ->get(route('sales-app.products.present', ['product' => $product->id]))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('id="deck-details"', $html);
+        $this->assertStringContainsString('>Detalhes</button>', $html);
+        $this->assertStringContainsString('id="deck-details-sheet"', $html);
+        $this->assertStringContainsString('id="deck-details-close"', $html);
+        $this->assertStringContainsString('id="deck-details-backdrop"', $html);
+        $this->assertStringContainsString('role="dialog"', $html);
+        $this->assertStringContainsString('function openDetails', $html);
+        $this->assertStringContainsString('function closeDetails', $html);
+        $this->assertStringContainsString('fillDetailsPanel', $html);
+        $this->assertStringContainsString('is-details-open', $html);
+        $this->assertStringContainsString('if (detailsOpen) return', $html);
+
+        $this->assertStringContainsString('ÚNICA MÓVEL 5GB', $html);
+        $this->assertStringContainsString('Móvel', $html);
+        $this->assertStringContainsString('Plano completo para campo', $html);
+        $this->assertStringContainsString('5 GB', $html);
+        $this->assertStringContainsString('Ligações ilimitadas', $html);
+        $this->assertStringContainsString('79,90', $html);
+
+        // Selected product + Contratar + swipe remain intact.
+        $this->assertStringContainsString('"id":'.$product->id, $html);
+        $this->assertStringContainsString('id="deck-contract"', $html);
+        $this->assertStringContainsString('contractUrlBase + encodeURIComponent(String(item.id))', $html);
+        $this->assertStringContainsString('touchstart', $html);
+        $this->assertStringContainsString('touchmove', $html);
+        $this->assertStringContainsString('deck-prev', $html);
+        $this->assertStringContainsString('deck-next', $html);
+        $this->assertStringNotContainsString('route(\'commissions.products', $html);
     }
 
     public function test_contract_link_preserves_current_product_id(): void

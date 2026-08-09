@@ -45,7 +45,15 @@
             pointer-events: none;
         }
         .deck-chrome > * { pointer-events: auto; }
+        .deck-chrome-left {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
         .deck-back,
+        .deck-details,
         .deck-contract {
             display: inline-flex;
             align-items: center;
@@ -63,14 +71,23 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             white-space: nowrap;
+            cursor: pointer;
+            font-family: inherit;
         }
         .deck-back { opacity: 0.92; }
+        .deck-details {
+            opacity: 0.92;
+            flex: 0 0 auto;
+        }
         .deck-contract {
             border-color: rgba(148, 163, 184, 0.35);
             color: #E2E8F0;
             font-weight: 700;
+            flex: 0 0 auto;
+            margin-left: auto;
         }
-        .deck-contract[aria-disabled="true"] {
+        .deck-contract[aria-disabled="true"],
+        .deck-details:disabled {
             opacity: 0.4;
             pointer-events: none;
         }
@@ -197,12 +214,134 @@
             padding: 1.5rem;
             z-index: 2;
         }
+        .deck-sheet {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        .deck-sheet.is-open { display: flex; }
+        .deck-sheet-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            border: 0;
+            padding: 0;
+            cursor: pointer;
+        }
+        .deck-sheet-panel {
+            position: relative;
+            z-index: 1;
+            max-height: min(68dvh, 34rem);
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0;
+            padding: 0.55rem 1rem calc(1rem + var(--safe-bottom));
+            border-radius: 1.15rem 1.15rem 0 0;
+            background: #171A22;
+            border: 1px solid var(--border);
+            border-bottom: 0;
+            color: var(--text);
+            box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+        }
+        .deck-sheet-handle {
+            width: 2.5rem;
+            height: 0.28rem;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.45);
+            margin: 0.15rem auto 0.75rem;
+        }
+        .deck-sheet-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+        .deck-sheet-top h2 {
+            margin: 0;
+            font-size: 1.05rem;
+            line-height: 1.25;
+        }
+        .deck-sheet-close {
+            flex: 0 0 auto;
+            min-height: 44px;
+            min-width: 44px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(15, 17, 23, 0.65);
+            color: #E2E8F0;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .deck-sheet-meta {
+            margin: 0 0 0.85rem;
+            color: var(--muted);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .deck-sheet-section {
+            margin: 0 0 0.9rem;
+        }
+        .deck-sheet-section h3 {
+            margin: 0 0 0.35rem;
+            font-size: 0.82rem;
+            color: #CBD5E1;
+            font-weight: 700;
+        }
+        .deck-sheet-section p,
+        .deck-sheet-section li {
+            margin: 0;
+            color: #E2E8F0;
+            font-size: 0.95rem;
+            line-height: 1.45;
+            white-space: pre-wrap;
+        }
+        .deck-sheet-section ul {
+            margin: 0;
+            padding-left: 1.1rem;
+        }
+        .deck-sheet-section li {
+            margin-bottom: 0.3rem;
+            white-space: normal;
+        }
+        .deck-sheet-price {
+            display: inline-flex;
+            align-items: center;
+            min-height: 40px;
+            padding: 0.45rem 0.75rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+            background: rgba(15, 17, 23, 0.7);
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        .deck-shell.is-details-open .deck-viewport {
+            pointer-events: none;
+        }
         @media (min-width: 768px) {
             .deck-shell { max-width: 900px; margin: 0 auto; }
+            .deck-sheet-panel {
+                max-width: 900px;
+                margin: 0 auto;
+                border-radius: 1.15rem 1.15rem 0 0;
+            }
+        }
+        @media (max-width: 430px) {
+            .deck-back, .deck-details, .deck-contract { padding: 0 0.7rem; font-size: 0.8rem; }
         }
         @media (max-width: 360px) {
-            .deck-back, .deck-contract { padding: 0 0.7rem; font-size: 0.8rem; }
+            .deck-back, .deck-details, .deck-contract { padding: 0 0.55rem; font-size: 0.75rem; }
             .deck-name { font-size: 1.05rem; }
+            .deck-chrome { gap: 0.35rem; }
+        }
+        @media (max-width: 320px) {
+            .deck-back { max-width: 7.2rem; overflow: hidden; text-overflow: ellipsis; }
         }
     </style>
 </head>
@@ -215,7 +354,10 @@
      data-map-url="{{ $mapUrl }}"
      data-contract-url-base="{{ $contractUrlBase }}">
     <div class="deck-chrome">
-        <a class="deck-back" id="deck-back-map" href="{{ $mapUrl }}">Voltar ao mapa</a>
+        <div class="deck-chrome-left">
+            <a class="deck-back" id="deck-back-map" href="{{ $mapUrl }}">Voltar ao mapa</a>
+            <button type="button" class="deck-details" id="deck-details" aria-haspopup="dialog" aria-controls="deck-details-sheet">Detalhes</button>
+        </div>
         <a class="deck-contract" id="deck-contract" href="{{ $mapUrl }}">Contratar</a>
     </div>
     <div class="deck-counter" id="deck-counter" aria-live="polite">0 / 0</div>
@@ -228,6 +370,19 @@
         <button type="button" id="deck-prev" aria-label="Produto anterior">←</button>
         <button type="button" id="deck-next" aria-label="Próximo produto">→</button>
     </div>
+
+    <div class="deck-sheet" id="deck-details-sheet" aria-hidden="true">
+        <button type="button" class="deck-sheet-backdrop" id="deck-details-backdrop" aria-label="Fechar detalhes"></button>
+        <div class="deck-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="deck-details-title">
+            <div class="deck-sheet-handle" aria-hidden="true"></div>
+            <div class="deck-sheet-top">
+                <h2 id="deck-details-title">Detalhes</h2>
+                <button type="button" class="deck-sheet-close" id="deck-details-close">Fechar</button>
+            </div>
+            <p class="deck-sheet-meta" id="deck-details-category"></p>
+            <div id="deck-details-body"></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -239,12 +394,20 @@
     const nextBtn = document.getElementById('deck-next');
     const viewport = document.getElementById('deck-viewport');
     const contractBtn = document.getElementById('deck-contract');
+    const detailsBtn = document.getElementById('deck-details');
+    const detailsSheet = document.getElementById('deck-details-sheet');
+    const detailsBackdrop = document.getElementById('deck-details-backdrop');
+    const detailsClose = document.getElementById('deck-details-close');
+    const detailsTitle = document.getElementById('deck-details-title');
+    const detailsCategory = document.getElementById('deck-details-category');
+    const detailsBody = document.getElementById('deck-details-body');
     const products = {!! $deckJson !!} || [];
     const contractUrlBase = root.dataset.contractUrlBase || '';
     let index = Math.min(Math.max(0, Number(root.dataset.start || 0)), Math.max(0, products.length - 1));
     let startX = 0;
     let deltaX = 0;
     let swiping = false;
+    let detailsOpen = false;
 
     function escapeHtml(value) {
         return String(value ?? '')
@@ -272,6 +435,7 @@
         if (!products.length) {
             contractBtn.setAttribute('aria-disabled', 'true');
             contractBtn.href = root.dataset.mapUrl || '#';
+            if (detailsBtn) detailsBtn.disabled = true;
             return;
         }
         const item = products[index];
@@ -279,6 +443,55 @@
         contractBtn.href = contractUrlBase + encodeURIComponent(String(item.id));
         contractBtn.dataset.productId = String(item.id);
         contractBtn.setAttribute('aria-label', 'Contratar ' + (item.name || 'produto'));
+        if (detailsBtn) {
+            detailsBtn.disabled = false;
+            detailsBtn.dataset.productId = String(item.id);
+        }
+    }
+
+    function fillDetailsPanel(item) {
+        if (!item) return;
+        if (detailsTitle) detailsTitle.textContent = item.name || 'Detalhes';
+        if (detailsCategory) detailsCategory.textContent = item.category || '';
+        let html = '';
+        if (item.description) {
+            html += '<section class="deck-sheet-section"><h3>Descrição</h3><p>' + escapeHtml(item.description) + '</p></section>';
+        }
+        const benefits = Array.isArray(item.benefits) ? item.benefits : [];
+        if (benefits.length) {
+            html += '<section class="deck-sheet-section"><h3>Benefícios</h3><ul>' +
+                benefits.map(function (b) { return '<li>' + escapeHtml(b) + '</li>'; }).join('') +
+                '</ul></section>';
+        }
+        if (item.price) {
+            html += '<section class="deck-sheet-section"><h3>Preço</h3><div class="deck-sheet-price">R$ ' + escapeHtml(item.price) + '</div></section>';
+        }
+        if (!html) {
+            html = '<section class="deck-sheet-section"><p>Sem detalhes adicionais cadastrados para este produto.</p></section>';
+        }
+        if (detailsBody) detailsBody.innerHTML = html;
+    }
+
+    function openDetails() {
+        if (!products.length || !detailsSheet) return;
+        const item = products[index];
+        fillDetailsPanel(item);
+        detailsOpen = true;
+        detailsSheet.classList.add('is-open');
+        detailsSheet.setAttribute('aria-hidden', 'false');
+        root.classList.add('is-details-open');
+        swiping = false;
+        deltaX = 0;
+        if (detailsClose) detailsClose.focus();
+    }
+
+    function closeDetails() {
+        if (!detailsSheet) return;
+        detailsOpen = false;
+        detailsSheet.classList.remove('is-open');
+        detailsSheet.setAttribute('aria-hidden', 'true');
+        root.classList.remove('is-details-open');
+        if (detailsBtn) detailsBtn.focus();
     }
 
     function render() {
@@ -310,6 +523,7 @@
 
     function goTo(nextIndex, animate) {
         if (!products.length) return;
+        if (detailsOpen) closeDetails();
         index = Math.min(Math.max(0, nextIndex), products.length - 1);
         if (!animate) {
             track.style.transition = 'none';
@@ -330,8 +544,15 @@
 
     prevBtn.addEventListener('click', function () { goTo(index - 1, true); });
     nextBtn.addEventListener('click', function () { goTo(index + 1, true); });
+    detailsBtn?.addEventListener('click', function () { openDetails(); });
+    detailsClose?.addEventListener('click', function () { closeDetails(); });
+    detailsBackdrop?.addEventListener('click', function () { closeDetails(); });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && detailsOpen) closeDetails();
+    });
 
     viewport.addEventListener('touchstart', function (e) {
+        if (detailsOpen) return;
         if (!e.touches || !e.touches[0]) return;
         swiping = true;
         startX = e.touches[0].clientX;
@@ -340,7 +561,7 @@
     }, { passive: true });
 
     viewport.addEventListener('touchmove', function (e) {
-        if (!swiping || !e.touches || !e.touches[0]) return;
+        if (detailsOpen || !swiping || !e.touches || !e.touches[0]) return;
         deltaX = e.touches[0].clientX - startX;
         const width = viewport.clientWidth || 1;
         const offset = (-index * 100) + (deltaX / width * 100);
@@ -348,6 +569,11 @@
     }, { passive: true });
 
     viewport.addEventListener('touchend', function () {
+        if (detailsOpen) {
+            swiping = false;
+            deltaX = 0;
+            return;
+        }
         if (!swiping) return;
         swiping = false;
         track.style.transition = 'transform 0.28s ease';

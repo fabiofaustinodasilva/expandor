@@ -2,8 +2,9 @@
 
 - [x] Foto ocupa quase toda a tela
 - [x] Contratar discreto, sem cobrir a foto
+- [x] Detalhes abre bottom-sheet sem sair da apresentação
 - [x] Voltar ao mapa em 1 toque
-- [x] Swipe esquerda/direita
+- [x] Swipe esquerda/direita (pausado com Detalhes aberto)
 - [x] product_id preservado no Contratar
 - [x] Cadastro reutiliza FirstApproach do mapa
 - [x] GPS automático ao abrir Contratar

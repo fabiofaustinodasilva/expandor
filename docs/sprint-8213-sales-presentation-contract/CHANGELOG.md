@@ -3,8 +3,9 @@
 ## Apresentação
 
 - UI foto-first full-screen (menos texto/cards)
-- Botão discreto **Contratar** + **Voltar ao mapa**
+- Botões discretos: **Voltar ao mapa**, **Detalhes** (bottom-sheet), **Contratar**
 - Swipe + setas discretas; catálogo ainda em JSON único
+- Painel Detalhes: nome, categoria, descrição, benefícios, preço (dados do Product atual)
 
 ## Contratação
 
