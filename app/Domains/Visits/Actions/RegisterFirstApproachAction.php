@@ -161,7 +161,15 @@ class RegisterFirstApproachAction
                 'first_approach' => true,
             ], $actor);
 
-            if (! empty($data['follow_up_at']) && $visitStatus === VisitStatus::RETURN_LATER) {
+            // Sprint 8.2.16 — status Retorno sem FollowUp era “esquecível”.
+            // StoreFirstApproachRequest já exige follow_up_at; aqui reforçamos o vínculo Agenda.
+            if ($visitStatus === VisitStatus::RETURN_LATER) {
+                if (empty($data['follow_up_at'])) {
+                    throw ValidationException::withMessages([
+                        'follow_up_at' => 'Informe a data do retorno.',
+                    ]);
+                }
+
                 $this->visits->scheduleFollowUp($visit, [
                     'scheduled_at' => $data['follow_up_at'],
                     'notes' => $data['notes'] ?? null,

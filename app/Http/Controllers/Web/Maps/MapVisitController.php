@@ -24,8 +24,8 @@ class MapVisitController extends Controller
         $data = $request->validated();
         $visit = $action->execute($campaign, $data, $request->user());
 
-        if (($data['status'] ?? null) === VisitStatus::RETURN_LATER->value
-            && ! empty($data['follow_up_at'])) {
+        // Sprint 8.2.16 — Retorno sempre gera FollowUp (Agenda). Validação exige follow_up_at.
+        if (($data['status'] ?? null) === VisitStatus::RETURN_LATER->value) {
             $visits->scheduleFollowUp($visit, [
                 'scheduled_at' => $data['follow_up_at'],
                 'notes' => $data['notes'] ?? null,

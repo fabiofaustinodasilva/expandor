@@ -4,6 +4,7 @@ namespace App\Domains\Visits\Requests;
 
 use App\Domains\Sales\SaleFields\SaleFieldsPolicyResolver;
 use App\Domains\Visits\Enums\VisitStatus;
+use App\Domains\Visits\Support\FollowUpSchedule;
 use App\Tenancy\TenantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -16,6 +17,16 @@ class StoreFirstApproachRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('follow_up_at')) {
+            $normalized = FollowUpSchedule::normalize($this->input('follow_up_at'));
+            $this->merge([
+                'follow_up_at' => $normalized?->format('Y-m-d H:i:s'),
+            ]);
+        }
     }
 
     public function rules(): array
@@ -55,7 +66,13 @@ class StoreFirstApproachRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:2000'],
             'plan' => ['nullable', 'string', 'max:120'],
             'gps_accuracy' => ['nullable', 'numeric', 'min:0'],
-            'follow_up_at' => ['nullable', 'date', 'after_or_equal:today'],
+            // Sprint 8.2.16 — Retorno sem data não pode “esquecer” a Agenda.
+            'follow_up_at' => [
+                Rule::requiredIf(fn () => $this->input('status') === VisitStatus::RETURN_LATER->value),
+                'nullable',
+                'date',
+                'after_or_equal:today',
+            ],
             'visited_at' => ['nullable', 'date'],
         ], $saleRules);
     }
@@ -65,6 +82,7 @@ class StoreFirstApproachRequest extends FormRequest
         return array_merge([
             'status.required' => 'Escolha o resultado do atendimento.',
             'street.required' => 'Informe a rua ou use Local GPS.',
+            'follow_up_at.required' => 'Informe a data do retorno.',
         ], app(SaleFieldsPolicyResolver::class)->validationMessages());
     }
 }

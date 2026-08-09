@@ -4,6 +4,7 @@ namespace App\Domains\Visits\Requests;
 
 use App\Domains\Sales\SaleFields\SaleFieldsPolicyResolver;
 use App\Domains\Visits\Enums\VisitStatus;
+use App\Domains\Visits\Support\FollowUpSchedule;
 use App\Tenancy\TenantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,7 +18,14 @@ class StoreVisitRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge($this->nullEmptySaleFields());
+        $merged = $this->nullEmptySaleFields();
+
+        if ($this->filled('follow_up_at')) {
+            $normalized = FollowUpSchedule::normalize($this->input('follow_up_at'));
+            $merged['follow_up_at'] = $normalized?->format('Y-m-d H:i:s');
+        }
+
+        $this->merge($merged);
     }
 
     /**
@@ -56,7 +64,13 @@ class StoreVisitRequest extends FormRequest
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'visited_at' => ['nullable', 'date'],
-            'follow_up_at' => ['nullable', 'date', 'after_or_equal:today'],
+            // Sprint 8.2.16 — Retorno exige data utilizável → FollowUp → Agenda.
+            'follow_up_at' => [
+                Rule::requiredIf(fn () => $this->input('status') === VisitStatus::RETURN_LATER->value),
+                'nullable',
+                'date',
+                'after_or_equal:today',
+            ],
             'user_id' => [
                 'nullable',
                 'integer',
@@ -67,6 +81,8 @@ class StoreVisitRequest extends FormRequest
 
     public function messages(): array
     {
-        return app(SaleFieldsPolicyResolver::class)->validationMessages();
+        return array_merge([
+            'follow_up_at.required' => 'Informe a data do retorno.',
+        ], app(SaleFieldsPolicyResolver::class)->validationMessages());
     }
 }
