@@ -53,6 +53,16 @@
                     <div id="map-search-results" class="hidden absolute left-0 right-0 top-[calc(100%+0.4rem)] z-50 max-h-72 overflow-y-auto rounded-xl border border-slate-700 bg-slate-950 shadow-xl" role="listbox"></div>
                 </div>
                 <div class="flex gap-2 items-center shrink-0">
+                    @if(!empty($isFieldSeller))
+                        <a href="{{ $urls['follow_ups_today'] ?? route('follow-ups.index', ['day' => 'today']) }}"
+                           id="map-today-chip"
+                           class="h-12 md:h-14 px-3 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-200 inline-flex items-center gap-1.5 shrink-0 text-sm font-semibold no-underline hover:border-sky-500/50"
+                           title="{{ ($todayFollowUpsCount ?? 0) > 0 ? 'Ver retornos de hoje' : 'Nenhum retorno hoje' }}">
+                            <span class="text-slate-300">Hoje</span>
+                            <span class="text-sky-300">·</span>
+                            <span id="map-today-count" class="tabular-nums text-sky-300">{{ (int) ($todayFollowUpsCount ?? 0) }}</span>
+                        </a>
+                    @endif
                     <span id="offline-queue-badge" class="hidden h-12 md:h-14 px-3 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-semibold items-center gap-1 shrink-0">
                         <span id="offline-queue-count">0</span> pendente(s)
                     </span>
@@ -531,11 +541,16 @@
                     <textarea name="notes" id="visit-notes" rows="2" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2" placeholder="Ex.: voltar amanhã à tarde"></textarea>
                 </div>
                 <div id="visit-return-block" class="hidden space-y-2">
-                    <label class="text-xs text-slate-400">Sugestão de retorno <span class="text-slate-600">(opcional)</span></label>
+                    <label class="text-xs text-slate-400">Quando voltar? <span class="text-rose-400/80">*</span></label>
+                    <div class="flex flex-wrap gap-2" id="visit-return-shortcuts">
+                        <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="1" data-target="visit">Amanhã</button>
+                        <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="2" data-target="visit">+2 dias</button>
+                        <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="pick" data-target="visit">Escolher data</button>
+                    </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="text-[11px] text-slate-500" for="visit-follow-up-date">Data</label>
-                            <input type="date" id="visit-follow-up-date" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3">
+                            <input type="date" id="visit-follow-up-date" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" min="{{ now()->toDateString() }}">
                         </div>
                         <div>
                             <label class="text-[11px] text-slate-500" for="visit-follow-up-time">Horário <span class="text-slate-600">(opc.)</span></label>
@@ -670,11 +685,16 @@
                         'sellableProducts' => $sellableProducts ?? [],
                     ])
                     <div id="point-return-block" class="hidden space-y-2">
-                        <label class="text-xs text-slate-400">Sugestão de retorno <span class="text-slate-600">(opcional)</span></label>
+                        <label class="text-xs text-slate-400">Quando voltar? <span class="text-rose-400/80">*</span></label>
+                        <div class="flex flex-wrap gap-2" id="point-return-shortcuts">
+                            <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="1" data-target="point">Amanhã</button>
+                            <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="2" data-target="point">+2 dias</button>
+                            <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="pick" data-target="point">Escolher data</button>
+                        </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="text-[11px] text-slate-500" for="point-follow-up-date">Data</label>
-                                <input type="date" id="point-follow-up-date" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3">
+                                <input type="date" id="point-follow-up-date" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" min="{{ now()->toDateString() }}">
                             </div>
                             <div>
                                 <label class="text-[11px] text-slate-500" for="point-follow-up-time">Horário <span class="text-slate-600">(opc.)</span></label>
@@ -1037,5 +1057,5 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="{{ asset('js/map-provider.js') }}?v=3"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=49"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=50"></script>
 @endpush

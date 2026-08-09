@@ -53,6 +53,42 @@
         const time = document.getElementById(timeId)?.value || '';
         return time ? `${date}T${time}` : date;
     }
+
+    function localDatePlusDays(days) {
+        const d = new Date();
+        d.setHours(12, 0, 0, 0);
+        d.setDate(d.getDate() + days);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function applyReturnShortcut(target, days) {
+        const dateEl = document.getElementById(`${target}-follow-up-date`);
+        const timeEl = document.getElementById(`${target}-follow-up-time`);
+        if (!dateEl) return;
+        if (days === 'pick') {
+            dateEl.focus();
+            try { dateEl.showPicker?.(); } catch (e) { /* ignore */ }
+            return;
+        }
+        dateEl.value = localDatePlusDays(Number(days) || 1);
+        if (timeEl && !timeEl.value) {
+            timeEl.value = '18:00';
+        }
+    }
+
+    function ensureReturnDefaults(target) {
+        const dateEl = document.getElementById(`${target}-follow-up-date`);
+        if (dateEl && !dateEl.value) {
+            dateEl.value = localDatePlusDays(1);
+        }
+        const timeEl = document.getElementById(`${target}-follow-up-time`);
+        if (timeEl && !timeEl.value) {
+            timeEl.value = '18:00';
+        }
+    }
     const form = document.getElementById('map-filters-form');
     const citySelect = document.getElementById('filter-city');
     const sectorSelect = document.getElementById('filter-sector');
@@ -1029,6 +1065,8 @@
             const fuTime = document.getElementById('visit-follow-up-time');
             if (fuDate) fuDate.value = '';
             if (fuTime) fuTime.value = '';
+        } else {
+            ensureReturnDefaults('visit');
         }
     }
 
@@ -1057,6 +1095,8 @@
             const fuTime = document.getElementById('point-follow-up-time');
             if (fuDate) fuDate.value = '';
             if (fuTime) fuTime.value = '';
+        } else {
+            ensureReturnDefaults('point');
         }
         document.querySelectorAll('.point-outcome').forEach((btn) => {
             btn.classList.toggle('is-selected', btn.dataset.status === status);
@@ -1536,6 +1576,14 @@
                 return;
             }
         }
+        if (status === 'return_later') {
+            const followUpAt = combineFollowUpAt('visit-follow-up-date', 'visit-follow-up-time');
+            if (!followUpAt) {
+                visitError.textContent = 'Informe a data do retorno.';
+                visitError.classList.remove('hidden');
+                return;
+            }
+        }
 
         submitBtn.disabled = true;
         visitError.classList.add('hidden');
@@ -1550,7 +1598,7 @@
             Object.assign(payload, collectSaleFinalizeFields('visit'));
         }
         const followUpAt = combineFollowUpAt('visit-follow-up-date', 'visit-follow-up-time');
-        if (status === 'return_later' && followUpAt) {
+        if (status === 'return_later') {
             payload.follow_up_at = followUpAt;
         }
         if (selectedMarker) {
@@ -1610,6 +1658,7 @@
             bumpDayMetric('visits');
             if (status === 'interested') bumpDayMetric('interested');
             if (status === 'installation_requested') bumpDayMetric('contracts');
+            if (status === 'return_later') bumpTodayChipIfNeeded(followUpAt);
 
             openPostVisitModal();
         } catch (error) {
@@ -1639,6 +1688,18 @@
             const el = document.getElementById(id);
             if (el) el.textContent = String(Number(el.textContent || 0) + 1);
         });
+    }
+
+    function bumpTodayChipIfNeeded(followUpAt) {
+        if (!followUpAt || !isFieldSeller) return;
+        const today = localDatePlusDays(0);
+        const datePart = String(followUpAt).slice(0, 10);
+        if (datePart !== today) return;
+        const el = document.getElementById('map-today-count');
+        if (!el) return;
+        el.textContent = String(Number(el.textContent || 0) + 1);
+        const chip = document.getElementById('map-today-chip');
+        if (chip) chip.title = 'Ver retornos de hoje';
     }
 
     async function flyToSearchHits() {
@@ -2095,7 +2156,16 @@
                 }
             }
             const followUpAt = combineFollowUpAt('point-follow-up-date', 'point-follow-up-time');
-            if (status === 'return_later' && followUpAt) payload.follow_up_at = followUpAt;
+            if (status === 'return_later') {
+                if (!followUpAt) {
+                    pointError.textContent = 'Informe a data do retorno.';
+                    pointError.classList.remove('hidden');
+                    submitBtn.disabled = false;
+                    pointSubmitting = false;
+                    return;
+                }
+                payload.follow_up_at = followUpAt;
+            }
         }
 
         if (!payload.street) {
@@ -2200,6 +2270,7 @@
                         bumpDayMetric('visits');
                         if (result.data.visit_status === 'interested') bumpDayMetric('interested');
                         if (result.data.visit_status === 'installation_requested') bumpDayMetric('contracts');
+                        if (status === 'return_later') bumpTodayChipIfNeeded(payload.follow_up_at);
                     }
                     // Sprint 8.2.8: vendedor volta ao mapa sem modal de ajuste.
                     if (isFieldSeller) {
@@ -2722,6 +2793,11 @@
     document.getElementById('point-modal-backdrop')?.addEventListener('click', closePointModal);
     document.getElementById('point-modal-cancel')?.addEventListener('click', closePointModal);
     pointForm?.addEventListener('submit', submitPoint);
+    document.querySelectorAll('.return-shortcut').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            applyReturnShortcut(btn.dataset.target || 'point', btn.dataset.days || '1');
+        });
+    });
     document.getElementById('point-adjust-on-map')?.addEventListener('click', () => {
         const lat = Number(document.getElementById('point-latitude').value);
         const lng = Number(document.getElementById('point-longitude').value);

@@ -14,6 +14,7 @@ use App\Domains\Sales\SaleFields\SaleFieldKeys;
 use App\Domains\Sales\SaleFields\SaleFieldsPolicyResolver;
 use App\Domains\Sales\Territory\Repositories\TerritoryRepository;
 use App\Domains\Visits\Actions\RegisterFirstApproachAction;
+use App\Domains\Visits\Repositories\VisitRepository;
 use App\Http\Controllers\Controller;
 use App\Support\CommercialTerminology;
 use Illuminate\View\View;
@@ -28,6 +29,7 @@ class MapController extends Controller
         protected RegisterFirstApproachAction $firstApproach,
         protected ProductCatalogService $products,
         protected SaleFieldsPolicyResolver $saleFields,
+        protected VisitRepository $visits,
     ) {}
 
     public function index(): View
@@ -129,8 +131,10 @@ class MapController extends Controller
         ];
 
         $sellerCampaigns = collect();
+        $todayFollowUpsCount = 0;
         if ($isFieldSeller && $user) {
             $sellerCampaigns = $this->firstApproach->activeCampaignsFor($user);
+            $todayFollowUpsCount = $this->visits->countPendingFollowUpsForToday($user);
         }
 
         return view('maps.index', [
@@ -152,6 +156,7 @@ class MapController extends Controller
             'dayMetrics' => $dayMetrics,
             'teamMetrics' => $teamMetrics,
             'dayGoal' => $dayGoal,
+            'todayFollowUpsCount' => $todayFollowUpsCount,
             'sellerName' => $user?->name,
             'currentUserId' => $user?->id,
             'markersUrl' => url('/api/v1/maps/markers'),
@@ -176,6 +181,7 @@ class MapController extends Controller
                 'opportunity_create' => route('crm.opportunities.create'),
                 'messages_create' => route('communication.messages.create'),
                 'follow_ups_index' => route('follow-ups.index'),
+                'follow_ups_today' => route('follow-ups.index', ['day' => 'today']),
                 'property_residents' => url('/properties/__PROPERTY__/residents'),
                 'dashboard' => route('dashboard'),
                 'my_visits' => route('operations.my-visits'),

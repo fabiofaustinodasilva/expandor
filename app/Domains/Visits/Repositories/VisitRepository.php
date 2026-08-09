@@ -30,8 +30,10 @@ class VisitRepository
     /**
      * Agenda de retornos pendentes.
      * Seller: somente os próprios. Manager/Admin/Supervisor: toda a equipe.
+     *
+     * @param  'today'|null  $dayFilter  Sprint 8.2.16 — filtro discreto "Hoje".
      */
-    public function paginatePendingFollowUps(?User $viewer = null, int $perPage = 15): LengthAwarePaginator
+    public function paginatePendingFollowUps(?User $viewer = null, int $perPage = 15, ?string $dayFilter = null): LengthAwarePaginator
     {
         $query = FollowUp::query()
             ->where('status', FollowUpStatus::PENDING)
@@ -47,7 +49,28 @@ class VisitRepository
             $query->where('user_id', $viewer->id);
         }
 
-        return $query->paginate($perPage);
+        if ($dayFilter === 'today') {
+            $today = now()->timezone(config('app.timezone'))->toDateString();
+            $query->whereDate('scheduled_at', $today);
+        }
+
+        return $query->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * Contagem de retornos pendentes agendados para hoje (chip "Hoje").
+     */
+    public function countPendingFollowUpsForToday(User $viewer): int
+    {
+        $query = FollowUp::query()
+            ->where('status', FollowUpStatus::PENDING)
+            ->whereDate('scheduled_at', now()->timezone(config('app.timezone'))->toDateString());
+
+        if ($this->scopesAgendaToOwnFollowUps($viewer)) {
+            $query->where('user_id', $viewer->id);
+        }
+
+        return $query->count();
     }
 
     public function scopesAgendaToOwnFollowUps(User $user): bool

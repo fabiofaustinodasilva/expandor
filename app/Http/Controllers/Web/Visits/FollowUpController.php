@@ -14,6 +14,7 @@ use App\Domains\Visits\Requests\StoreFollowUpRequest;
 use App\Http\Controllers\Controller;
 use App\Support\CommercialTerminology;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class FollowUpController extends Controller
@@ -24,7 +25,7 @@ class FollowUpController extends Controller
         protected SaleFieldsPolicyResolver $saleFields,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         $this->authorize('viewAny', Visit::class);
 
@@ -34,10 +35,12 @@ class FollowUpController extends Controller
 
         $teamView = ! $this->repository->scopesAgendaToOwnFollowUps($user);
         $salePolicy = $this->saleFields->resolveForUser($user);
+        $dayFilter = $request->query('day') === 'today' ? 'today' : null;
 
         return view('visits.follow-ups.index', [
-            'followUps' => $this->repository->paginatePendingFollowUps($user),
+            'followUps' => $this->repository->paginatePendingFollowUps($user, 15, $dayFilter),
             'teamView' => $teamView,
+            'dayFilter' => $dayFilter,
             'outcomeOptions' => CommercialTerminology::agendaOutcomeOptions(),
             'sellableProducts' => $this->products->sellableOptions(),
             'saleRequiredChecklist' => $salePolicy->checklist(),

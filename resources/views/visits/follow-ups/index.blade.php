@@ -13,11 +13,22 @@
         <x-client.secondary-button :href="route('map.index')">Abrir mapa</x-client.secondary-button>
     </x-client.page-header>
 
+    <div class="flex flex-wrap gap-2 mb-4" style="display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1rem;">
+        <a class="btn {{ empty($dayFilter) ? 'btn-primary' : 'btn-ghost' }}" href="{{ route('follow-ups.index') }}">Todos</a>
+        <a class="btn {{ ($dayFilter ?? null) === 'today' ? 'btn-primary' : 'btn-ghost' }}" href="{{ route('follow-ups.index', ['day' => 'today']) }}">Hoje</a>
+    </div>
+
     @if($followUps->isEmpty())
         <div class="card">
             <div class="empty-friendly">
-                <div style="font-weight:700; font-size:1.05rem;">Nenhum retorno na agenda</div>
-                <p>Quando o resultado for “Retornar”, o cliente aparece aqui na data combinada.</p>
+                @if(($dayFilter ?? null) === 'today')
+                    <div style="font-weight:700; font-size:1.05rem;">Nenhum retorno hoje</div>
+                    <p>Não há retornos pendentes agendados para hoje.</p>
+                    <a class="btn btn-ghost" href="{{ route('follow-ups.index') }}">Ver todos</a>
+                @else
+                    <div style="font-weight:700; font-size:1.05rem;">Nenhum retorno na agenda</div>
+                    <p>Quando o resultado for “Retornar”, o ponto aparece aqui na data combinada.</p>
+                @endif
                 <a class="btn btn-primary" href="{{ route('map.index') }}">Ir ao mapa</a>
             </div>
         </div>
@@ -70,7 +81,11 @@
                             <h2 style="margin:0; font-size:1.05rem; font-weight:700;">{{ $clientName }}</h2>
                             <p class="header-meta" style="margin:.25rem 0 0;">{{ $addressLabel }}</p>
                             <p class="header-meta" style="margin:.2rem 0 0;">
+                                <span class="badge" style="background:#1e293b;color:#94a3b8;">Pendente</span>
                                 {{ $followUp->visit?->campaign?->name ?: 'Sem campanha' }}
+                                @if($followUp->visit?->plan)
+                                    · {{ $followUp->visit->plan }}
+                                @endif
                                 @if($followUp->notes)
                                     · {{ \Illuminate\Support\Str::limit($followUp->notes, 80) }}
                                 @endif
