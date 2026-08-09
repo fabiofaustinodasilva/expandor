@@ -5,6 +5,7 @@ namespace App\Domains\Platform\Services;
 use App\Domains\Billing\Actions\SyncPlanFeaturesAction;
 use App\Domains\Company\Models\Plan;
 use App\Domains\Company\Models\User;
+use App\Domains\Integrations\Services\IntegrationEntitlementService;
 use App\Domains\Platform\Support\PlanCatalog;
 use App\Domains\Security\Services\SecurityService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -16,6 +17,7 @@ class PlatformPlanService
     public function __construct(
         protected SyncPlanFeaturesAction $syncFeatures,
         protected SecurityService $security,
+        protected IntegrationEntitlementService $integrationEntitlements,
     ) {}
 
     public function paginate(int $perPage = 20): LengthAwarePaginator
@@ -72,6 +74,7 @@ class PlatformPlanService
         $old = $plan->only(['name', 'slug', 'price', 'price_yearly', 'status']);
         $plan->fill($this->payload($data, $slug))->save();
         $this->syncFeatures->execute($plan);
+        $this->integrationEntitlements->invalidatePlanCompaniesCache($plan->fresh());
 
         $this->security->recordAudit(
             action: 'platform.plan.updated',

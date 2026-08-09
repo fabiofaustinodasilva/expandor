@@ -54,6 +54,14 @@ class FeatureFlagService
         return $override?->enabled ?? $flag->default_enabled;
     }
 
+    /**
+     * Whether an active feature-flag row exists for the key (platform kill-switch catalog).
+     */
+    public function exists(string $key): bool
+    {
+        return $this->repository->findFlagByKey($key) !== null;
+    }
+
     public function toggle(Company $company, string $key, bool $enabled, User $actor): CompanyFeatureFlag
     {
         $flag = $this->repository->findFlagByKey($key);
