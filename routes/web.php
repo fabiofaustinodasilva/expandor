@@ -134,6 +134,7 @@ Route::middleware([
     'auth',
     'tenancy.initialize',
     'tenancy.active',
+    'presence.touch',
 ])->group(function (): void {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
     Route::post('/impersonation/exit', [ImpersonationController::class, 'destroy'])->name('impersonation.exit');

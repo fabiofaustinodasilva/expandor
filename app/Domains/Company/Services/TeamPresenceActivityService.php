@@ -12,18 +12,22 @@ use App\Support\CommercialTerminology;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Sprint 8.2.17 — presença + atividade da equipe (sem GPS / sem rastreamento).
  *
- * Online = sessions.last_activity dentro da janela (default 5 min).
+ * Online = users.last_seen_at dentro da janela (default 5 min).
+ * Independente de SESSION_DRIVER (file/database/redis).
  * Último login = users.last_login_at (distinto de presença).
  * Atividade comercial = Visit / Sale existentes.
  */
 class TeamPresenceActivityService
 {
+    /** Janela para considerar Online na Equipe. */
     public const ONLINE_WINDOW_MINUTES = 5;
+
+    /** Throttle de escrita do middleware (não a cada request). */
+    public const PRESENCE_TOUCH_MINUTES = 2;
 
     public const TIMELINE_LIMIT = 20;
 
@@ -55,15 +59,12 @@ class TeamPresenceActivityService
      */
     public function presenceByUserIds(array $userIds, Collection $members): array
     {
-        $lastActivity = $this->sessionLastActivityByUserIds($userIds);
-        $threshold = now()->subMinutes(self::ONLINE_WINDOW_MINUTES)->getTimestamp();
         $out = [];
 
         foreach ($members as $member) {
             $id = (int) $member->id;
-            $unix = $lastActivity[$id] ?? null;
-            $lastSeen = $unix ? Carbon::createFromTimestamp((int) $unix, config('app.timezone')) : null;
-            $online = $unix !== null && (int) $unix >= $threshold;
+            $lastSeen = $member->last_seen_at;
+            $online = $this->isOnline($lastSeen);
 
             $out[$id] = [
                 'online' => $online,
@@ -75,26 +76,6 @@ class TeamPresenceActivityService
         }
 
         return $out;
-    }
-
-    /**
-     * @param  list<int>  $userIds
-     * @return array<int, int> user_id => unix last_activity
-     */
-    public function sessionLastActivityByUserIds(array $userIds): array
-    {
-        if ($userIds === [] || ! Schema::hasTable('sessions')) {
-            return [];
-        }
-
-        return DB::table('sessions')
-            ->whereIn('user_id', $userIds)
-            ->whereNotNull('user_id')
-            ->groupBy('user_id')
-            ->selectRaw('user_id, MAX(last_activity) as last_activity')
-            ->pluck('last_activity', 'user_id')
-            ->map(fn ($v) => (int) $v)
-            ->all();
     }
 
     /**
@@ -233,7 +214,7 @@ class TeamPresenceActivityService
     }
 
     /**
-     * Histórico de conexões confiável: logins auditados + última atividade da sessão atual.
+     * Histórico de conexões confiável: logins auditados + última atividade (last_seen_at).
      * Sem inventar "Saiu" (logout não é auditado).
      *
      * @return list<array{at: Carbon, label: string, kind: string}>
@@ -261,11 +242,9 @@ class TeamPresenceActivityService
             ];
         }
 
-        $presence = $this->sessionLastActivityByUserIds([(int) $user->id]);
-        $unix = $presence[(int) $user->id] ?? null;
-        if ($unix !== null) {
+        if ($user->last_seen_at !== null) {
             $events[] = [
-                'at' => Carbon::createFromTimestamp((int) $unix, config('app.timezone')),
+                'at' => $user->last_seen_at->timezone(config('app.timezone')),
                 'label' => 'Última atividade',
                 'kind' => 'last_seen',
             ];

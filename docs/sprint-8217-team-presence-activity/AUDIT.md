@@ -5,7 +5,7 @@
 | # | Pergunta | Resposta |
 |---|----------|----------|
 | 1 | `last_login_at`? | **SIM** — `users.last_login_at` (LoginController / API Auth) |
-| 2 | `last_seen_at`? | **NÃO** como coluna. Equivalente: `sessions.last_activity` (unix) |
+| 2 | `last_seen_at`? | **SIM (hotfix)** — `users.last_seen_at`; antes usava `sessions` (incompatível com SESSION_DRIVER=file) |
 | 3 | Histórico login/logout? | Login: `audit_logs.action=auth.login_succeeded`. **Logout não é auditado** |
 | 4 | Tabela sessões? | **SIM** — `sessions` (id, user_id, last_activity, …); driver default `database` |
 | 5 | Audit log utilizável? | **Parcial** — logins confiáveis; sem duração de sessão histórica completa |
@@ -20,7 +20,9 @@
 
 ## Migration
 
-**Não necessária** para o escopo. `last_seen_at` opcional no futuro Capacitor (ver OFFLINE-READINESS).
+Hotfix: `users.last_seen_at` + índice `(company_id, last_seen_at)`. Ver `HOTFIX-PRESENCE.md`.
+
+Original sprint planejou zero migrations; produção com `SESSION_DRIVER=file` exige a coluna.
 
 ## Risco tenancy
 

@@ -2,11 +2,11 @@
 
 Não implementa Capacitor/offline nesta sprint.
 
-| Hoje | Futuro app |
+| Hoje (hotfix) | Futuro app |
 |------|------------|
-| Presença = `sessions.last_activity` (web) | Endpoint leve `presence/ping` → preferir `users.last_seen_at` |
-| Sanctum API não atualiza session web | App deve reportar last_seen no sync |
-| Offline = sem atividade recente | Continua offline localmente; ao sync atualiza presença |
-| Sem heartbeat excessivo | Ping a cada 1–2 min em foreground basta |
+| Presença = `users.last_seen_at` via middleware web throttled | Mesmo campo; endpoint leve `presence/ping` ou middleware API |
+| Independente de SESSION_DRIVER | App reporta last_seen no sync/foreground |
+| Offline = null / > 5 min | Continua offline localmente; ao sync atualiza `last_seen_at` |
+| Throttle 2 min | Ping a cada 1–2 min em foreground basta |
 
-Migration futura mínima (se necessário): `users.last_seen_at nullable timestamp`.
+Coluna já criada pelo hotfix: `users.last_seen_at`.

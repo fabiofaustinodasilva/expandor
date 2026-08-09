@@ -20,7 +20,6 @@ use App\Domains\Visits\Support\VisitHistoryPresenter;
 use App\Tenancy\TenantContext;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\Support\CreatesTenantUsers;
 use Tests\TestCase;
 
@@ -104,30 +103,13 @@ class Sprint8217TeamPresenceActivityTest extends TestCase
             'email' => 'online@sprint8217.test',
             'name' => 'Online Seller',
             'last_login_at' => now()->subHour(),
+            'last_seen_at' => now()->subMinutes(2),
         ]);
         $offline = $this->makeUser($company, Role::SELLER, [
             'email' => 'offline@sprint8217.test',
             'name' => 'Offline Seller',
             'last_login_at' => now()->setTime(8, 0),
-        ]);
-
-        DB::table('sessions')->insert([
-            [
-                'id' => 'sess-online-8217',
-                'user_id' => $online->id,
-                'ip_address' => '127.0.0.1',
-                'user_agent' => 'test',
-                'payload' => 'x',
-                'last_activity' => now()->subMinutes(2)->getTimestamp(),
-            ],
-            [
-                'id' => 'sess-offline-8217',
-                'user_id' => $offline->id,
-                'ip_address' => '127.0.0.1',
-                'user_agent' => 'test',
-                'payload' => 'x',
-                'last_activity' => now()->subMinutes(30)->getTimestamp(),
-            ],
+            'last_seen_at' => now()->subMinutes(30),
         ]);
 
         $html = $this->actingAs($admin)->get(route('operations.team'))->assertOk()->getContent();
@@ -249,14 +231,7 @@ class Sprint8217TeamPresenceActivityTest extends TestCase
             'created_at' => now()->setTime(6, 0),
         ]);
 
-        DB::table('sessions')->insert([
-            'id' => 'sess-conn-8217',
-            'user_id' => $seller->id,
-            'ip_address' => '127.0.0.1',
-            'user_agent' => 'test',
-            'payload' => 'x',
-            'last_activity' => now()->setTime(12, 3)->getTimestamp(),
-        ]);
+        $seller->forceFill(['last_seen_at' => now()->setTime(12, 3)])->save();
 
         $html = $this->actingAs($admin)
             ->get(route('operations.team', ['member' => $seller->id]))
@@ -282,6 +257,47 @@ class Sprint8217TeamPresenceActivityTest extends TestCase
             ->assertSee('Todos')
             ->assertSee('Online')
             ->assertSee('Offline');
+    }
+
+    public function test_last_seen_null_is_offline_and_recent_is_online(): void
+    {
+        Carbon::setTestNow(now()->startOfSecond());
+        $service = app(TeamPresenceActivityService::class);
+        $this->assertFalse($service->isOnline(null));
+        $this->assertTrue($service->isOnline(now()->copy()->subMinutes(1)));
+        $this->assertTrue($service->isOnline(now()->copy()->subMinutes(5)));
+        $this->assertFalse($service->isOnline(now()->copy()->subMinutes(5)->subSecond()));
+        Carbon::setTestNow();
+    }
+
+    public function test_presence_middleware_throttles_last_seen_updates_with_file_sessions(): void
+    {
+        config(['session.driver' => 'file']);
+
+        $company = $this->makeCompanyWithPlan('Empresa 8217 Touch');
+        $seller = $this->makeUser($company, Role::SELLER, [
+            'email' => 'touch@sprint8217.test',
+            'last_seen_at' => null,
+        ]);
+
+        Carbon::setTestNow(now()->setTime(10, 0, 0));
+
+        $this->actingAs($seller)->get(route('profile.edit'))->assertOk();
+        $seller->refresh();
+        $this->assertNotNull($seller->last_seen_at);
+        $first = $seller->last_seen_at->copy();
+
+        Carbon::setTestNow(now()->addMinute());
+        $this->actingAs($seller)->get(route('profile.edit'))->assertOk();
+        $seller->refresh();
+        $this->assertTrue($seller->last_seen_at->equalTo($first), 'Must not rewrite before 2 minutes');
+
+        Carbon::setTestNow($first->copy()->addMinutes(2));
+        $this->actingAs($seller)->get(route('profile.edit'))->assertOk();
+        $seller->refresh();
+        $this->assertTrue($seller->last_seen_at->greaterThan($first));
+
+        Carbon::setTestNow();
     }
 
     protected function makeVisit($company, $seller, VisitStatus $status, ?string $residentName, Carbon $at): Visit

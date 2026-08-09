@@ -47,6 +47,7 @@ class User extends Authenticatable
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
         'last_login_at',
+        'last_seen_at',
     ];
 
     protected $hidden = [
@@ -61,6 +62,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'last_seen_at' => 'datetime',
             'password' => 'hashed',
             'is_platform_admin' => 'boolean',
             'two_factor_enabled' => 'boolean',

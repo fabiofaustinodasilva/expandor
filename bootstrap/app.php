@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \App\Http\Middleware\EnsurePermission::class,
             'platform.admin' => \App\Domains\Platform\Middleware\EnsurePlatformAdmin::class,
             'marketplace.attribution' => \App\Domains\Marketplace\Growth\Middleware\CaptureMarketplaceAttribution::class,
+            'presence.touch' => \App\Http\Middleware\TouchUserPresence::class,
         ]);
 
         // Auth -> Tenancy -> Route Model Binding

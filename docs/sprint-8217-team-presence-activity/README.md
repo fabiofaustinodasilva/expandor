@@ -8,7 +8,13 @@ Melhora a Área da Empresa → Equipe com foto, online/offline, última atividad
 
 ## Decisão Fase A → B
 
-**Zero migrations.** Presença via `sessions.last_activity` (driver database padrão). Histórico de conexão via `audit_logs` (`auth.login_succeeded`) + última atividade da sessão atual. Sem inventar "Saiu".
+**Hotfix pós-produção:** presença **não** depende de `sessions`.  
+Usa `users.last_seen_at` + middleware throttled (`presence.touch`, 2 min).  
+Online = 5 minutos. Funciona com `SESSION_DRIVER=file`.  
+
+Histórico de conexão via `audit_logs` (`auth.login_succeeded`) + `last_seen_at`. Sem inventar "Saiu".
+
+Ver `HOTFIX-PRESENCE.md`.
 
 ## Docs
 
