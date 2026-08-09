@@ -201,6 +201,9 @@ class MapController extends Controller
             'noCampaignMessage' => RegisterFirstApproachAction::NO_CAMPAIGN_MESSAGE,
             'mapFrontendConfig' => $mapFrontendConfig,
             'mapProviderFallbackUrl' => route('map.provider-fallback'),
+            'commissionAwardedFlash' => $isFieldSeller
+                ? \App\Domains\Commissions\Support\CommissionAwardedPayload::pullFlash()
+                : null,
         ]);
     }
 

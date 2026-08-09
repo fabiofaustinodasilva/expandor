@@ -27,6 +27,7 @@ Produto passa a ter comissão **fixa** ou **percentual**. Vendas field-sales (`i
 | Arquivo | Conteúdo |
 |---------|----------|
 | [AUDIT.md](./AUDIT.md) | 30 perguntas |
+| [HOTFIX-REWARD.md](./HOTFIX-REWARD.md) | Diagnóstico + hotfix da recompensa |
 | [DATA-MODEL.md](./DATA-MODEL.md) | Schema |
 | [CALCULATION-RULES.md](./CALCULATION-RULES.md) | Fórmulas + arredondamento |
 | [RULE-PRECEDENCE.md](./RULE-PRECEDENCE.md) | Precedência auditada |

@@ -6,40 +6,32 @@ Após Contratar / FirstApproach com `installation_requested`, JSON inclui:
 
 ```json
 "commission_awarded": {
+  "commission_id": 99,
   "amount": 18.50,
   "currency": "BRL",
   "sale_id": 123,
   "visit_id": 456,
+  "awarded": true,
   "play_reward": true
 }
 ```
 
-`play_reward = amount > 0`.
+`awarded` / `play_reward` = amount > 0 **e** comissão persistida.
 
-## Feedback visual
+## Overlay
 
-- Texto curto: **VENDA FECHADA!** + “Você ganhou R$ X de comissão”
-- Duração ~1–2s, não bloqueia mapa
-- Comissão 0: manter toast de venda atual, sem celebração de dinheiro
+- Markup `#commission-reward` no mapa
+- Texto: Venda fechada! / Você ganhou / R$ X / de comissão
+- ~2.6s, auto-dismiss, não bloqueia mapa
+- Formatação pt-BR via `toLocaleString`
 
 ## Som
 
-- Arquivo local Expandor: `/sounds/commission-coins.wav` (sem CDN)
-- Fallback: Web Audio API (beeps) se o arquivo falhar / autoplay restringir
-- Volume discreto (~0.35); uma vez por operação confirmada
-- Falha de áudio **nunca** afeta a venda
-- Autoplay: só após gesto do usuário (submit do formulário)
+- `/sounds/commission-coins.wav` local
+- preload + unlock no primeiro gesto
+- Falha de áudio nunca afeta a venda
 
-Preferência Sons Ativado/Desativado: estrutura futura — documentada, não implementada nesta sprint.
+## Idempotência
 
-## Idempotência do feedback
-
-Chave: `sessionStorage['expandor.commission_rewarded.' + visit_id]`  
-Setada **somente** após sucesso desta resposta — não “última comissão existe”.
-
-Reload da página: não toca de novo.
-
-## Capacitor (futuro)
-
-Evento lógico: `sale.commission_awarded`  
-Web: sound + animation. Native: sound + haptic leve. Não implementar agora.
+- Chave: `sessionStorage['expandor.commission_reward_shown_{commission_id}']`
+- Flash Laravel one-time no próximo GET do mapa (seller)

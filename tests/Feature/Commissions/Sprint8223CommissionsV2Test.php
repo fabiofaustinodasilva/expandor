@@ -194,6 +194,7 @@ class Sprint8223CommissionsV2Test extends TestCase
         $payload = \App\Domains\Commissions\Support\CommissionAwardedPayload::fromVisit($visit->fresh(['sale.items']));
         $this->assertNotNull($payload);
         $this->assertFalse($payload['play_reward']);
+        $this->assertFalse($payload['awarded']);
         $this->assertSame(0.0, $payload['amount']);
     }
 
@@ -255,8 +256,10 @@ class Sprint8223CommissionsV2Test extends TestCase
         $awarded = $response->json('data.commission_awarded');
         $this->assertIsArray($awarded);
         $this->assertTrue($awarded['play_reward']);
+        $this->assertTrue($awarded['awarded']);
         $this->assertSame(12.0, (float) $awarded['amount']);
         $this->assertSame('BRL', $awarded['currency']);
+        $this->assertNotEmpty($awarded['commission_id']);
     }
 
     public function test_manager_can_create_percentage_product(): void
@@ -355,10 +358,11 @@ class Sprint8223CommissionsV2Test extends TestCase
     {
         $js = (string) file_get_contents(base_path('public/js/operational-map.js'));
         $this->assertStringContainsString('celebrateCommissionAward', $js);
-        $this->assertStringContainsString('expandor.commission_rewarded.', $js);
+        $this->assertStringContainsString('expandor.commission_reward_shown_', $js);
         $this->assertStringContainsString('play_reward', $js);
-        $this->assertStringContainsString('VENDA FECHADA!', $js);
+        $this->assertStringContainsString('Venda fechada!', $js);
         $this->assertStringContainsString('playCommissionCoinSound', $js);
+        $this->assertStringContainsString('commission-coins.wav', $js);
     }
 
     /**

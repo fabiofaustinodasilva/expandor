@@ -353,67 +353,143 @@
         toast._t = setTimeout(() => toastEl.classList.remove('show'), 2800);
     }
 
-    /** Sprint 8.2.23 — celebration only after backend confirms commission_awarded.play_reward */
+    /** Sprint 8.2.23 hotfix — celebration only after backend confirms commission_awarded.awarded */
+    const commissionRewardEl = document.getElementById('commission-reward');
+    const commissionRewardAmountEl = document.getElementById('commission-reward-amount');
+    let commissionAudio = null;
+    let commissionAudioUnlocked = false;
+
     function formatBrl(amount) {
-        const n = Number(amount) || 0;
-        return n.toFixed(2).replace('.', ',');
+        const n = Number(amount);
+        const safe = Number.isFinite(n) ? n : 0;
+        try {
+            return safe.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        } catch (_) {
+            return 'R$ ' + safe.toFixed(2).replace('.', ',');
+        }
     }
 
-    function playCommissionCoinBeepFallback() {
+    function ensureCommissionAudio() {
+        if (commissionAudio) return commissionAudio;
         try {
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (!AudioCtx) return;
-            const ctx = new AudioCtx();
-            const now = ctx.currentTime;
-            [880, 1174.7, 1318.5].forEach((freq, i) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.0001, now);
-                gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02 + i * 0.05);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22 + i * 0.05);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(now + i * 0.05);
-                osc.stop(now + 0.28 + i * 0.05);
-            });
-            setTimeout(() => {
-                try { ctx.close(); } catch (_) { /* ignore */ }
-            }, 600);
+            commissionAudio = new Audio('/sounds/commission-coins.wav');
+            commissionAudio.preload = 'auto';
+            commissionAudio.volume = 0.45;
+        } catch (_) {
+            commissionAudio = null;
+        }
+        return commissionAudio;
+    }
+
+    function unlockCommissionAudio() {
+        if (commissionAudioUnlocked) return;
+        const audio = ensureCommissionAudio();
+        if (!audio) return;
+        try {
+            const p = audio.play();
+            if (p && typeof p.then === 'function') {
+                p.then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    commissionAudioUnlocked = true;
+                }).catch(() => { /* still locked — ok */ });
+            }
+        } catch (_) { /* ignore */ }
+    }
+
+    ['pointerdown', 'touchstart', 'click', 'keydown'].forEach((evt) => {
+        document.addEventListener(evt, unlockCommissionAudio, { once: true, passive: true });
+    });
+
+    function playCommissionCoinSound() {
+        try {
+            const audio = ensureCommissionAudio();
+            if (!audio) return;
+            audio.currentTime = 0;
+            const playPromise = audio.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(() => { /* never break sale */ });
+            }
         } catch (_) {
             /* audio must never break the sale flow */
         }
     }
 
-    function playCommissionCoinSound() {
+    function rewardStorageKey(awarded) {
+        if (awarded?.commission_id != null) {
+            return 'expandor.commission_reward_shown_' + String(awarded.commission_id);
+        }
+        if (awarded?.visit_id != null) {
+            return 'expandor.commission_rewarded.' + String(awarded.visit_id);
+        }
+        return null;
+    }
+
+    function wasRewardShown(key) {
+        if (!key) return false;
         try {
-            const audio = new Audio('/sounds/commission-coins.wav');
-            audio.volume = 0.35;
-            const playPromise = audio.play();
-            if (playPromise && typeof playPromise.catch === 'function') {
-                playPromise.catch(() => playCommissionCoinBeepFallback());
-            }
+            return sessionStorage.getItem(key) === '1';
         } catch (_) {
-            playCommissionCoinBeepFallback();
+            return false;
         }
     }
 
-    function celebrateCommissionAward(awarded) {
-        if (!awarded || !awarded.play_reward) return;
-        const visitId = awarded.visit_id;
-        if (visitId == null) return;
-        const key = 'expandor.commission_rewarded.' + String(visitId);
+    function markRewardShown(key) {
+        if (!key) return;
         try {
-            if (sessionStorage.getItem(key)) return;
             sessionStorage.setItem(key, '1');
-        } catch (_) {
-            /* sessionStorage may be blocked; still show once this response */
+        } catch (_) { /* ignore */ }
+    }
+
+    function showCommissionRewardOverlay(amount) {
+        if (!commissionRewardEl || !commissionRewardAmountEl) {
+            toast('🪙 Venda fechada! Você ganhou ' + formatBrl(amount) + ' de comissão');
+            return;
         }
-        const amountLabel = formatBrl(awarded.amount);
-        toast('VENDA FECHADA! Você ganhou R$ ' + amountLabel + ' de comissão');
+        commissionRewardAmountEl.textContent = formatBrl(amount);
+        commissionRewardEl.hidden = false;
+        commissionRewardEl.classList.add('is-visible');
+        commissionRewardEl.classList.remove('is-leaving');
+        clearTimeout(showCommissionRewardOverlay._t);
+        clearTimeout(showCommissionRewardOverlay._t2);
+        showCommissionRewardOverlay._t = setTimeout(() => {
+            commissionRewardEl.classList.add('is-leaving');
+            showCommissionRewardOverlay._t2 = setTimeout(() => {
+                commissionRewardEl.classList.remove('is-visible', 'is-leaving');
+                commissionRewardEl.hidden = true;
+            }, 260);
+        }, 2600);
+    }
+
+    function celebrateCommissionAward(awarded) {
+        if (!awarded) return;
+        const ok = awarded.awarded === true || awarded.play_reward === true;
+        if (!ok) return;
+        const amount = Number(awarded.amount);
+        if (!(amount > 0)) return;
+
+        const key = rewardStorageKey(awarded);
+        if (wasRewardShown(key)) return;
+        markRewardShown(key);
+
+        showCommissionRewardOverlay(amount);
         playCommissionCoinSound();
     }
+
+    function consumeCommissionAwardFromResponse(data) {
+        const awarded = data?.commission_awarded;
+        if (awarded) celebrateCommissionAward(awarded);
+    }
+
+    // One-time flash after redirect/full page load (seller map only).
+    try {
+        const rawFlash = page.dataset.commissionAwardedFlash;
+        if (rawFlash && rawFlash !== 'null' && rawFlash !== '') {
+            const flashed = JSON.parse(rawFlash);
+            // Defer so map chrome is ready; still gated by sessionStorage idempotency.
+            setTimeout(() => celebrateCommissionAward(flashed), 350);
+        }
+    } catch (_) { /* ignore bad flash */ }
 
     initBasemapProvider();
 
@@ -1850,8 +1926,11 @@
 
             closeVisitModal();
             closeDrawer();
-            if (status === 'installation_requested' && result?.data?.commission_awarded?.play_reward) {
-                celebrateCommissionAward(result.data.commission_awarded);
+            if (status === 'installation_requested' && result?.data?.commission_awarded) {
+                consumeCommissionAwardFromResponse(result.data);
+                if (!result.data.commission_awarded.awarded && !result.data.commission_awarded.play_reward) {
+                    toast(saleRegisteredToast);
+                }
             } else {
                 toast(status === 'installation_requested' ? saleRegisteredToast : 'Visita registrada');
             }
@@ -2445,8 +2524,11 @@
             clearDraftLocationMarker();
             clearRememberedContractProduct();
             const saleDone = useFirstApproach && status === 'installation_requested';
-            if (saleDone && result?.data?.commission_awarded?.play_reward) {
-                celebrateCommissionAward(result.data.commission_awarded);
+            if (saleDone && result?.data?.commission_awarded) {
+                consumeCommissionAwardFromResponse(result.data);
+                if (!result.data.commission_awarded.awarded && !result.data.commission_awarded.play_reward) {
+                    toast(saleRegisteredToast || 'Cadastro salvo');
+                }
             } else {
                 const saveMsg = saleDone
                     ? (saleRegisteredToast || 'Cadastro salvo')

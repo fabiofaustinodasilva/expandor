@@ -35,6 +35,7 @@
     data-day-interested="{{ $dayMetrics->interested_total ?? 0 }}"
     data-day-contracts="{{ $dayMetrics->installations_total ?? 0 }}"
     data-sale-registered-toast="{{ $commercial::saleRegisteredToast() }}"
+    data-commission-awarded-flash='@json($commissionAwardedFlash ?? null)'
     data-sale-required-fields='@json($saleRequiredFields ?? [])'
     data-sale-field-labels='@json($saleFieldLabels ?? [])'
     data-sectors='@json($sectors->map(fn ($s) => ["id" => $s->id, "city_id" => $s->city_id, "name" => $s->name])->values())'
@@ -828,6 +829,18 @@
         </div>
     </div>
     @endif
+
+    {{-- Sprint 8.2.23 hotfix — seller commission reward (non-blocking) --}}
+    <div id="commission-reward" class="commission-reward" hidden aria-live="polite" role="status">
+        <div class="commission-reward__card">
+            <div class="commission-reward__emoji" aria-hidden="true">🪙</div>
+            <p class="commission-reward__title">Venda fechada!</p>
+            <p class="commission-reward__label">Você ganhou</p>
+            <p class="commission-reward__amount" id="commission-reward-amount">R$ 0,00</p>
+            <p class="commission-reward__sub">de comissão</p>
+            <p class="commission-reward__hint">Comissão adicionada ao seu resultado.</p>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -1166,6 +1179,71 @@
     }
     body.adjust-mode .leaflet-marker-draggable { cursor: grabbing; }
     body.region-select-mode { cursor: crosshair; }
+
+    /* Sprint 8.2.23 hotfix — commission reward overlay */
+    .commission-reward {
+        position: fixed;
+        inset: 0;
+        z-index: 120;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0 0.85rem calc(5.75rem + env(safe-area-inset-bottom, 0px));
+        pointer-events: none;
+        background: transparent;
+    }
+    @media (min-width: 640px) {
+        .commission-reward {
+            align-items: center;
+            padding: 1rem;
+        }
+    }
+    .commission-reward[hidden] { display: none !important; }
+    .commission-reward.is-visible { display: flex; }
+    .commission-reward__card {
+        width: min(100%, 22rem);
+        pointer-events: none;
+        text-align: center;
+        border-radius: 1.25rem;
+        padding: 1.15rem 1.25rem 1.25rem;
+        background: color-mix(in srgb, #0f172a 92%, #22c55e);
+        border: 1px solid color-mix(in srgb, #22c55e 45%, transparent);
+        box-shadow: 0 18px 48px rgba(2, 6, 23, 0.55);
+        color: #f8fafc;
+        animation: commissionRewardIn 0.28s ease;
+    }
+    .commission-reward.is-leaving .commission-reward__card {
+        animation: commissionRewardOut 0.25s ease forwards;
+    }
+    .commission-reward__emoji { font-size: 1.75rem; line-height: 1; margin-bottom: 0.35rem; }
+    .commission-reward__title {
+        margin: 0; font-size: 1.15rem; font-weight: 800; letter-spacing: 0.01em;
+    }
+    .commission-reward__label {
+        margin: 0.55rem 0 0; font-size: 0.85rem; color: #cbd5e1; font-weight: 500;
+    }
+    .commission-reward__amount {
+        margin: 0.15rem 0; font-size: clamp(1.65rem, 6vw, 2rem); font-weight: 800;
+        color: #4ade80; letter-spacing: 0.01em;
+    }
+    .commission-reward__sub {
+        margin: 0; font-size: 0.9rem; color: #e2e8f0; font-weight: 600;
+    }
+    .commission-reward__hint {
+        margin: 0.65rem 0 0; font-size: 0.78rem; color: #94a3b8; font-weight: 500;
+    }
+    @keyframes commissionRewardIn {
+        from { opacity: 0; transform: translateY(14px) scale(0.97); }
+        to { opacity: 1; transform: none; }
+    }
+    @keyframes commissionRewardOut {
+        from { opacity: 1; transform: none; }
+        to { opacity: 0; transform: translateY(10px) scale(0.98); }
+    }
+    @media (max-width: 360px) {
+        .commission-reward { padding-left: 0.65rem; padding-right: 0.65rem; }
+        .commission-reward__card { padding: 1rem; }
+    }
 </style>
 @endpush
 
@@ -1178,5 +1256,5 @@
 @endif
 <script src="{{ asset('js/map-provider.js') }}?v=5"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=54"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=55"></script>
 @endpush
