@@ -23,6 +23,9 @@ class SaleItem extends Model
         'quantity',
         'line_total',
         'commission_amount',
+        'commission_type',
+        'commission_rate',
+        'commission_base',
     ];
 
     protected function casts(): array
@@ -31,6 +34,8 @@ class SaleItem extends Model
             'unit_price' => 'decimal:2',
             'line_total' => 'decimal:2',
             'commission_amount' => 'decimal:2',
+            'commission_rate' => 'decimal:4',
+            'commission_base' => 'decimal:2',
             'quantity' => 'integer',
         ];
     }

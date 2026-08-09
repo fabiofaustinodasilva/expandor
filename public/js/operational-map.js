@@ -353,6 +353,68 @@
         toast._t = setTimeout(() => toastEl.classList.remove('show'), 2800);
     }
 
+    /** Sprint 8.2.23 — celebration only after backend confirms commission_awarded.play_reward */
+    function formatBrl(amount) {
+        const n = Number(amount) || 0;
+        return n.toFixed(2).replace('.', ',');
+    }
+
+    function playCommissionCoinBeepFallback() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const now = ctx.currentTime;
+            [880, 1174.7, 1318.5].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02 + i * 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22 + i * 0.05);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + i * 0.05);
+                osc.stop(now + 0.28 + i * 0.05);
+            });
+            setTimeout(() => {
+                try { ctx.close(); } catch (_) { /* ignore */ }
+            }, 600);
+        } catch (_) {
+            /* audio must never break the sale flow */
+        }
+    }
+
+    function playCommissionCoinSound() {
+        try {
+            const audio = new Audio('/sounds/commission-coins.mp3');
+            audio.volume = 0.45;
+            const playPromise = audio.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(() => playCommissionCoinBeepFallback());
+            }
+        } catch (_) {
+            playCommissionCoinBeepFallback();
+        }
+    }
+
+    function celebrateCommissionAward(awarded) {
+        if (!awarded || !awarded.play_reward) return;
+        const visitId = awarded.visit_id;
+        if (visitId == null) return;
+        const key = 'expandor.commission_rewarded.' + String(visitId);
+        try {
+            if (sessionStorage.getItem(key)) return;
+            sessionStorage.setItem(key, '1');
+        } catch (_) {
+            /* sessionStorage may be blocked; still show once this response */
+        }
+        const amountLabel = formatBrl(awarded.amount);
+        toast('VENDA FECHADA! Você ganhou R$ ' + amountLabel + ' de comissão');
+        playCommissionCoinSound();
+    }
+
     initBasemapProvider();
 
     function debounce(fn, wait) {
@@ -1788,7 +1850,11 @@
 
             closeVisitModal();
             closeDrawer();
-            toast(status === 'installation_requested' ? saleRegisteredToast : 'Visita registrada');
+            if (status === 'installation_requested' && result?.data?.commission_awarded?.play_reward) {
+                celebrateCommissionAward(result.data.commission_awarded);
+            } else {
+                toast(status === 'installation_requested' ? saleRegisteredToast : 'Visita registrada');
+            }
             await loadMarkers({ fit: false, useBbox: true });
 
             bumpDayMetric('visits');
@@ -2379,12 +2445,16 @@
             clearDraftLocationMarker();
             clearRememberedContractProduct();
             const saleDone = useFirstApproach && status === 'installation_requested';
-            const saveMsg = saleDone
-                ? (saleRegisteredToast || 'Cadastro salvo')
-                : (useFirstApproach
-                    ? 'Ponto registrado'
-                    : (mode === 'edit' ? 'Cliente atualizado' : 'Ponto registrado'));
-            toast(saveMsg);
+            if (saleDone && result?.data?.commission_awarded?.play_reward) {
+                celebrateCommissionAward(result.data.commission_awarded);
+            } else {
+                const saveMsg = saleDone
+                    ? (saleRegisteredToast || 'Cadastro salvo')
+                    : (useFirstApproach
+                        ? 'Ponto registrado'
+                        : (mode === 'edit' ? 'Cliente atualizado' : 'Ponto registrado'));
+                toast(saveMsg);
+            }
             await loadMarkers({ fit: false, useBbox: true });
             if (result?.data) {
                 const created = {

@@ -2,6 +2,7 @@
 
 namespace App\Domains\Sales\Products\Models;
 
+use App\Domains\Commissions\Enums\ProductCommissionType;
 use App\Domains\Company\Models\Company;
 use App\Domains\Commissions\Models\SalesCommission;
 use App\Tenancy\Concerns\BelongsToTenant;
@@ -30,7 +31,9 @@ class Product extends Model
         'image_thumb',
         'video_url',
         'price',
+        'commission_type',
         'commission_amount',
+        'commission_percentage',
         'stock_control',
         'stock_quantity',
         'minimum_stock',
@@ -43,7 +46,9 @@ class Product extends Model
     {
         return [
             'price' => 'decimal:2',
+            'commission_type' => ProductCommissionType::class,
             'commission_amount' => 'decimal:2',
+            'commission_percentage' => 'decimal:4',
             'stock_control' => 'boolean',
             'stock_quantity' => 'integer',
             'minimum_stock' => 'integer',
@@ -76,6 +81,25 @@ class Product extends Model
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    public function commissionType(): ProductCommissionType
+    {
+        $type = $this->commission_type;
+
+        return $type instanceof ProductCommissionType
+            ? $type
+            : ProductCommissionType::tryFrom((string) $type) ?? ProductCommissionType::Fixed;
+    }
+
+    public function isFixedCommission(): bool
+    {
+        return $this->commissionType() === ProductCommissionType::Fixed;
+    }
+
+    public function isPercentageCommission(): bool
+    {
+        return $this->commissionType() === ProductCommissionType::Percentage;
     }
 
     public function isSellable(int $quantity = 1): bool

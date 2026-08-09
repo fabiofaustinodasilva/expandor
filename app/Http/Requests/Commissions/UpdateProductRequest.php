@@ -29,7 +29,9 @@ class UpdateProductRequest extends FormRequest
             'image' => app(MediaUploadService::class)->rules(MediaPurpose::ProductImage),
             'remove_image' => ['sometimes', 'boolean'],
             'price' => ['required', 'numeric', 'min:0'],
-            'commission_amount' => ['required', 'numeric', 'min:0'],
+            'commission_type' => ['required', Rule::in(\App\Domains\Commissions\Enums\ProductCommissionType::values())],
+            'commission_amount' => ['required_if:commission_type,fixed', 'nullable', 'numeric', 'min:0'],
+            'commission_percentage' => ['required_if:commission_type,percentage', 'nullable', 'numeric', 'between:0,100'],
             'stock_control' => ['sometimes', 'boolean'],
             'minimum_stock' => ['nullable', 'integer', 'min:0'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:99999'],
@@ -68,6 +70,7 @@ class UpdateProductRequest extends FormRequest
     {
         $this->merge([
             'stock_control' => $this->boolean('stock_control'),
+            'commission_type' => $this->input('commission_type', 'fixed'),
         ]);
 
         app(MediaUploadService::class)->assertRequestFilesValid([

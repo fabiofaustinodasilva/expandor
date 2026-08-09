@@ -26,6 +26,9 @@ class SalesCommission extends Model
         'product_id',
         'product_name',
         'commission_amount',
+        'commission_type',
+        'commission_rate',
+        'commission_base',
         'quantity',
         'status',
         'earned_at',
@@ -39,6 +42,8 @@ class SalesCommission extends Model
     {
         return [
             'commission_amount' => 'decimal:2',
+            'commission_rate' => 'decimal:4',
+            'commission_base' => 'decimal:2',
             'quantity' => 'integer',
             'status' => SalesCommissionStatus::class,
             'earned_at' => 'datetime',

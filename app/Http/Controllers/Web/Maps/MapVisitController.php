@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web\Maps;
 
 use App\Domains\Campaigns\Models\Campaign;
+use App\Domains\Commissions\Support\CommissionAwardedPayload;
 use App\Domains\Visits\Actions\RegisterVisitAction;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Domains\Visits\Models\Visit;
@@ -32,17 +33,26 @@ class MapVisitController extends Controller
             ], $request->user());
         }
 
+        $payload = [
+            'visit_id' => $visit->id,
+            'property_id' => $visit->property_id,
+            'status' => $visit->status->value,
+            'plan' => $visit->plan,
+            'follow_up_url' => route('visits.follow-ups.create', $visit),
+            'show_url' => route('visits.show', $visit),
+        ];
+
+        if ($visit->status === VisitStatus::INSTALLATION_REQUESTED) {
+            $awarded = CommissionAwardedPayload::fromVisit($visit->fresh(['sale.items']));
+            if ($awarded !== null) {
+                $payload['commission_awarded'] = $awarded;
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Visita registrada',
-            'data' => [
-                'visit_id' => $visit->id,
-                'property_id' => $visit->property_id,
-                'status' => $visit->status->value,
-                'plan' => $visit->plan,
-                'follow_up_url' => route('visits.follow-ups.create', $visit),
-                'show_url' => route('visits.show', $visit),
-            ],
+            'data' => $payload,
         ], 201);
     }
 }

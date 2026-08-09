@@ -3,6 +3,7 @@
 namespace App\Domains\Sales\Products\Services;
 
 use App\Domains\Company\Models\User;
+use App\Domains\Commissions\Enums\ProductCommissionType;
 use App\Domains\Media\Enums\MediaCategory;
 use App\Domains\Media\Enums\MediaPurpose;
 use App\Domains\Media\Services\MediaUploadService;
@@ -52,7 +53,7 @@ class ProductCatalogService
                 'image_thumb' => $thumbPath,
                 'video_url' => $data['video_url'] ?? null,
                 'price' => $data['price'] ?? 0,
-                'commission_amount' => $data['commission_amount'] ?? 0,
+                ...$this->commissionPayload($data),
                 'stock_control' => $stockControl,
                 'stock_quantity' => 0,
                 'minimum_stock' => $data['minimum_stock'] ?? 0,
@@ -83,7 +84,8 @@ class ProductCatalogService
     {
         $old = $product->only([
             'name', 'category', 'description', 'benefits', 'image', 'image_thumb', 'video_url',
-            'price', 'commission_amount', 'stock_control', 'minimum_stock', 'status', 'sort_order',
+            'price', 'commission_type', 'commission_amount', 'commission_percentage',
+            'stock_control', 'minimum_stock', 'status', 'sort_order',
         ]);
 
         $payload = [
@@ -93,7 +95,7 @@ class ProductCatalogService
             'benefits' => array_key_exists('benefits', $data) ? $data['benefits'] : $product->benefits,
             'video_url' => array_key_exists('video_url', $data) ? $data['video_url'] : $product->video_url,
             'price' => $data['price'] ?? $product->price,
-            'commission_amount' => $data['commission_amount'] ?? $product->commission_amount,
+            ...$this->commissionPayload($data, $product),
             'stock_control' => array_key_exists('stock_control', $data)
                 ? (bool) $data['stock_control']
                 : $product->stock_control,
@@ -155,7 +157,7 @@ class ProductCatalogService
     }
 
     /**
-     * @return list<array{id: int, name: string, price: float|string, commission_amount: float|string, stock_control: bool, stock_quantity: int}>
+     * @return list<array{id: int, name: string, price: float|string, commission_type: string, commission_amount: float|string, commission_percentage: float|string|null, stock_control: bool, stock_quantity: int, available: bool}>
      */
     public function sellableOptions(): array
     {
@@ -167,7 +169,9 @@ class ProductCatalogService
                 'id',
                 'name',
                 'price',
+                'commission_type',
                 'commission_amount',
+                'commission_percentage',
                 'stock_control',
                 'stock_quantity',
                 'status',
@@ -176,13 +180,49 @@ class ProductCatalogService
                 'id' => $p->id,
                 'name' => $p->name,
                 'price' => $p->price,
+                'commission_type' => $p->commissionType()->value,
                 'commission_amount' => $p->commission_amount,
+                'commission_percentage' => $p->commission_percentage,
                 'stock_control' => $p->stock_control,
                 'stock_quantity' => $p->stock_quantity,
                 'available' => $p->isSellable(),
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{commission_type: string, commission_amount: float|int|string, commission_percentage: float|int|string|null}
+     */
+    protected function commissionPayload(array $data, ?Product $existing = null): array
+    {
+        $type = ProductCommissionType::tryFrom((string) ($data['commission_type'] ?? ''))
+            ?? $existing?->commissionType()
+            ?? ProductCommissionType::Fixed;
+
+        if ($type === ProductCommissionType::Percentage) {
+            $percentage = array_key_exists('commission_percentage', $data)
+                ? (float) $data['commission_percentage']
+                : (float) ($existing?->commission_percentage ?? 0);
+
+            return [
+                'commission_type' => $type->value,
+                'commission_percentage' => $percentage,
+                // Keep amount as 0 for clarity when percentage; do not invent fixed value.
+                'commission_amount' => array_key_exists('commission_amount', $data)
+                    ? (float) $data['commission_amount']
+                    : (float) ($existing?->commission_amount ?? 0),
+            ];
+        }
+
+        return [
+            'commission_type' => ProductCommissionType::Fixed->value,
+            'commission_amount' => array_key_exists('commission_amount', $data)
+                ? (float) $data['commission_amount']
+                : (float) ($existing?->commission_amount ?? 0),
+            'commission_percentage' => null,
+        ];
     }
 
     /**

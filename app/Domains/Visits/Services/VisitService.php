@@ -4,6 +4,7 @@ namespace App\Domains\Visits\Services;
 
 use App\Domains\Campaigns\Models\Campaign;
 use App\Domains\Commissions\Actions\GenerateVisitCommissionAction;
+use App\Domains\Commissions\Services\ProductCommissionCalculator;
 use App\Domains\Company\Models\User;
 use App\Domains\Sales\Models\Sale;
 use App\Domains\Sales\Models\SaleItem;
@@ -30,6 +31,7 @@ class VisitService
         protected StockService $stock,
         protected GenerateVisitCommissionAction $generateCommission,
         protected ResidentService $residents,
+        protected ProductCommissionCalculator $commissionCalculator,
     ) {}
 
     /**
@@ -171,6 +173,9 @@ class VisitService
                         'quantity' => $line['quantity'],
                         'line_total' => $line['line_total'],
                         'commission_amount' => $line['commission_amount'],
+                        'commission_type' => $line['commission_type'],
+                        'commission_rate' => $line['commission_rate'],
+                        'commission_base' => $line['commission_base'],
                     ]);
 
                     $this->generateCommission->executeForSaleItem($visit, $item, $lineProduct, $user);
@@ -202,7 +207,16 @@ class VisitService
      * Normaliza carrinho: items[] ou legado product_id único.
      *
      * @param  array<string, mixed>  $data
-     * @return list<array{product: Product, quantity: int, unit_price: float, line_total: float, commission_amount: float}>
+     * @return list<array{
+     *     product: Product,
+     *     quantity: int,
+     *     unit_price: float,
+     *     line_total: float,
+     *     commission_amount: float,
+     *     commission_type: string,
+     *     commission_rate: float,
+     *     commission_base: float|null
+     * }>
      */
     protected function normalizeSaleCartLines(array $data, int $companyId): array
     {
@@ -232,13 +246,16 @@ class VisitService
         foreach ($merged as $pid => $qty) {
             $product = $this->resolveContractProduct($pid, $companyId);
             $unitPrice = (float) $product->price;
-            $unitCommission = (float) $product->commission_amount;
+            $calc = $this->commissionCalculator->forProduct($product, $unitPrice, $qty);
             $lines[] = [
                 'product' => $product,
-                'quantity' => $qty,
-                'unit_price' => $unitPrice,
-                'line_total' => round($unitPrice * $qty, 2),
-                'commission_amount' => round($unitCommission * $qty, 2),
+                'quantity' => $calc['quantity'],
+                'unit_price' => $calc['unit_price'],
+                'line_total' => $calc['line_total'],
+                'commission_amount' => $calc['commission_amount'],
+                'commission_type' => $calc['commission_type'],
+                'commission_rate' => $calc['commission_rate'],
+                'commission_base' => $calc['commission_base'],
             ];
         }
 

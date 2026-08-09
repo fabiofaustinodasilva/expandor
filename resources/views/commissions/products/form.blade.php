@@ -65,11 +65,84 @@
                        value="{{ old('price', $product->price) }}" required>
             </div>
             <div>
-                <label for="commission_amount">{{ $commercial::commissionPerSale() }} (R$)</label>
-                <input class="form-control" type="number" step="0.01" min="0" id="commission_amount" name="commission_amount"
-                       value="{{ old('commission_amount', $product->commission_amount) }}" required>
+                <label for="commission_type">Como deseja pagar a comissão?</label>
+                @php
+                    $commissionType = old('commission_type', $product->commission_type?->value ?? $product->commission_type ?? 'fixed');
+                @endphp
+                <select class="form-control" id="commission_type" name="commission_type" required>
+                    <option value="fixed" @selected($commissionType === 'fixed')>Valor fixo</option>
+                    <option value="percentage" @selected($commissionType === 'percentage')>Porcentagem</option>
+                </select>
             </div>
         </div>
+
+        <fieldset style="border:1px solid var(--border, #d4d4d8);border-radius:8px;padding:.75rem 1rem;margin-bottom:.75rem;">
+            <legend style="padding:0 .35rem;font-size:.85rem;font-weight:600;">COMISSÃO</legend>
+
+            <div id="commission-fixed-fields" style="margin-bottom:.75rem;">
+                <label for="commission_amount">{{ $commercial::commissionPerSale() }} (R$)</label>
+                <input class="form-control" type="number" step="0.01" min="0" id="commission_amount" name="commission_amount"
+                       value="{{ old('commission_amount', $product->commission_amount ?? 0) }}">
+                @error('commission_amount')<div class="header-meta" style="color:var(--highlight);">{{ $message }}</div>@enderror
+            </div>
+
+            <div id="commission-percentage-fields" style="margin-bottom:.75rem;">
+                <label for="commission_percentage">Percentual (%)</label>
+                <input class="form-control" type="number" step="0.01" min="0" max="100" id="commission_percentage" name="commission_percentage"
+                       value="{{ old('commission_percentage', $product->commission_percentage) }}">
+                @error('commission_percentage')<div class="header-meta" style="color:var(--highlight);">{{ $message }}</div>@enderror
+            </div>
+
+            <div class="header-meta" id="commission-preview" aria-live="polite">
+                Preço atual do produto: R$ <span id="commission-preview-price">0,00</span><br>
+                Comissão estimada: R$ <span id="commission-preview-amount">0,00</span>
+            </div>
+        </fieldset>
+
+        @push('scripts')
+        <script>
+            (function () {
+                const typeEl = document.getElementById('commission_type');
+                const priceEl = document.getElementById('price');
+                const amountEl = document.getElementById('commission_amount');
+                const pctEl = document.getElementById('commission_percentage');
+                const fixedBox = document.getElementById('commission-fixed-fields');
+                const pctBox = document.getElementById('commission-percentage-fields');
+                const previewPrice = document.getElementById('commission-preview-price');
+                const previewAmount = document.getElementById('commission-preview-amount');
+
+                function money(n) {
+                    return (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace('.', ',');
+                }
+
+                function syncType() {
+                    const isPct = typeEl.value === 'percentage';
+                    fixedBox.style.display = isPct ? 'none' : '';
+                    pctBox.style.display = isPct ? '' : 'none';
+                    amountEl.required = !isPct;
+                    pctEl.required = isPct;
+                    updatePreview();
+                }
+
+                function updatePreview() {
+                    const price = Number(priceEl.value) || 0;
+                    previewPrice.textContent = money(price);
+                    if (typeEl.value === 'percentage') {
+                        const pct = Number(pctEl.value) || 0;
+                        previewAmount.textContent = money(price * (pct / 100));
+                    } else {
+                        previewAmount.textContent = money(amountEl.value);
+                    }
+                }
+
+                typeEl.addEventListener('change', syncType);
+                priceEl.addEventListener('input', updatePreview);
+                amountEl.addEventListener('input', updatePreview);
+                pctEl.addEventListener('input', updatePreview);
+                syncType();
+            })();
+        </script>
+        @endpush
 
         <div style="margin-bottom:.75rem;">
             <label>

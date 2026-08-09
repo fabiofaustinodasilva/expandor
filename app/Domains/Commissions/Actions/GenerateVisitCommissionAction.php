@@ -22,6 +22,9 @@ class GenerateVisitCommissionAction
     /**
      * Após visita Contratou: gera comissão (idempotente) e baixa estoque se necessário.
      * Preferir executeForSaleItem() no fluxo multi-produto.
+     *
+     * Fonte do valor: snapshot do SaleItem quando disponível (nunca recalc live do produto
+     * se o item já materializou commission_amount).
      */
     public function execute(Visit $visit, Product $product, User $actor, int $quantity = 1, ?SaleItem $saleItem = null): SalesCommission
     {
@@ -44,7 +47,16 @@ class GenerateVisitCommissionAction
 
             $this->stock->assertAvailable($product, $quantity);
 
-            $unitCommission = (float) $product->commission_amount;
+            $amount = $saleItem !== null
+                ? (float) $saleItem->commission_amount
+                : round((float) $product->commission_amount * $quantity, 2);
+
+            $type = $saleItem?->commission_type
+                ?? (string) ($product->commission_type?->value ?? $product->commission_type ?? 'fixed');
+            $rate = $saleItem !== null
+                ? ($saleItem->commission_rate !== null ? (float) $saleItem->commission_rate : null)
+                : (float) $product->commission_amount;
+            $base = $saleItem?->commission_base !== null ? (float) $saleItem->commission_base : null;
 
             $commission = SalesCommission::query()->create([
                 'company_id' => $visit->company_id,
@@ -53,7 +65,10 @@ class GenerateVisitCommissionAction
                 'sale_item_id' => $saleItem?->id,
                 'product_id' => $product->id,
                 'product_name' => $product->name,
-                'commission_amount' => round($unitCommission * $quantity, 2),
+                'commission_amount' => $amount,
+                'commission_type' => $type,
+                'commission_rate' => $rate,
+                'commission_base' => $base,
                 'quantity' => $quantity,
                 'status' => SalesCommissionStatus::PENDING,
                 'earned_at' => $visit->visited_at ?? now(),
@@ -76,6 +91,9 @@ class GenerateVisitCommissionAction
                     'sale_item_id' => $saleItem?->id,
                     'product_id' => $product->id,
                     'commission_amount' => $commission->commission_amount,
+                    'commission_type' => $commission->commission_type,
+                    'commission_rate' => $commission->commission_rate,
+                    'commission_base' => $commission->commission_base,
                     'quantity' => $quantity,
                 ],
             );

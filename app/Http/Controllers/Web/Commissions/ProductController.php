@@ -64,7 +64,9 @@ class ProductController extends Controller
             'product' => new Product([
                 'status' => Product::STATUS_ACTIVE,
                 'stock_control' => false,
+                'commission_type' => 'fixed',
                 'commission_amount' => 0,
+                'commission_percentage' => null,
                 'price' => 0,
                 'stock_quantity' => 0,
                 'minimum_stock' => 0,
