@@ -226,6 +226,6 @@ class Sprint8211FieldSalesExperienceTest extends TestCase
         $seller = $this->makeUser($company, Role::SELLER, ['email' => 'seller-cache@sprint8211.test']);
 
         $html = $this->actingAs($seller)->get(route('map.index'))->assertOk()->getContent();
-        $this->assertStringContainsString('operational-map.js?v=49', $html);
+        $this->assertStringContainsString('operational-map.js?v=50', $html);
     }
 }

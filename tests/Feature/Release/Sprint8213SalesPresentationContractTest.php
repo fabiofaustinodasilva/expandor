@@ -147,7 +147,7 @@ class Sprint8213SalesPresentationContractTest extends TestCase
 
         $js = file_get_contents(public_path('js/operational-map.js'));
 
-        $this->assertStringContainsString('operational-map.js?v=49', $html);
+        $this->assertStringContainsString('operational-map.js?v=50', $html);
         $this->assertStringContainsString('openContractRegistration', $js);
         $this->assertStringContainsString('seedSaleCartWithProduct', $js);
         $this->assertStringContainsString('contract_product', $js);
