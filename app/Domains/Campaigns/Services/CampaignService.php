@@ -6,12 +6,17 @@ use App\Domains\Campaigns\Enums\CampaignStatus;
 use App\Domains\Campaigns\Models\Campaign;
 use App\Domains\Company\Models\User;
 use App\Domains\Sales\Territory\Models\Sector;
+use App\Domains\Sales\Territory\Services\TerritoryService;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CampaignService
 {
+    public function __construct(
+        protected TerritoryService $territory,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -21,10 +26,12 @@ class CampaignService
             /** @var TenantContext $context */
             $context = app(TenantContext::class);
 
+            $cityId = $this->resolveOperationalCityId($data);
+
             $campaign = Campaign::query()->create([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
-                'city_id' => $data['city_id'],
+                'city_id' => $cityId,
                 'status' => CampaignStatus::from($data['status'] ?? CampaignStatus::DRAFT->value),
                 'start_date' => $data['start_date'] ?? null,
                 'end_date' => $data['end_date'] ?? null,
@@ -44,10 +51,12 @@ class CampaignService
     public function update(Campaign $campaign, array $data): Campaign
     {
         return DB::transaction(function () use ($campaign, $data) {
+            $cityId = $this->resolveOperationalCityId($data);
+
             $campaign->update([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
-                'city_id' => $data['city_id'],
+                'city_id' => $cityId,
                 'start_date' => $data['start_date'] ?? null,
                 'end_date' => $data['end_date'] ?? null,
                 'goal_visits' => (int) ($data['goal_visits'] ?? 0),
@@ -90,6 +99,26 @@ class CampaignService
     /**
      * @param  array<string, mixed>  $data
      */
+    protected function resolveOperationalCityId(array $data): int
+    {
+        if (! empty($data['geo_municipality_id'])) {
+            return $this->territory
+                ->upsertCityFromCatalog((int) $data['geo_municipality_id'])
+                ->id;
+        }
+
+        if (! empty($data['city_id'])) {
+            return (int) $data['city_id'];
+        }
+
+        throw ValidationException::withMessages([
+            'geo_municipality_id' => 'Selecione a cidade da campanha.',
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
     protected function syncAssociations(Campaign $campaign, array $data): void
     {
         $userIds = collect($data['user_ids'] ?? [])
@@ -122,17 +151,22 @@ class CampaignService
         }
 
         if ($sectorIds !== []) {
-            $validSectorIds = Sector::query()
+            $sectors = Sector::query()
                 ->where('city_id', $campaign->city_id)
                 ->whereIn('id', $sectorIds)
-                ->pluck('id')
-                ->all();
+                ->get(['id', 'name']);
 
-            if (count($validSectorIds) !== count($sectorIds)) {
+            if ($sectors->count() !== count($sectorIds)) {
                 throw ValidationException::withMessages([
-                    'sector_ids' => 'Os setores devem pertencer à cidade da campanha.',
+                    'sector_ids' => 'As áreas devem pertencer à cidade da campanha.',
                 ]);
             }
+
+            $validSectorIds = $sectors
+                ->reject(fn (Sector $sector) => $this->territory->isReservedWholeCitySectorName($sector->name))
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
         } else {
             $validSectorIds = [];
         }

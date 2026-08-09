@@ -7,15 +7,18 @@ use App\Domains\Campaigns\Models\Campaign;
 use App\Domains\Company\Models\Role;
 use App\Domains\Sales\Territory\Models\City;
 use App\Domains\Sales\Territory\Models\Sector;
+use App\Domains\Sales\Territory\Services\TerritoryService;
 use App\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\CreatesTenantUsers;
+use Tests\Support\SeedsGeoCatalog;
 use Tests\TestCase;
 
 class CampaignsModuleTest extends TestCase
 {
     use CreatesTenantUsers;
     use RefreshDatabase;
+    use SeedsGeoCatalog;
 
     protected function setUp(): void
     {
@@ -82,6 +85,8 @@ class CampaignsModuleTest extends TestCase
             'email' => 'manager@campaigns.test',
         ]);
 
+        $this->seedMiniGeoCatalog();
+
         $this->actingAs($viewer)->get(route('campaigns.index'))->assertForbidden();
         $this->actingAs($viewer)->get(route('campaigns.create'))->assertForbidden();
 
@@ -100,9 +105,8 @@ class CampaignsModuleTest extends TestCase
 
         app(TenantContext::class)->set($company, $admin);
 
-        $city = City::factory()->create([
-            'company_id' => $company->id,
-        ]);
+        [, $municipality] = $this->seedMiniGeoCatalog();
+        $city = app(TerritoryService::class)->upsertCityFromCatalog($municipality);
 
         $sectorA = Sector::factory()->create([
             'company_id' => $company->id,
@@ -129,12 +133,13 @@ class CampaignsModuleTest extends TestCase
         $response = $this->actingAs($admin)->post(route('campaigns.store'), [
             'name' => 'Porta a Porta Centro',
             'description' => 'Operação externa',
-            'city_id' => $city->id,
+            'geo_municipality_id' => $municipality->id,
             'status' => CampaignStatus::DRAFT->value,
             'start_date' => now()->toDateString(),
             'end_date' => now()->addDays(15)->toDateString(),
             'goal_visits' => 80,
             'user_ids' => [$sellerA->id, $sellerB->id],
+            'territory_mode' => 'sectors',
             'sector_ids' => [$sectorA->id, $sectorB->id],
         ]);
 

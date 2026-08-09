@@ -29,8 +29,13 @@ class StoreCampaignRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'city_id' => [
+            'geo_municipality_id' => [
                 'required',
+                'integer',
+                Rule::exists('geo_municipalities', 'id'),
+            ],
+            'city_id' => [
+                'nullable',
                 'integer',
                 Rule::exists('cities', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
             ],
@@ -67,7 +72,7 @@ class StoreCampaignRequest extends FormRequest
             if ($ids->isEmpty()) {
                 $validator->errors()->add(
                     'sector_ids',
-                    'Selecione ao menos um setor ou escolha Todos os setores.'
+                    'Selecione ao menos uma área ou escolha Toda a cidade.'
                 );
             }
         });

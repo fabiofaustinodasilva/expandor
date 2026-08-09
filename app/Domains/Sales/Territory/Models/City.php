@@ -20,6 +20,7 @@ class City extends Model
         'name',
         'state',
         'ibge_code',
+        'geo_municipality_id',
         'active',
     ];
 
@@ -38,6 +39,11 @@ class City extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function geoMunicipality(): BelongsTo
+    {
+        return $this->belongsTo(\App\Domains\Geo\Models\GeoMunicipality::class, 'geo_municipality_id');
     }
 
     public function sectors(): HasMany

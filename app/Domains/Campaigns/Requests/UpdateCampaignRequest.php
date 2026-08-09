@@ -28,8 +28,14 @@ class UpdateCampaignRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'geo_municipality_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('geo_municipalities', 'id'),
+            ],
             'city_id' => [
-                'required',
+                'required_without:geo_municipality_id',
+                'nullable',
                 'integer',
                 Rule::exists('cities', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
             ],
@@ -65,7 +71,7 @@ class UpdateCampaignRequest extends FormRequest
             if ($ids->isEmpty()) {
                 $validator->errors()->add(
                     'sector_ids',
-                    'Selecione ao menos um setor ou escolha Todos os setores.'
+                    'Selecione ao menos uma área ou escolha Toda a cidade.'
                 );
             }
         });

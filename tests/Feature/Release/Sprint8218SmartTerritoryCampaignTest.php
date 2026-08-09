@@ -5,17 +5,20 @@ namespace Tests\Feature\Release;
 use App\Domains\Campaigns\Enums\CampaignStatus;
 use App\Domains\Campaigns\Models\Campaign;
 use App\Domains\Company\Models\Role;
+use App\Domains\Geo\Models\GeoMunicipality;
 use App\Domains\Sales\Products\Models\Product;
 use App\Domains\Sales\Properties\Enums\PropertyStatus;
 use App\Domains\Sales\Properties\Models\Address;
 use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Sales\Territory\Models\City;
 use App\Domains\Sales\Territory\Models\Sector;
+use App\Domains\Sales\Territory\Services\TerritoryService;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\CreatesTenantUsers;
+use Tests\Support\SeedsGeoCatalog;
 use Tests\TestCase;
 
 /**
@@ -25,16 +28,18 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
 {
     use CreatesTenantUsers;
     use RefreshDatabase;
+    use SeedsGeoCatalog;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->seedFoundation();
+        $this->seedMiniGeoCatalog();
     }
 
     public function test_campaign_with_all_sectors_keeps_empty_pivot(): void
     {
-        [$admin, $city] = $this->adminWithCity('Empresa 8218 All');
+        [$admin, $city, $municipality] = $this->adminWithCity('Empresa 8218 All');
 
         $sector = Sector::factory()->create([
             'company_id' => $admin->company_id,
@@ -44,7 +49,7 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
 
         $this->actingAs($admin)->post(route('campaigns.store'), [
             'name' => 'Campanha Cidade Inteira',
-            'city_id' => $city->id,
+            'geo_municipality_id' => $municipality->id,
             'status' => CampaignStatus::DRAFT->value,
             'territory_mode' => 'all',
             'sector_ids' => [$sector->id],
@@ -58,7 +63,7 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
 
     public function test_campaign_with_one_sector(): void
     {
-        [$admin, $city] = $this->adminWithCity('Empresa 8218 One');
+        [$admin, $city, $municipality] = $this->adminWithCity('Empresa 8218 One');
 
         $centro = Sector::factory()->create([
             'company_id' => $admin->company_id,
@@ -73,7 +78,7 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
 
         $this->actingAs($admin)->post(route('campaigns.store'), [
             'name' => 'Campanha Um Setor',
-            'city_id' => $city->id,
+            'geo_municipality_id' => $municipality->id,
             'status' => CampaignStatus::DRAFT->value,
             'territory_mode' => 'sectors',
             'sector_ids' => [$centro->id],
@@ -85,7 +90,7 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
 
     public function test_campaign_with_multiple_sectors(): void
     {
-        [$admin, $city] = $this->adminWithCity('Empresa 8218 Multi');
+        [$admin, $city, $municipality] = $this->adminWithCity('Empresa 8218 Multi');
 
         $a = Sector::factory()->create([
             'company_id' => $admin->company_id,
@@ -105,7 +110,7 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
 
         $this->actingAs($admin)->post(route('campaigns.store'), [
             'name' => 'Campanha Multi',
-            'city_id' => $city->id,
+            'geo_municipality_id' => $municipality->id,
             'status' => CampaignStatus::DRAFT->value,
             'territory_mode' => 'sectors',
             'sector_ids' => [$a->id, $b->id],
@@ -147,11 +152,9 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
     public function test_changing_city_rejects_incompatible_sectors(): void
     {
         [$admin, $cityA] = $this->adminWithCity('Empresa 8218 City Switch');
-        $cityB = City::factory()->create([
-            'company_id' => $admin->company_id,
-            'name' => 'Cidade B',
-            'state' => 'GO',
-        ]);
+
+        $municipalityB = GeoMunicipality::query()->where('ibge_code', '5208707')->firstOrFail();
+        $cityB = app(TerritoryService::class)->upsertCityFromCatalog($municipalityB);
 
         $sectorA = Sector::factory()->create([
             'company_id' => $admin->company_id,
@@ -166,7 +169,7 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
 
         $this->actingAs($admin)->post(route('campaigns.store'), [
             'name' => 'Campanha Setor Errado',
-            'city_id' => $cityB->id,
+            'geo_municipality_id' => $municipalityB->id,
             'status' => CampaignStatus::DRAFT->value,
             'territory_mode' => 'sectors',
             'sector_ids' => [$sectorA->id],
@@ -192,7 +195,7 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
         $this->actingAs($admin)
             ->get(route('campaigns.edit', $campaign))
             ->assertOk()
-            ->assertSee('Selecionar setores', false)
+            ->assertSee('Áreas específicas')
             ->assertSee('Centro')
             ->assertSee('name="sector_ids[]"', false)
             ->assertSee('value="'.$sector->id.'"', false)
@@ -361,8 +364,10 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
         $adminA = $this->makeUser($companyA, Role::ADMINISTRATOR, ['email' => 'assoc-a@8218.test']);
         $adminB = $this->makeUser($companyB, Role::ADMINISTRATOR, ['email' => 'assoc-b@8218.test']);
 
+        $municipality = GeoMunicipality::query()->where('ibge_code', '5203100')->firstOrFail();
+
         app(TenantContext::class)->set($companyA, $adminA);
-        $cityA = City::factory()->create(['company_id' => $companyA->id, 'name' => 'Cidade A', 'state' => 'GO']);
+        $cityA = app(TerritoryService::class)->upsertCityFromCatalog($municipality);
 
         app(TenantContext::class)->set($companyB, $adminB);
         $cityB = City::factory()->create(['company_id' => $companyB->id, 'name' => 'Cidade B', 'state' => 'GO']);
@@ -376,7 +381,7 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
 
         $response = $this->actingAs($adminA)->post(route('campaigns.store'), [
             'name' => 'Tentativa Cross',
-            'city_id' => $cityA->id,
+            'geo_municipality_id' => $municipality->id,
             'status' => CampaignStatus::DRAFT->value,
             'territory_mode' => 'sectors',
             'sector_ids' => [$sectorB->id],
@@ -392,7 +397,7 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
 
     public function test_custom_sector_works_on_campaign(): void
     {
-        [$admin, $city] = $this->adminWithCity('Empresa 8218 Custom');
+        [$admin, $city, $municipality] = $this->adminWithCity('Empresa 8218 Custom');
         $custom = Sector::factory()->create([
             'company_id' => $admin->company_id,
             'city_id' => $city->id,
@@ -401,7 +406,7 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
 
         $this->actingAs($admin)->post(route('campaigns.store'), [
             'name' => 'Campanha Rural',
-            'city_id' => $city->id,
+            'geo_municipality_id' => $municipality->id,
             'status' => CampaignStatus::DRAFT->value,
             'territory_mode' => 'sectors',
             'sector_ids' => [$custom->id],
@@ -449,13 +454,13 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
         $this->actingAs($admin)
             ->get(route('campaigns.create'))
             ->assertOk()
-            ->assertSee('Todos os setores')
-            ->assertSee('Selecionar setores')
+            ->assertSee('Toda a cidade')
+            ->assertSee('Áreas específicas')
             ->assertSee('territory_mode', false);
     }
 
     /**
-     * @return array{0: \App\Domains\Company\Models\User, 1: City}
+     * @return array{0: \App\Domains\Company\Models\User, 1: City, 2: GeoMunicipality}
      */
     protected function adminWithCity(string $companyName): array
     {
@@ -465,13 +470,10 @@ class Sprint8218SmartTerritoryCampaignTest extends TestCase
         ]);
         app(TenantContext::class)->set($company, $admin);
 
-        $city = City::factory()->create([
-            'company_id' => $company->id,
-            'name' => 'Bom Jardim de Goiás',
-            'state' => 'GO',
-        ]);
+        $municipality = GeoMunicipality::query()->where('ibge_code', '5203100')->firstOrFail();
+        $city = app(TerritoryService::class)->upsertCityFromCatalog($municipality);
 
-        return [$admin, $city];
+        return [$admin, $city, $municipality];
     }
 
     /**

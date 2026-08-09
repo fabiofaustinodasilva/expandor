@@ -37,11 +37,15 @@ class CampaignRepository
      */
     public function sectorOptions(?int $cityId = null): Collection
     {
+        $territory = app(\App\Domains\Sales\Territory\Services\TerritoryService::class);
+
         return Sector::query()
             ->where('active', true)
             ->when($cityId, fn ($q) => $q->where('city_id', $cityId))
             ->orderBy('name')
-            ->get(['id', 'city_id', 'name']);
+            ->get(['id', 'city_id', 'name'])
+            ->reject(fn (Sector $sector) => $territory->isReservedWholeCitySectorName($sector->name))
+            ->values();
     }
 
     /**

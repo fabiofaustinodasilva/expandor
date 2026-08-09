@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             FeatureFlagSeeder::class,
             MarketplaceDefaultSeeder::class,
             MarketplaceGrowthSeeder::class,
+            GeoCatalogSeeder::class,
         ]);
     }
 }
