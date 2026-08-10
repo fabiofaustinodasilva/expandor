@@ -149,6 +149,45 @@ class Sprint8226FieldFlowUxTest extends TestCase
         $this->assertStringContainsString('pointer-events: none', $blade);
     }
 
+    public function test_footer_actions_cannot_overflow_sheet(): void
+    {
+        $blade = file_get_contents(resource_path('views/maps/index.blade.php'));
+
+        // Hotfix: width:100% on both buttons in a row caused Confirmar venda to clip.
+        $this->assertStringNotContainsString('map-operation-btn-secondary { flex: 0 0 auto; min-width: 7.5rem', $blade);
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.map-operation-btn-(primary|secondary)[^{]*\{[^}]*min-width:\s*7\.5rem/',
+            $blade
+        );
+        $this->assertStringContainsString('.map-operation-footer', $blade);
+        $this->assertStringContainsString('box-sizing: border-box', $blade);
+        $this->assertStringContainsString('min-width: 0', $blade);
+        $this->assertStringContainsString('@media (min-width: 480px)', $blade);
+        $this->assertStringContainsString('flex-direction: column-reverse', $blade);
+        $this->assertStringContainsString('flex: 1 1 0%', $blade);
+        $this->assertStringContainsString('flex: 0 1 auto', $blade);
+        $this->assertStringContainsString('max-width: 42%', $blade);
+        $this->assertMatchesRegularExpression(
+            '/@media\s*\(min-width:\s*480px\)\s*\{[\s\S]*?\.map-operation-btn-primary\s*\{[\s\S]*?width:\s*auto/',
+            $blade
+        );
+        $this->assertMatchesRegularExpression(
+            '/@media\s*\(min-width:\s*480px\)\s*\{[\s\S]*?\.map-operation-btn-secondary\s*\{[\s\S]*?width:\s*auto/',
+            $blade
+        );
+
+        $company = $this->makeCompanyWithPlan();
+        $seller = $this->makeUser($company, Role::SELLER, [
+            'email' => 'seller.footer@example.test',
+        ]);
+        $html = $this->actingAs($seller)->get(route('map.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('map-operation-actions', $html);
+        $this->assertGreaterThanOrEqual(2, substr_count($html, 'class="map-operation-actions"'));
+        $this->assertStringContainsString('id="visit-submit"', $html);
+        $this->assertStringContainsString('id="point-submit"', $html);
+    }
+
     public function test_gps_not_required_copy(): void
     {
         $company = $this->makeCompanyWithPlan();

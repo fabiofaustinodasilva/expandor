@@ -1058,28 +1058,38 @@
     .map-sheet-footer,
     .map-operation-footer {
         flex: 0 0 auto;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
         border-top: 1px solid color-mix(in srgb, #334155 80%, transparent);
         background: color-mix(in srgb, #020617 94%, #0f172a);
         padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
         box-shadow: 0 -8px 24px rgba(2, 6, 23, 0.45);
     }
+    /* Hotfix 8.2.26 — footer actions must stay inside sheet (no horizontal overflow) */
     .map-operation-actions {
         display: flex;
         flex-direction: column-reverse;
         gap: 0.5rem;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
     }
-    @media (min-width: 400px) {
-        .map-operation-actions {
-            flex-direction: row;
-            align-items: stretch;
-        }
-        .map-operation-btn-secondary { flex: 0 0 auto; min-width: 7.5rem; }
-        .map-operation-btn-primary { flex: 1 1 auto; }
+    .map-operation-btn-primary,
+    .map-operation-btn-secondary {
+        box-sizing: border-box;
+        max-width: 100%;
+        min-width: 0;
+        width: 100%;
+        border-radius: 0.75rem;
+        padding-left: 0.85rem;
+        padding-right: 0.85rem;
+        white-space: nowrap;
     }
     .map-operation-btn-primary {
-        width: 100%;
         height: 3.5rem;
-        border-radius: 0.75rem;
         background: #0ea5e9;
         color: #020617;
         font-weight: 700;
@@ -1087,14 +1097,28 @@
         border: 0;
     }
     .map-operation-btn-secondary {
-        width: 100%;
         height: 3rem;
-        border-radius: 0.75rem;
         border: 1px solid #334155;
         background: transparent;
         color: #e2e8f0;
         font-weight: 500;
         font-size: 0.875rem;
+    }
+    @media (min-width: 480px) {
+        .map-operation-actions {
+            flex-direction: row;
+            align-items: stretch;
+        }
+        .map-operation-btn-secondary {
+            flex: 0 1 auto;
+            width: auto;
+            max-width: 42%;
+        }
+        .map-operation-btn-primary {
+            flex: 1 1 0%;
+            width: auto;
+            min-width: 0;
+        }
     }
     /* Drawer passivo enquanto sheet operacional está aberto */
     body.map-operation-open #marker-drawer.open {
