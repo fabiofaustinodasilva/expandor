@@ -23,7 +23,9 @@ use App\Http\Controllers\Web\Payments\SubscriptionController;
 use App\Http\Controllers\Web\Payments\WebhookController;
 use App\Http\Controllers\Web\AI\AIConversationController;
 use App\Http\Controllers\Web\Acquisition\TrialSignupController;
+use App\Http\Controllers\Web\Auth\ForgotPasswordController;
 use App\Http\Controllers\Web\Auth\LoginController;
+use App\Http\Controllers\Web\Auth\ResetPasswordController;
 use App\Http\Controllers\Web\Billing\CompanyPlanController;
 use App\Http\Controllers\Web\Branding\BrandingController;
 use App\Http\Controllers\Web\Communication\MessageController;
@@ -121,6 +123,17 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/login', [LoginController::class, 'store'])
         ->middleware('throttle:login')
         ->name('login.store');
+
+    Route::get('/esqueci-minha-senha', [ForgotPasswordController::class, 'create'])
+        ->name('password.request');
+    Route::post('/esqueci-minha-senha', [ForgotPasswordController::class, 'store'])
+        ->middleware('throttle:password-reset')
+        ->name('password.email');
+    Route::get('/redefinir-senha/{token}', [ResetPasswordController::class, 'create'])
+        ->name('password.reset');
+    Route::post('/redefinir-senha', [ResetPasswordController::class, 'store'])
+        ->middleware('throttle:password-reset')
+        ->name('password.update');
 
     Route::get('/cadastro', [TrialSignupController::class, 'create'])->name('signup.create');
     Route::post('/cadastro', [TrialSignupController::class, 'store'])

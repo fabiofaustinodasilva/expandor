@@ -201,6 +201,28 @@
             font-size: 0.9rem;
             text-align: left;
         }
+        .status {
+            color: color-mix(in srgb, var(--accent) 70%, var(--text) 30%);
+            background: color-mix(in srgb, var(--accent) 12%, transparent);
+            border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+            border-radius: 0.65rem;
+            margin: 0 0 1rem;
+            padding: 0.75rem 0.85rem;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+        .forgot-link {
+            display: block;
+            margin: 0.85rem 0 0;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.92rem;
+            text-decoration: underline;
+            text-underline-offset: 0.15em;
+        }
+        .forgot-link:hover {
+            color: var(--text);
+        }
         .support {
             margin-top: 1.15rem;
             color: var(--muted);
@@ -245,6 +267,10 @@
         <p class="brand-hero__subtitle">Acesse sua conta</p>
     </header>
 
+    @if(session('status'))
+        <div class="status" role="status">{{ session('status') }}</div>
+    @endif
+
     @if($errors->any())
         <div class="error">
             @foreach($errors->all() as $error)
@@ -255,7 +281,7 @@
 
     <form method="POST" action="{{ route('login.store') }}">
         @csrf
-        <label for="email">Usuário</label>
+        <label for="email">E-mail</label>
         <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username">
 
         <label for="password">Senha</label>
@@ -268,6 +294,8 @@
 
         <button class="btn-primary" type="submit">Entrar</button>
     </form>
+
+    <a class="forgot-link" href="{{ route('password.request') }}" data-forgot-password="1">Esqueceu sua senha?</a>
 
     @if($showTrialCta)
         <hr class="auth-divider" aria-hidden="true">

@@ -2,10 +2,13 @@
 
 namespace App\Domains\Company\Models;
 
+use App\Domains\Auth\Notifications\ResetPasswordNotification;
 use App\Tenancy\Concerns\BelongsToTenant;
 use App\Domains\Visits\Models\Visit;
 use App\Domains\Training\Models\TrainingProgress;
 use Database\Factories\UserFactory;
+use Illuminate\Auth\Passwords\CanResetPassword;
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,10 +18,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements CanResetPasswordContract
 {
     /** @use HasFactory<UserFactory> */
     use BelongsToTenant;
+    use CanResetPassword;
     use HasApiTokens;
     use HasFactory;
     use Notifiable;
@@ -192,5 +196,13 @@ class User extends Authenticatable
     public function isPlatformAdmin(): bool
     {
         return (bool) $this->is_platform_admin;
+    }
+
+    /**
+     * E-mail transacional Expandor (SMTP da plataforma) — recuperação de senha.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 }

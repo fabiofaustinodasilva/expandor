@@ -46,10 +46,11 @@ class LoginPlatformBrandingRenderTest extends TestCase
             ->assertSee('alt="Expandor"', false)
             ->assertSee('Bem-vindo ao Expandor', false)
             ->assertSee('Acesse sua conta', false)
-            ->assertSee('Usuário', false)
+            ->assertSee('E-mail', false)
             ->assertSee('Senha', false)
             ->assertSee('Lembrar-me', false)
             ->assertSee('Entrar', false)
+            ->assertSee('Esqueceu sua senha?', false)
             ->assertDontSee('data-platform-fallback="1"', false)
             ->assertDontSee('companies/')
             ->getContent();

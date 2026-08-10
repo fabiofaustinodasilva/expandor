@@ -188,7 +188,7 @@ class AppServiceProvider extends ServiceProvider
             DB::select('select 1');
         });
 
-        View::composer(['layouts.app', 'layouts.operational', 'layouts.sales-app', 'auth.login'], function ($view): void {
+        View::composer(['layouts.app', 'layouts.operational', 'layouts.sales-app', 'auth.login', 'auth.forgot-password', 'auth.reset-password'], function ($view): void {
             $user = auth()->user();
 
             if ($user instanceof User) {
@@ -240,6 +240,11 @@ class AppServiceProvider extends ServiceProvider
             $max = (int) config('security.login.max_attempts', 5);
 
             return Limit::perMinute(max(1, $max))
+                ->by(strtolower((string) $request->input('email')).'|'.$request->ip());
+        });
+
+        RateLimiter::for('password-reset', function (Request $request) {
+            return Limit::perMinute(5)
                 ->by(strtolower((string) $request->input('email')).'|'.$request->ip());
         });
 
