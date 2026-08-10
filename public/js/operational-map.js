@@ -1382,7 +1382,7 @@
             else notesHint.textContent = '(opcional)';
         }
         if (submitBtn && isFieldSeller) {
-            submitBtn.textContent = status === 'installation_requested' ? 'Confirmar venda' : 'Salvar';
+            submitBtn.textContent = status === 'installation_requested' ? 'Confirmar venda' : 'Salvar ponto';
         }
         if (status !== 'installation_requested') {
             clearSaleFinalizeFields('point');
@@ -1449,11 +1449,26 @@
         syncVisitContractBlock('');
         document.querySelectorAll('.visit-quick').forEach((btn) => btn.classList.remove('is-selected'));
         visitError.classList.add('hidden');
+
+        const subtitle = document.getElementById('visit-modal-subtitle');
+        if (subtitle) {
+            const name = (selectedMarker.resident_name || selectedMarker.address || '').trim();
+            subtitle.textContent = name !== ''
+                ? name
+                : 'Como foi a abordagem?';
+        }
+        const submit = document.getElementById('visit-submit');
+        if (submit) submit.textContent = 'Salvar visita';
+
+        setMapOperationOpen(true);
         visitModal.classList.add('open');
     }
 
     function closeVisitModal() {
         visitModal.classList.remove('open');
+        if (!pointModal?.classList.contains('open')) {
+            setMapOperationOpen(false);
+        }
     }
 
     function openPostVisitModal() {
@@ -1590,6 +1605,30 @@
         }
     }
 
+    let emptyAreaHintShown = false;
+    let emptyHintHideTimer = null;
+
+    function setMapOperationOpen(open) {
+        document.body.classList.toggle('map-operation-open', !!open);
+    }
+
+    function showEmptyAreaHintOnce() {
+        if (emptyAreaHintShown) return;
+        emptyAreaHintShown = true;
+        const hint = document.getElementById('map-empty-hint');
+        if (hint) {
+            hint.classList.remove('hidden');
+            hint.classList.add('is-visible');
+            clearTimeout(emptyHintHideTimer);
+            emptyHintHideTimer = setTimeout(() => {
+                hint.classList.remove('is-visible');
+                setTimeout(() => hint.classList.add('hidden'), 220);
+            }, 4200);
+            return;
+        }
+        toast('Nenhum ponto nesta área. Toque no mapa para adicionar.', 'success');
+    }
+
     function renderMarkers(markers, { fit = false } = {}) {
         const query = searchInput.value;
         let filtered = markers
@@ -1629,9 +1668,15 @@
         statusEl.textContent = filtered.length
             ? `${filtered.length} ponto(s) nesta área`
             : 'Nenhum ponto nesta área.';
+
+        // Sprint 8.2.26: estado vazio não bloqueia; hint discreto 1× por lifecycle.
         const emptyState = document.getElementById('map-empty-state');
         if (emptyState) {
-            emptyState.classList.toggle('visible', filtered.length === 0 && initialFitDone);
+            emptyState.classList.remove('visible');
+            emptyState.classList.add('hidden');
+        }
+        if (filtered.length === 0 && initialFitDone) {
+            showEmptyAreaHintOnce();
         }
 
         if (fit && bounds.length > 0) {
@@ -1642,6 +1687,8 @@
                 maxZoom: 16,
             });
             setTimeout(() => { suppressMoveLoad = false; }, 500);
+            initialFitDone = true;
+        } else if (fit && bounds.length === 0) {
             initialFitDone = true;
         }
     }
@@ -1817,7 +1864,10 @@
         const seq = ++loadSeq;
         statusEl.textContent = 'Carregando mapa...';
         const emptyState = document.getElementById('map-empty-state');
-        if (emptyState) emptyState.classList.remove('visible');
+        if (emptyState) {
+            emptyState.classList.remove('visible');
+            emptyState.classList.add('hidden');
+        }
         const query = buildQuery(useBbox && initialFitDone);
         const url = query ? `${markersUrl}?${query}` : markersUrl;
 
@@ -2201,15 +2251,23 @@
         pointError.classList.add('hidden');
         pointForm.reset();
         document.getElementById('point-mode').value = mode;
-        document.getElementById('point-modal-title').textContent = mode === 'edit'
-            ? 'Editar residência'
-            : 'Novo ponto';
-        document.getElementById('point-submit').textContent = mode === 'edit'
-            ? 'Salvar alterações'
-            : 'Salvar';
+        const eyebrow = document.getElementById('point-modal-eyebrow');
+        const subtitle = document.getElementById('point-modal-subtitle');
+        if (mode === 'edit') {
+            document.getElementById('point-modal-title').textContent = 'Editar residência';
+            document.getElementById('point-submit').textContent = 'Salvar alterações';
+            if (eyebrow) eyebrow.textContent = 'Editar local';
+            if (subtitle) subtitle.textContent = 'Atualize os dados deste ponto.';
+        } else {
+            document.getElementById('point-modal-title').textContent = 'Novo ponto';
+            document.getElementById('point-submit').textContent = 'Salvar ponto';
+            if (eyebrow) eyebrow.textContent = 'Adicionar local';
+            if (subtitle) subtitle.textContent = 'Cadastre este local para iniciar uma abordagem.';
+        }
         const title = document.getElementById('point-gps-title');
-        if (title) title.textContent = mode === 'edit' ? 'Local da residência' : 'Local no mapa';
+        if (title) title.textContent = mode === 'edit' ? 'Localização' : 'Localização';
 
+        setMapOperationOpen(true);
         const managerStatus = document.getElementById('point-manager-status');
         const firstApproach = document.getElementById('point-first-approach');
         if (mode === 'create' && isFieldSeller) {
@@ -2279,6 +2337,10 @@
         document.getElementById('point-mode').value = 'create';
         document.getElementById('point-modal-title').textContent = 'Contratar produto';
         document.getElementById('point-submit').textContent = 'Confirmar venda';
+        const eyebrow = document.getElementById('point-modal-eyebrow');
+        const subtitle = document.getElementById('point-modal-subtitle');
+        if (eyebrow) eyebrow.textContent = 'Produtos e fechamento';
+        if (subtitle) subtitle.textContent = 'Revise os produtos antes de finalizar.';
 
         const managerStatus = document.getElementById('point-manager-status');
         const firstApproach = document.getElementById('point-first-approach');
@@ -2295,6 +2357,7 @@
         syncPointOutcomeUi('installation_requested');
         seedSaleCartWithProduct('point', pid);
         document.getElementById('point-meta-label').textContent = `Você: ${sellerName} · ${nowLabel()}`;
+        setMapOperationOpen(true);
         pointModal.classList.add('open');
         if (window.lucide) window.lucide.createIcons();
 
@@ -2305,18 +2368,21 @@
             pointError.classList.add('hidden');
         } catch (err) {
             const msg = err?.message || 'Não foi possível obter a localização.';
-            pointError.textContent = `${msg} Feche e toque no mapa para marcar o ponto, ou use Minha localização.`;
+            pointError.textContent = `${msg} Toque no mapa para marcar o ponto, ou use Minha localização (opcional).`;
             pointError.classList.remove('hidden');
             const title = document.getElementById('point-gps-title');
-            if (title) title.textContent = 'Localização não obtida';
+            if (title) title.textContent = 'Localização';
             const gpsLabel = document.getElementById('point-gps-label');
-            if (gpsLabel) gpsLabel.textContent = 'GPS negado ou indisponível';
+            if (gpsLabel) gpsLabel.textContent = 'GPS indisponível — toque no mapa ou ajuste a posição';
         }
     }
 
     function closePointModal() {
         pointModal?.classList.remove('open');
         pointSubmitting = false;
+        if (!visitModal?.classList.contains('open')) {
+            setMapOperationOpen(false);
+        }
     }
 
     function openCreateAtMapTap(latlng) {
@@ -2485,7 +2551,7 @@
             return;
         }
         if (!payload.latitude || !payload.longitude) {
-            pointError.textContent = 'Aguarde a localização GPS ou toque no mapa para marcar o ponto.';
+            pointError.textContent = 'Marque a posição no mapa (toque ou ajuste) antes de salvar.';
             pointError.classList.remove('hidden');
             submitBtn.disabled = false;
             pointSubmitting = false;
@@ -2890,7 +2956,7 @@
         const next = findNextHouse();
         const hint = document.getElementById('brief-next-house');
         if (hint) {
-            hint.textContent = 'Use Minha localização para se localizar. Depois toque no mapa para registrar o ponto.';
+            hint.textContent = 'Toque no mapa para registrar um ponto. Minha localização é opcional.';
         }
         el.classList.add('open');
     }
@@ -3005,6 +3071,7 @@
     });
     document.getElementById('action-delete')?.addEventListener('click', openDeleteModal);
     document.getElementById('visit-modal-close').addEventListener('click', closeVisitModal);
+    document.getElementById('visit-modal-cancel')?.addEventListener('click', closeVisitModal);
     document.getElementById('visit-modal-backdrop').addEventListener('click', closeVisitModal);
     visitForm.addEventListener('submit', submitVisit);
 

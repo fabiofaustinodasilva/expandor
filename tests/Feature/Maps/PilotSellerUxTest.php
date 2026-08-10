@@ -47,11 +47,16 @@ class PilotSellerUxTest extends TestCase
             ->assertSee('Continue na rua')
             ->assertSee('Pular')
             ->assertSee('visit-sale-finalize')
-            ->assertSee('Finalizar venda')
+            ->assertSee('Confirmar venda')
             ->assertSee('point-notes')
             ->assertSee('Situação / interesse')
             ->assertSee('Casas visitadas hoje')
-            ->assertDontSee('Visão da equipe');
+            ->assertDontSee('Visão da equipe')
+            ->assertDontSee('Nenhuma residência nesta área')
+            ->assertSee('data-map-operation-sheet="1"', false)
+            ->assertSee('map-operation-body', false)
+            ->assertSee('Salvar ponto', false)
+            ->assertSee('Cancelar', false);
     }
 
     public function test_map_visit_contratou_requires_sale_fields_and_audits(): void

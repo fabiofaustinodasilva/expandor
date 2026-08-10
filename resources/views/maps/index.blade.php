@@ -241,11 +241,11 @@
 
     {{-- Sprint 8.2.7: CTA de rota removida — fluxo via Meu Local --}}
 
-    <div id="map-empty-state" class="absolute inset-0 z-10 hidden items-center justify-center pointer-events-none p-6 lg:pr-[316px]">
-        <div class="pointer-events-auto max-w-sm w-full rounded-2xl bg-slate-950/95 border border-slate-700 p-5 text-center shadow-xl">
-            <div class="text-lg font-semibold mb-1">Nenhuma residência nesta área</div>
-            <p class="text-slate-400 text-sm mb-4">Use <strong class="text-slate-200">Minha localização</strong> para se localizar e toque no mapa para registrar um ponto.</p>
-        </div>
+    {{-- Empty viewport hint (Sprint 8.2.26): não bloqueia; JS usa toast 1× por lifecycle --}}
+    <div id="map-empty-state" class="hidden" aria-hidden="true" data-empty-hint="1"></div>
+
+    <div id="map-empty-hint" class="map-empty-hint hidden" role="status" aria-live="polite" data-empty-hint-toast="1">
+        <p class="map-empty-hint__text">Nenhum ponto nesta área. Toque no mapa para adicionar.</p>
     </div>
 
     <div id="map-legend-panel" class="map-legend-panel map-company-overlay{{ !empty($isFieldSeller) ? ' is-field-seller is-collapsed hidden' : ' is-collapsed hidden' }}"
@@ -543,15 +543,24 @@
         </div>
     </div>
 
-    {{-- Visit modal — registro rápido (Sprint 8.2.23.1: header/body/footer + scroll interno) --}}
-    <div id="visit-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    {{-- Visit modal — Map Operation Sheet (Sprint 8.2.26) --}}
+    <div id="visit-modal" class="fixed inset-0 z-[100] hidden items-end sm:items-center justify-center p-0 sm:p-4"
+         role="dialog" aria-modal="true" aria-labelledby="visit-modal-title" data-map-operation-sheet="1">
         <div id="visit-modal-backdrop" class="absolute inset-0 bg-black/60"></div>
-        <div class="map-sheet-panel relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700">
-            <div class="map-sheet-header flex items-center justify-between px-5 pt-5 pb-2">
-                <h3 class="text-lg font-semibold">Como foi?</h3>
-                <button id="visit-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
+        <div class="map-sheet-panel map-operation-sheet relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700">
+            <div class="map-sheet-header map-operation-header px-5 pt-5 pb-3">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[11px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">Resultado da abordagem</p>
+                        <h3 class="text-lg font-semibold leading-tight" id="visit-modal-title">Registrar visita</h3>
+                        <p class="text-sm text-slate-400 mt-1 truncate" id="visit-modal-subtitle">Como foi a abordagem?</p>
+                    </div>
+                    <button id="visit-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800 shrink-0" aria-label="Fechar">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
             </div>
-            <div class="map-sheet-body px-5">
+            <div class="map-sheet-body map-operation-body px-5">
                 <form id="visit-form" class="space-y-3 pb-3">
                     <input type="hidden" name="property_id" id="visit-property-id">
                     <input type="hidden" name="status" id="visit-status" value="">
@@ -564,17 +573,20 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="grid grid-cols-1 gap-2" id="visit-quick-group">
-                        @foreach(($outcomeStatuses ?? []) as $value => $meta)
-                            <button type="button"
-                                    class="visit-quick status-chip h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm inline-flex items-center gap-2"
-                                    data-status="{{ $value }}"
-                                    data-status-color="{{ $meta['color'] }}"
-                                    style="--status-color: {{ $meta['color'] }};">
-                                <span class="status-chip-swatch shrink-0" aria-hidden="true">{{ ($meta['mark'] ?? '') !== '' ? $meta['mark'] : '' }}</span>
-                                <span>{{ $meta['label'] }}</span>
-                            </button>
-                        @endforeach
+                    <div>
+                        <p class="text-xs text-slate-400 mb-2 font-medium">Como foi a abordagem?</p>
+                        <div class="grid grid-cols-1 gap-2" id="visit-quick-group">
+                            @foreach(($outcomeStatuses ?? []) as $value => $meta)
+                                <button type="button"
+                                        class="visit-quick status-chip h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm inline-flex items-center gap-2"
+                                        data-status="{{ $value }}"
+                                        data-status-color="{{ $meta['color'] }}"
+                                        style="--status-color: {{ $meta['color'] }};">
+                                    <span class="status-chip-swatch shrink-0" aria-hidden="true">{{ ($meta['mark'] ?? '') !== '' ? $meta['mark'] : '' }}</span>
+                                    <span>{{ $meta['label'] }}</span>
+                                </button>
+                            @endforeach
+                        </div>
                     </div>
                     @include('partials.sale-finalize-fields', [
                         'prefix' => 'visit',
@@ -605,9 +617,12 @@
                     </div>
                 </form>
             </div>
-            <div class="map-sheet-footer px-5 pt-2 space-y-2">
+            <div class="map-sheet-footer map-operation-footer px-5 pt-2 space-y-2">
                 <p id="visit-error" class="text-sm text-rose-400 hidden"></p>
-                <button type="submit" form="visit-form" id="visit-submit" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold">Salvar visita</button>
+                <div class="map-operation-actions">
+                    <button type="button" id="visit-modal-cancel" class="map-operation-btn-secondary">Cancelar</button>
+                    <button type="submit" form="visit-form" id="visit-submit" class="map-operation-btn-primary">Salvar visita</button>
+                </div>
             </div>
         </div>
     </div>
@@ -624,22 +639,31 @@
         </div>
     </div>
 
-    {{-- New point modal --}}
-    <div id="point-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    {{-- New point modal — Map Operation Sheet (Sprint 8.2.26) --}}
+    <div id="point-modal" class="fixed inset-0 z-[100] hidden items-end sm:items-center justify-center p-0 sm:p-4"
+         role="dialog" aria-modal="true" aria-labelledby="point-modal-title" data-map-operation-sheet="1">
         <div id="point-modal-backdrop" class="absolute inset-0 bg-black/60"></div>
-        <div class="map-sheet-panel relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700">
-            <div class="map-sheet-header flex items-center justify-between px-5 pt-5 pb-2">
-                <h3 class="text-lg font-semibold" id="point-modal-title">Novo ponto</h3>
-                <button id="point-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800" aria-label="Fechar"><i data-lucide="x" class="w-4 h-4"></i></button>
+        <div class="map-sheet-panel map-operation-sheet relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700">
+            <div class="map-sheet-header map-operation-header px-5 pt-5 pb-3">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-[11px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5" id="point-modal-eyebrow">Adicionar local</p>
+                        <h3 class="text-lg font-semibold leading-tight" id="point-modal-title">Novo ponto</h3>
+                        <p class="text-sm text-slate-400 mt-1" id="point-modal-subtitle">Cadastre este local para iniciar uma abordagem.</p>
+                    </div>
+                    <button id="point-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800 shrink-0" aria-label="Fechar">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
             </div>
-            <div class="map-sheet-body px-5">
+            <div class="map-sheet-body map-operation-body px-5">
             <div class="rounded-xl bg-slate-900 border border-slate-800 p-3 mb-4 text-sm" id="point-gps-block">
-                <div class="text-slate-400 text-xs uppercase mb-1" id="point-gps-title">Local no mapa</div>
+                <div class="text-slate-400 text-xs uppercase mb-1" id="point-gps-title">Localização</div>
                 <div id="point-gps-label" class="text-sm text-sky-300 font-medium">Posição pronta para registro</div>
                 <div class="text-xs text-slate-500 mt-1 field-seller-hide-meta" id="point-meta-label">Você: {{ $sellerName }}</div>
                 <div class="text-xs text-emerald-400 mt-0.5 font-medium" id="point-accuracy-label"></div>
                 <div class="text-xs text-slate-400 mt-0.5 field-seller-hide-meta" id="point-accuracy-class"></div>
-                <button type="button" id="point-adjust-on-map" class="mt-3 w-full h-12 rounded-xl border border-sky-600/50 text-sky-300 text-sm font-medium hidden">
+                <button type="button" id="point-adjust-on-map" class="mt-3 w-full h-11 rounded-xl border border-slate-600 text-slate-300 text-sm font-medium hidden">
                     Ajustar posição no mapa
                 </button>
             </div>
@@ -754,10 +778,12 @@
                 </div>
                 </form>
             </div>
-            <div class="map-sheet-footer point-form-actions px-5 pt-2 space-y-2">
+            <div class="map-sheet-footer map-operation-footer point-form-actions px-5 pt-2 space-y-2">
                 <p id="point-error" class="text-sm text-rose-400 hidden"></p>
-                <button type="submit" form="point-form" id="point-submit" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold text-base">Salvar</button>
-                <button type="button" id="point-modal-cancel" class="w-full h-12 rounded-xl border border-slate-700 text-slate-200 font-medium text-sm">Voltar ao mapa</button>
+                <div class="map-operation-actions">
+                    <button type="button" id="point-modal-cancel" class="map-operation-btn-secondary">Cancelar</button>
+                    <button type="submit" form="point-form" id="point-submit" class="map-operation-btn-primary">Salvar ponto</button>
+                </div>
             </div>
         </div>
     </div>
@@ -989,25 +1015,39 @@
     .leaflet-region-select { stroke: #38bdf8; stroke-width: 2; stroke-dasharray: 6 4; fill: rgba(56,189,248,.12); }
     #metrics-panel.open, #marker-drawer.open { transform: translateX(0); }
     #drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+
+    /* Sprint 8.2.26 — Map Operation Sheet: altura flex correta + CTA acessível */
     #visit-modal.open, #point-modal.open, #delete-point-modal.open,
     #adjust-confirm-modal.open, #post-create-adjust-modal.open, #region-campaign-modal.open,
     #post-visit-modal.open, #seller-day-brief.open, #seller-tips-modal.open { display: flex; }
 
-    /* Sprint 8.2.23.1 — sale finalize panels: fixed header/footer + scrollable body */
-    .map-sheet-panel {
+    #visit-modal.open,
+    #point-modal.open {
+        z-index: 100;
+    }
+
+    .map-sheet-panel,
+    .map-operation-sheet {
         display: flex;
         flex-direction: column;
+        min-height: 0;
+        width: 100%;
         max-height: min(100dvh, 100%);
         overflow: hidden;
         padding-bottom: env(safe-area-inset-bottom, 0px);
+        align-self: stretch;
     }
     @media (min-width: 640px) {
-        .map-sheet-panel {
+        .map-sheet-panel,
+        .map-operation-sheet {
             max-height: min(92dvh, 900px);
+            align-self: center;
         }
     }
-    .map-sheet-header { flex-shrink: 0; }
-    .map-sheet-body {
+    .map-sheet-header,
+    .map-operation-header { flex: 0 0 auto; }
+    .map-sheet-body,
+    .map-operation-body {
         flex: 1 1 auto;
         min-height: 0;
         overflow-x: hidden;
@@ -1015,15 +1055,89 @@
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
     }
-    .map-sheet-footer {
-        flex-shrink: 0;
+    .map-sheet-footer,
+    .map-operation-footer {
+        flex: 0 0 auto;
         border-top: 1px solid color-mix(in srgb, #334155 80%, transparent);
         background: color-mix(in srgb, #020617 94%, #0f172a);
         padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
         box-shadow: 0 -8px 24px rgba(2, 6, 23, 0.45);
     }
+    .map-operation-actions {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 0.5rem;
+    }
+    @media (min-width: 400px) {
+        .map-operation-actions {
+            flex-direction: row;
+            align-items: stretch;
+        }
+        .map-operation-btn-secondary { flex: 0 0 auto; min-width: 7.5rem; }
+        .map-operation-btn-primary { flex: 1 1 auto; }
+    }
+    .map-operation-btn-primary {
+        width: 100%;
+        height: 3.5rem;
+        border-radius: 0.75rem;
+        background: #0ea5e9;
+        color: #020617;
+        font-weight: 700;
+        font-size: 1rem;
+        border: 0;
+    }
+    .map-operation-btn-secondary {
+        width: 100%;
+        height: 3rem;
+        border-radius: 0.75rem;
+        border: 1px solid #334155;
+        background: transparent;
+        color: #e2e8f0;
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+    /* Drawer passivo enquanto sheet operacional está aberto */
+    body.map-operation-open #marker-drawer.open {
+        opacity: 0.35;
+        pointer-events: none;
+        filter: saturate(0.7);
+    }
+    body.map-operation-open #drawer-backdrop.open {
+        opacity: 0.25;
+        pointer-events: none;
+    }
+    .map-empty-hint {
+        position: absolute;
+        left: 50%;
+        bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+        transform: translateX(-50%);
+        z-index: 25;
+        max-width: min(22rem, calc(100vw - 1.5rem));
+        pointer-events: none;
+        padding: 0.65rem 0.9rem;
+        border-radius: 0.85rem;
+        background: color-mix(in srgb, #0f172a 92%, #38bdf8);
+        border: 1px solid color-mix(in srgb, #38bdf8 35%, #334155);
+        box-shadow: 0 10px 28px rgba(2, 6, 23, 0.45);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .map-empty-hint.is-visible {
+        opacity: 1;
+    }
+    .map-empty-hint__text {
+        margin: 0;
+        font-size: 0.8rem;
+        line-height: 1.35;
+        color: #e2e8f0;
+        text-align: center;
+        font-weight: 500;
+    }
+    @media (min-width: 640px) {
+        .map-empty-hint { bottom: 1.75rem; }
+    }
     #adjust-banner:not(.hidden) { display: block; }
-    #map-empty-state.visible { display: flex; }
+    #map-empty-state.visible { display: none !important; }
     #map-filters-form.open { display: grid !important; }
     #commercial-filters.open { display: block !important; }
     #map-legend-panel.open { display: block !important; }
@@ -1296,5 +1410,5 @@
 @endif
 <script src="{{ asset('js/map-provider.js') }}?v=5"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=56"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=57"></script>
 @endpush

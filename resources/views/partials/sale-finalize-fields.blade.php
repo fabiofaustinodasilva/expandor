@@ -14,8 +14,8 @@
      data-prefix="{{ $prefix }}"
      data-products='@json($productsJson)'
      data-require-product="{{ !empty($req['product']) ? '1' : '0' }}">
-    <div class="text-sm font-semibold text-emerald-300 tracking-wide">Finalizar venda</div>
-    <p class="text-[11px] text-slate-400 -mt-1">Cliente + produtos. Total, estoque e comissão são automáticos.</p>
+    <div class="text-sm font-semibold text-emerald-300 tracking-wide" data-sale-finalize-title="1">Confirmar venda</div>
+    <p class="text-[11px] text-slate-400 -mt-1">Revise os produtos antes de finalizar.</p>
 
     <div class="space-y-2">
         <div class="text-[11px] uppercase tracking-wide text-slate-500">Dados do cliente</div>

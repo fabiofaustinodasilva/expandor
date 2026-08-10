@@ -99,12 +99,12 @@ class Sprint829FieldSalesFinalUxTest extends TestCase
         $html = $this->actingAs($seller)->get(route('map.index'))->assertOk()->getContent();
 
         $this->assertStringContainsString('id="point-modal-cancel"', $html);
-        $this->assertStringContainsString('Voltar ao mapa', $html);
+        $this->assertStringContainsString('Cancelar', $html);
         $this->assertStringContainsString('id="point-submit"', $html);
         $this->assertStringContainsString('point-form-actions', $html);
         $this->assertStringContainsString('@media (max-width: 430px)', $html);
         $this->assertStringContainsString('@media (max-width: 320px)', $html);
-        $this->assertStringContainsString('operational-map.js?v=51', $html);
+        $this->assertStringContainsString('operational-map.js?v=57', $html);
     }
 
     public function test_seller_tips_describe_locate_then_tap_flow(): void
