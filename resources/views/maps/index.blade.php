@@ -543,68 +543,72 @@
         </div>
     </div>
 
-    {{-- Visit modal — registro rápido --}}
+    {{-- Visit modal — registro rápido (Sprint 8.2.23.1: header/body/footer + scroll interno) --}}
     <div id="visit-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center p-0 sm:p-4">
         <div id="visit-modal-backdrop" class="absolute inset-0 bg-black/60"></div>
-        <div class="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700 p-5">
-            <div class="flex items-center justify-between mb-3">
+        <div class="map-sheet-panel relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700">
+            <div class="map-sheet-header flex items-center justify-between px-5 pt-5 pb-2">
                 <h3 class="text-lg font-semibold">Como foi?</h3>
                 <button id="visit-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <form id="visit-form" class="space-y-3">
-                <input type="hidden" name="property_id" id="visit-property-id">
-                <input type="hidden" name="status" id="visit-status" value="">
-                <div class="visit-campaign-block">
-                    <label class="text-xs text-slate-400">Campanha</label>
-                    <select name="campaign_id" id="visit-campaign-id" required class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3">
-                        <option value="">Qual campanha?</option>
-                        @foreach($campaigns as $campaign)
-                            <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
+            <div class="map-sheet-body px-5">
+                <form id="visit-form" class="space-y-3 pb-3">
+                    <input type="hidden" name="property_id" id="visit-property-id">
+                    <input type="hidden" name="status" id="visit-status" value="">
+                    <div class="visit-campaign-block">
+                        <label class="text-xs text-slate-400">Campanha</label>
+                        <select name="campaign_id" id="visit-campaign-id" required class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3">
+                            <option value="">Qual campanha?</option>
+                            @foreach($campaigns as $campaign)
+                                <option value="{{ $campaign->id }}">{{ $campaign->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2" id="visit-quick-group">
+                        @foreach(($outcomeStatuses ?? []) as $value => $meta)
+                            <button type="button"
+                                    class="visit-quick status-chip h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm inline-flex items-center gap-2"
+                                    data-status="{{ $value }}"
+                                    data-status-color="{{ $meta['color'] }}"
+                                    style="--status-color: {{ $meta['color'] }};">
+                                <span class="status-chip-swatch shrink-0" aria-hidden="true">{{ ($meta['mark'] ?? '') !== '' ? $meta['mark'] : '' }}</span>
+                                <span>{{ $meta['label'] }}</span>
+                            </button>
                         @endforeach
-                    </select>
-                </div>
-                <div class="grid grid-cols-1 gap-2" id="visit-quick-group">
-                    @foreach(($outcomeStatuses ?? []) as $value => $meta)
-                        <button type="button"
-                                class="visit-quick status-chip h-14 rounded-xl border border-slate-700 bg-slate-900 text-left px-4 font-semibold text-sm inline-flex items-center gap-2"
-                                data-status="{{ $value }}"
-                                data-status-color="{{ $meta['color'] }}"
-                                style="--status-color: {{ $meta['color'] }};">
-                            <span class="status-chip-swatch shrink-0" aria-hidden="true">{{ ($meta['mark'] ?? '') !== '' ? $meta['mark'] : '' }}</span>
-                            <span>{{ $meta['label'] }}</span>
-                        </button>
-                    @endforeach
-                </div>
-                @include('partials.sale-finalize-fields', [
-                    'prefix' => 'visit',
-                    'requiredChecklist' => $saleRequiredChecklist ?? [],
-                    'sellableProducts' => $sellableProducts ?? [],
-                ])
-                <div class="visit-notes-block">
-                    <label class="text-xs text-slate-400">Anotação da visita <span class="text-slate-600" id="visit-notes-hint">(opcional)</span></label>
-                    <textarea name="notes" id="visit-notes" rows="2" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2" placeholder="Ex.: voltar amanhã à tarde"></textarea>
-                </div>
-                <div id="visit-return-block" class="hidden space-y-2">
-                    <label class="text-xs text-slate-400">Quando voltar? <span class="text-rose-400/80">*</span></label>
-                    <div class="flex flex-wrap gap-2" id="visit-return-shortcuts">
-                        <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="1" data-target="visit">Amanhã</button>
-                        <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="2" data-target="visit">+2 dias</button>
-                        <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="pick" data-target="visit">Escolher data</button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="text-[11px] text-slate-500" for="visit-follow-up-date">Data</label>
-                            <input type="date" id="visit-follow-up-date" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" min="{{ now()->toDateString() }}">
+                    @include('partials.sale-finalize-fields', [
+                        'prefix' => 'visit',
+                        'requiredChecklist' => $saleRequiredChecklist ?? [],
+                        'sellableProducts' => $sellableProducts ?? [],
+                    ])
+                    <div class="visit-notes-block">
+                        <label class="text-xs text-slate-400">Anotação da visita <span class="text-slate-600" id="visit-notes-hint">(opcional)</span></label>
+                        <textarea name="notes" id="visit-notes" rows="2" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2" placeholder="Ex.: voltar amanhã à tarde"></textarea>
+                    </div>
+                    <div id="visit-return-block" class="hidden space-y-2">
+                        <label class="text-xs text-slate-400">Quando voltar? <span class="text-rose-400/80">*</span></label>
+                        <div class="flex flex-wrap gap-2" id="visit-return-shortcuts">
+                            <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="1" data-target="visit">Amanhã</button>
+                            <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="2" data-target="visit">+2 dias</button>
+                            <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="pick" data-target="visit">Escolher data</button>
                         </div>
-                        <div>
-                            <label class="text-[11px] text-slate-500" for="visit-follow-up-time">Horário <span class="text-slate-600">(opc.)</span></label>
-                            <input type="time" id="visit-follow-up-time" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[11px] text-slate-500" for="visit-follow-up-date">Data</label>
+                                <input type="date" id="visit-follow-up-date" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" min="{{ now()->toDateString() }}">
+                            </div>
+                            <div>
+                                <label class="text-[11px] text-slate-500" for="visit-follow-up-time">Horário <span class="text-slate-600">(opc.)</span></label>
+                                <input type="time" id="visit-follow-up-time" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3">
+                            </div>
                         </div>
                     </div>
-                </div>
+                </form>
+            </div>
+            <div class="map-sheet-footer px-5 pt-2 space-y-2">
                 <p id="visit-error" class="text-sm text-rose-400 hidden"></p>
-                <button type="submit" id="visit-submit" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold">Salvar visita</button>
-            </form>
+                <button type="submit" form="visit-form" id="visit-submit" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold">Salvar visita</button>
+            </div>
         </div>
     </div>
 
@@ -623,11 +627,12 @@
     {{-- New point modal --}}
     <div id="point-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center p-0 sm:p-4">
         <div id="point-modal-backdrop" class="absolute inset-0 bg-black/60"></div>
-        <div class="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700 p-5 max-h-[92vh] overflow-y-auto">
-            <div class="flex items-center justify-between mb-3">
+        <div class="map-sheet-panel relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-slate-700">
+            <div class="map-sheet-header flex items-center justify-between px-5 pt-5 pb-2">
                 <h3 class="text-lg font-semibold" id="point-modal-title">Novo ponto</h3>
                 <button id="point-modal-close" type="button" class="p-2 rounded-lg hover:bg-slate-800" aria-label="Fechar"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
+            <div class="map-sheet-body px-5">
             <div class="rounded-xl bg-slate-900 border border-slate-800 p-3 mb-4 text-sm" id="point-gps-block">
                 <div class="text-slate-400 text-xs uppercase mb-1" id="point-gps-title">Local no mapa</div>
                 <div id="point-gps-label" class="text-sm text-sky-300 font-medium">Posição pronta para registro</div>
@@ -638,7 +643,7 @@
                     Ajustar posição no mapa
                 </button>
             </div>
-            <form id="point-form" class="space-y-3">
+            <form id="point-form" class="space-y-3 pb-3">
                 <input type="hidden" id="point-property-id" name="property_id">
                 <input type="hidden" id="point-latitude" name="latitude">
                 <input type="hidden" id="point-longitude" name="longitude">
@@ -747,12 +752,13 @@
                         </div>
                     </div>
                 </div>
+                </form>
+            </div>
+            <div class="map-sheet-footer point-form-actions px-5 pt-2 space-y-2">
                 <p id="point-error" class="text-sm text-rose-400 hidden"></p>
-                <div class="point-form-actions sticky bottom-0 -mx-1 px-1 pt-2 pb-1 bg-slate-950/95 backdrop-blur-sm space-y-2 z-10">
-                    <button type="submit" id="point-submit" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold text-base">Salvar</button>
-                    <button type="button" id="point-modal-cancel" class="w-full h-12 rounded-xl border border-slate-700 text-slate-200 font-medium text-sm">Voltar ao mapa</button>
-                </div>
-            </form>
+                <button type="submit" form="point-form" id="point-submit" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold text-base">Salvar</button>
+                <button type="button" id="point-modal-cancel" class="w-full h-12 rounded-xl border border-slate-700 text-slate-200 font-medium text-sm">Voltar ao mapa</button>
+            </div>
         </div>
     </div>
     {{-- Prep: campanha por região (sem criar campanha ainda) --}}
@@ -986,6 +992,36 @@
     #visit-modal.open, #point-modal.open, #delete-point-modal.open,
     #adjust-confirm-modal.open, #post-create-adjust-modal.open, #region-campaign-modal.open,
     #post-visit-modal.open, #seller-day-brief.open, #seller-tips-modal.open { display: flex; }
+
+    /* Sprint 8.2.23.1 — sale finalize panels: fixed header/footer + scrollable body */
+    .map-sheet-panel {
+        display: flex;
+        flex-direction: column;
+        max-height: min(100dvh, 100%);
+        overflow: hidden;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    @media (min-width: 640px) {
+        .map-sheet-panel {
+            max-height: min(92dvh, 900px);
+        }
+    }
+    .map-sheet-header { flex-shrink: 0; }
+    .map-sheet-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+    .map-sheet-footer {
+        flex-shrink: 0;
+        border-top: 1px solid color-mix(in srgb, #334155 80%, transparent);
+        background: color-mix(in srgb, #020617 94%, #0f172a);
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+        box-shadow: 0 -8px 24px rgba(2, 6, 23, 0.45);
+    }
     #adjust-banner:not(.hidden) { display: block; }
     #map-empty-state.visible { display: flex; }
     #map-filters-form.open { display: grid !important; }
@@ -1112,8 +1148,11 @@
     @media (max-width: 640px) {
         #commercial-filters { width: min(180px, 44vw); }
         #commercial-filters .text-xs { font-size: 11px; }
-        body.field-seller #point-modal .relative,
-        body.field-seller #visit-modal .relative { max-height: 88dvh; overflow-y: auto; }
+        body.field-seller #point-modal .map-sheet-panel,
+        body.field-seller #visit-modal .map-sheet-panel {
+            max-height: min(100dvh, 100%);
+            overflow: hidden;
+        }
         .map-btn-meu-local span { display: inline !important; }
         .map-btn-meu-local {
             min-height: 3rem;
@@ -1170,8 +1209,9 @@
         #map-bottom-left-controls { max-width: calc(100vw - 1.5rem); }
         body.map-fullscreen .op-main,
         body.field-seller .op-main { overflow-x: hidden; }
-        #point-modal .relative { max-height: min(92dvh, 100%); }
-        .point-form-actions { box-shadow: 0 -8px 24px rgba(2, 6, 23, 0.55); }
+        #point-modal .map-sheet-panel,
+        #visit-modal .map-sheet-panel { max-height: min(100dvh, 100%); }
+        .point-form-actions { /* footer actions live in map-sheet-footer */ }
     }
     @media (max-width: 320px) {
         .map-btn-meu-local span { font-size: 0.8rem; }

@@ -117,6 +117,7 @@
                 <th>Cliente / Ponto</th>
                 <th>Produto</th>
                 <th>Qtd</th>
+                <th>Valor da venda</th>
                 <th>Comissão (R$)</th>
                 <th>Status</th>
                 <th>Data</th>
@@ -136,15 +137,16 @@
                     };
                 @endphp
                 <tr>
-                    @if($isManager)<td>{{ $row->user?->name }}</td>@endif
-                    <td>{{ $client }}</td>
-                    <td>{{ $row->product_name }}</td>
-                    <td>{{ $row->quantity }}</td>
-                    <td>R$ {{ number_format((float) $row->commission_amount, 2, ',', '.') }}</td>
-                    <td><span class="comm-status {{ $statusClass }}">{{ $row->status->label() }}</span></td>
-                    <td>{{ optional($row->earned_at)->format('d/m/Y') }}</td>
+                    @if($isManager)<td data-label="Vendedor">{{ $row->user?->name }}</td>@endif
+                    <td data-label="Cliente / Ponto">{{ $client }}</td>
+                    <td data-label="Produto">{{ $row->product_name }}</td>
+                    <td data-label="Qtd">{{ $row->quantity }}</td>
+                    <td data-label="Valor da venda">{{ $row->historicalSaleAmountLabel() }}</td>
+                    <td data-label="Comissão (R$)">R$ {{ number_format((float) $row->commission_amount, 2, ',', '.') }}</td>
+                    <td data-label="Status"><span class="comm-status {{ $statusClass }}">{{ $row->status->label() }}</span></td>
+                    <td data-label="Data">{{ optional($row->earned_at)->format('d/m/Y') }}</td>
                     @if($isManager)
-                        <td style="white-space:nowrap;">
+                        <td data-label="Ações" style="white-space:nowrap;">
                             @if($row->status->value === 'pending')
                                 <form method="POST" action="{{ route('commissions.approve', $row) }}" style="display:inline;">
                                     @csrf
@@ -161,7 +163,7 @@
                     @endif
                 </tr>
             @empty
-                <tr><td colspan="{{ $isManager ? 8 : 6 }}">Nenhuma comissão no período.</td></tr>
+                <tr><td colspan="{{ $isManager ? 9 : 7 }}">Nenhuma comissão no período.</td></tr>
             @endforelse
             </tbody>
         </table>

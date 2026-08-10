@@ -91,4 +91,33 @@ class SalesCommission extends Model
     {
         return $this->belongsTo(User::class, 'paid_by');
     }
+
+    /**
+     * Valor histórico da linha de venda (nunca Product.price atual).
+     * Preferência: sale_items.line_total → commission_base (snapshot %) → null.
+     */
+    public function historicalSaleAmount(): ?float
+    {
+        $this->loadMissing('saleItem');
+
+        if ($this->saleItem !== null && $this->saleItem->line_total !== null) {
+            return round((float) $this->saleItem->line_total, 2, PHP_ROUND_HALF_UP);
+        }
+
+        if ($this->commission_base !== null) {
+            return round((float) $this->commission_base, 2, PHP_ROUND_HALF_UP);
+        }
+
+        return null;
+    }
+
+    public function historicalSaleAmountLabel(): string
+    {
+        $amount = $this->historicalSaleAmount();
+        if ($amount === null) {
+            return '—';
+        }
+
+        return 'R$ '.number_format($amount, 2, ',', '.');
+    }
 }
