@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web\Auth;
 
+use App\Domains\Auth\Services\SellerSingleSessionService;
 use App\Domains\Company\Models\User;
 use App\Domains\Platform\Services\ActivationIntelligenceService;
 use App\Domains\Security\Services\SecurityService;
@@ -19,6 +20,7 @@ class LoginController extends Controller
     public function __construct(
         protected SecurityService $security,
         protected ActivationIntelligenceService $activation,
+        protected SellerSingleSessionService $singleSession,
     ) {}
 
     public function create(): View
@@ -36,6 +38,7 @@ class LoginController extends Controller
         /** @var User|null $user */
         $user = User::query()
             ->withoutGlobalScopes()
+            ->with('role')
             ->whereRaw('LOWER(email) = ?', [strtolower(trim($credentials['email']))])
             ->first();
 
@@ -55,8 +58,14 @@ class LoginController extends Controller
             ]);
         }
 
+        // Seller: último login vence — incrementa geração antes de autenticar.
+        if ($this->singleSession->isSeller($user)) {
+            $this->singleSession->claimSellerLogin($user, $request);
+        }
+
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
+        $this->singleSession->bindCurrentVersion($user, $request);
 
         $user->forceFill(['last_login_at' => now()])->save();
 

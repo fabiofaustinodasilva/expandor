@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web\Auth;
 
+use App\Domains\Auth\Services\SellerSingleSessionService;
 use App\Domains\Company\Models\User;
 use App\Domains\Security\Services\SecurityService;
 use App\Http\Controllers\Controller;
@@ -19,6 +20,7 @@ class ResetPasswordController extends Controller
 {
     public function __construct(
         protected SecurityService $security,
+        protected SellerSingleSessionService $singleSession,
     ) {}
 
     public function create(Request $request, string $token): View
@@ -64,7 +66,9 @@ class ResetPasswordController extends Controller
                     'remember_token' => Str::random(60),
                 ])->save();
 
-                // Revoga tokens API (mobile); sessão única completa fica para 8.2.25.
+                // Invalida sessões web (session_version) + tokens API (Sanctum).
+                $this->singleSession->invalidateAllSessions($user, $request, 'password_reset');
+
                 if (method_exists($user, 'tokens')) {
                     $user->tokens()->delete();
                 }

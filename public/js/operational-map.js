@@ -353,6 +353,31 @@
         toast._t = setTimeout(() => toastEl.classList.remove('show'), 2800);
     }
 
+    /** Sprint 8.2.25 — sessão única Seller / sessão invalidada */
+    function handleAuthSessionLost(response) {
+        if (!response || (response.status !== 401 && response.status !== 419)) {
+            return false;
+        }
+        const loginUrl = '/login';
+        try {
+            toast('Sua conta foi acessada em outro dispositivo. Por segurança, esta sessão foi encerrada.', 'error');
+        } catch (_) {}
+        window.setTimeout(() => {
+            window.location.href = loginUrl;
+        }, 600);
+        return true;
+    }
+
+    async function mapFetch(url, options) {
+        const response = await fetch(url, options);
+        if (handleAuthSessionLost(response)) {
+            const err = new Error('session_replaced');
+            err.sessionReplaced = true;
+            throw err;
+        }
+        return response;
+    }
+
     /** Sprint 8.2.23 hotfix — celebration only after backend confirms commission_awarded.awarded */
     const commissionRewardEl = document.getElementById('commission-reward');
     const commissionRewardAmountEl = document.getElementById('commission-reward-amount');
@@ -898,7 +923,7 @@
     async function loadPointDetails(propertyId) {
         try {
             const url = pointShowTemplate.replace('__PROPERTY__', propertyId);
-            const response = await fetch(url, {
+            const response = await mapFetch(url, {
                 method: 'GET',
                 credentials: 'same-origin',
                 headers: {
@@ -1742,7 +1767,7 @@
 
         try {
             const url = pointAdjustTemplate.replace('__PROPERTY__', adjustState.propertyId);
-            const response = await fetch(url, {
+            const response = await mapFetch(url, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
@@ -1797,7 +1822,7 @@
         const url = query ? `${markersUrl}?${query}` : markersUrl;
 
         try {
-            const response = await fetch(url, {
+            const response = await mapFetch(url, {
                 method: 'GET',
                 credentials: 'same-origin',
                 headers: {
@@ -1903,7 +1928,7 @@
             }
 
             const url = visitStoreTemplate.replace('__CAMPAIGN__', campaignId);
-            const response = await fetch(url, {
+            const response = await mapFetch(url, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
@@ -1997,7 +2022,7 @@
         const url = `${markersUrl}?${params.toString()}`;
 
         try {
-            const response = await fetch(url, {
+            const response = await mapFetch(url, {
                 method: 'GET',
                 credentials: 'same-origin',
                 headers: {
@@ -2328,7 +2353,7 @@
 
         try {
             const url = pointShowTemplate.replace('__PROPERTY__', selectedMarker.property_id);
-            const response = await fetch(url, {
+            const response = await mapFetch(url, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
@@ -2504,7 +2529,7 @@
                 return;
             }
 
-            const response = await fetch(url, {
+            const response = await mapFetch(url, {
                 method,
                 credentials: 'same-origin',
                 headers: {

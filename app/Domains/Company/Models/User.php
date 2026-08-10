@@ -67,6 +67,7 @@ class User extends Authenticatable implements CanResetPasswordContract
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'last_seen_at' => 'datetime',
+            'session_version' => 'integer',
             'password' => 'hashed',
             'is_platform_admin' => 'boolean',
             'two_factor_enabled' => 'boolean',

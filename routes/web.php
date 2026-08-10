@@ -148,6 +148,7 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware([
     'auth',
+    'seller.single-session',
     'tenancy.initialize',
     'tenancy.active',
     'presence.touch',
