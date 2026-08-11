@@ -188,6 +188,34 @@
             if (status === 'no_interest') return '×';
             return '';
         },
+        /**
+         * Compact house pin (SVG) — status color fill, optional R/× mark.
+         * opts.draft → ghost/dashed (unsaved map tap), not a registered "Novo" point.
+         */
+        pinHtml(color, mark, locationKind, opts) {
+            const fill = color || '#9ca3af';
+            const kind = locationKind || 'gps';
+            const draft = opts && opts.draft ? ' is-draft' : '';
+            const markHtml = mark
+                ? `<span class="map-marker-mark" aria-hidden="true">${mark}</span>`
+                : '';
+            return `<div class="map-house-pin kind-${kind}${draft}" style="--pin-color:${fill}">`
+                + `<svg class="map-house-pin-svg" viewBox="0 0 28 36" width="28" height="36" aria-hidden="true" focusable="false">`
+                + `<path class="map-house-pin-body" d="M14 1.6C8.15 1.6 3.4 6.5 3.4 12.6c0 7.35 10.6 21.9 10.6 21.9s10.6-14.55 10.6-21.9C24.6 6.5 19.85 1.6 14 1.6z"/>`
+                + `<path class="map-house-pin-house" d="M9.15 16.35 14 12.1l4.85 4.25V21.2h-2.75v-3.25h-4.2V21.2H9.15z"/>`
+                + `</svg>${markHtml}</div>`;
+        },
+        legendPinHtml(color, mark) {
+            const fill = color || '#9ca3af';
+            const markHtml = mark
+                ? `<span class="map-legend-mark" aria-hidden="true">${mark}</span>`
+                : '';
+            return `<span class="map-legend-pin" style="--pin-color:${fill}">`
+                + `<svg class="map-legend-pin-svg" viewBox="0 0 28 36" width="16" height="20" aria-hidden="true" focusable="false">`
+                + `<path class="map-house-pin-body" d="M14 1.6C8.15 1.6 3.4 6.5 3.4 12.6c0 7.35 10.6 21.9 10.6 21.9s10.6-14.55 10.6-21.9C24.6 6.5 19.85 1.6 14 1.6z"/>`
+                + `<path class="map-house-pin-house" d="M9.15 16.35 14 12.1l4.85 4.25V21.2h-2.75v-3.25h-4.2V21.2H9.15z"/>`
+                + `</svg>${markHtml}</span>`;
+        },
         opportunityFromCounts(counts) {
             const total = (counts.customer || 0) + (counts.interested || 0) + (counts.visited || 0) + (counts.new || 0);
             if (!total) return { level: 'unknown', label: 'Sem dados na região' };
@@ -219,10 +247,10 @@
                 .join(' ');
             return L.divIcon({
                 className: 'commercial-cluster',
-                html: `<div class="commercial-cluster-bubble" style="--cluster-color:${color};width:${size}px;height:${size}px">
-                    <strong>${total}</strong>
-                    <span class="commercial-cluster-mix">${bits || ''}</span>
-                </div>`,
+                html: `<div class="commercial-cluster-bubble" style="--cluster-color:${color};width:${size}px;height:${size}px">`
+                    + `<strong>${total}</strong>`
+                    + `<span class="commercial-cluster-mix">${bits || ''}</span>`
+                    + `</div>`,
                 iconSize: [size, size],
                 iconAnchor: [size / 2, size / 2],
             });

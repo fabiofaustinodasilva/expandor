@@ -563,16 +563,21 @@
         return { label: 'Baixa precisão', tone: 'text-amber-400' };
     }
 
-    function coloredIcon(color, locationKind = 'gps', mark = '') {
-        const ring = locationKindMeta(locationKind).className;
-        const markHtml = mark
-            ? `<span class="map-marker-mark" aria-hidden="true">${mark}</span>`
-            : '';
+    function coloredIcon(color, locationKind = 'gps', mark = '', opts = {}) {
+        const html = (commercial && typeof commercial.pinHtml === 'function')
+            ? commercial.pinHtml(color, mark, locationKind, opts)
+            : `<div class="map-house-pin kind-${locationKind || 'gps'}${opts.draft ? ' is-draft' : ''}" style="--pin-color:${color || '#9ca3af'}">`
+                + `<svg class="map-house-pin-svg" viewBox="0 0 28 36" width="28" height="36" aria-hidden="true">`
+                + `<path class="map-house-pin-body" d="M14 1.6C8.15 1.6 3.4 6.5 3.4 12.6c0 7.35 10.6 21.9 10.6 21.9s10.6-14.55 10.6-21.9C24.6 6.5 19.85 1.6 14 1.6z"/>`
+                + `<path class="map-house-pin-house" d="M9.15 16.35 14 12.1l4.85 4.25V21.2h-2.75v-3.25h-4.2V21.2H9.15z"/>`
+                + `</svg>${mark ? `<span class="map-marker-mark" aria-hidden="true">${mark}</span>` : ''}</div>`;
+
         return L.divIcon({
-            className: '',
-            html: `<div class="map-marker-wrap"><div class="map-marker-ring ${ring}"></div><div class="map-marker-dot" style="background:${color || '#9ca3af'}">${markHtml}</div></div>`,
-            iconSize: [18, 18],
-            iconAnchor: [9, 9],
+            className: 'map-house-pin-icon',
+            html,
+            iconSize: [28, 36],
+            iconAnchor: [14, 34],
+            popupAnchor: [0, -30],
         });
     }
 
@@ -805,8 +810,11 @@
                 const mark = item.mark
                     ? `<span class="map-legend-mark" aria-hidden="true">${item.mark}</span>`
                     : '';
+                const swatch = (commercial && typeof commercial.legendPinHtml === 'function')
+                    ? commercial.legendPinHtml(item.color, item.mark)
+                    : `<span class="map-legend-pin" style="--pin-color:${item.color}">${mark}</span>`;
                 return `<div class="flex items-center justify-between gap-2">
-                    <span class="inline-flex items-center gap-1.5"><span class="map-legend-swatch" style="background:${item.color}">${mark}</span>${item.label}</span>
+                    <span class="inline-flex items-center gap-1.5">${swatch}${item.label}</span>
                     <span class="text-slate-300">${total}</span>
                 </div>`;
             }).join('');
@@ -1754,7 +1762,12 @@
         }
 
         const layer = L.marker([lat, lng], {
-            icon: coloredIcon(color || '#f97316', locationKind || 'gps'),
+            icon: coloredIcon(
+                mode === 'create-draft' ? '#94a3b8' : (color || '#f97316'),
+                locationKind || 'gps',
+                '',
+                mode === 'create-draft' ? { draft: true } : {}
+            ),
             draggable: true,
             autoPan: true,
             zIndexOffset: 1000,
@@ -3279,7 +3292,7 @@
             propertyId: null,
             latitude: lat,
             longitude: lng,
-            color: '#f97316',
+            color: '#94a3b8',
             locationKind: lastGpsAccuracy != null && lastGpsAccuracy > 50 ? 'low_accuracy' : 'gps',
             mode: 'create-draft',
         });

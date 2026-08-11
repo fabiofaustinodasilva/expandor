@@ -244,8 +244,8 @@ class Sprint8222GoogleMapsProviderTest extends TestCase
         $this->assertStringContainsString('spiderfyOnMaxZoom: true', $opsJs);
 
         $blade = file_get_contents(resource_path('views/maps/index.blade.php'));
-        $this->assertStringContainsString("js/operational-map.js') }}?v=57", $blade);
-        $this->assertStringContainsString("js/map-provider.js') }}?v=5", $blade);
+        $this->assertStringContainsString("js/operational-map.js') }}?v=58", $blade);
+        $this->assertStringContainsString("js/map-provider.js') }}?v=6", $blade);
     }
 
     public function test_13_fallback_avoids_double_init_guard(): void

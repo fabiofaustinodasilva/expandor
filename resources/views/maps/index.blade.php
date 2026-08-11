@@ -263,7 +263,11 @@
                 <ul class="space-y-1.5" id="map-legend-list">
                     @foreach($commercialLegend as $item)
                         <li class="flex items-center gap-2 text-xs text-slate-200">
-                            <span class="map-legend-swatch shrink-0" style="background: {{ $item['color'] }}" title="{{ $item['label'] }}">
+                            <span class="map-legend-pin shrink-0" style="--pin-color: {{ $item['color'] }}" title="{{ $item['label'] }}">
+                                <svg class="map-legend-pin-svg" viewBox="0 0 28 36" width="16" height="20" aria-hidden="true" focusable="false">
+                                    <path class="map-house-pin-body" d="M14 1.6C8.15 1.6 3.4 6.5 3.4 12.6c0 7.35 10.6 21.9 10.6 21.9s10.6-14.55 10.6-21.9C24.6 6.5 19.85 1.6 14 1.6z"/>
+                                    <path class="map-house-pin-house" d="M9.15 16.35 14 12.1l4.85 4.25V21.2h-2.75v-3.25h-4.2V21.2H9.15z"/>
+                                </svg>
                                 @if(!empty($item['mark']))
                                     <span class="map-legend-mark" aria-hidden="true">{{ $item['mark'] }}</span>
                                 @endif
@@ -884,6 +888,71 @@
     .op-main { height: 100vh; }
     @media (max-width: 900px) { .op-main { height: calc(100dvh - 74px); } }
     .leaflet-container { background: #0b1220; font: inherit; }
+    /* Sprint 8.2.29 — house pins (property) vs circle GPS */
+    .map-house-pin-icon { background: transparent !important; border: 0 !important; }
+    .map-house-pin {
+        position: relative;
+        width: 28px;
+        height: 36px;
+        --pin-color: #9ca3af;
+        pointer-events: auto;
+    }
+    .map-house-pin-svg { display: block; overflow: visible; }
+    .map-house-pin-body {
+        fill: var(--pin-color);
+        stroke: #fff;
+        stroke-width: 1.55;
+        vector-effect: non-scaling-stroke;
+    }
+    .map-house-pin-house { fill: #fff; }
+    .map-house-pin.kind-adjusted .map-house-pin-body { stroke: #3b82f6; stroke-width: 2; }
+    .map-house-pin.kind-low_accuracy .map-house-pin-body { stroke: #eab308; stroke-width: 2; }
+    .map-house-pin.is-draft .map-house-pin-body {
+        fill-opacity: 0.4;
+        stroke: #e2e8f0;
+        stroke-dasharray: 3.5 2.5;
+        stroke-width: 1.7;
+    }
+    .map-house-pin.is-draft .map-house-pin-house { fill-opacity: 0.85; }
+    .map-house-pin .map-marker-mark {
+        position: absolute;
+        right: 1px;
+        top: 7px;
+        min-width: 11px;
+        height: 11px;
+        padding: 0 2px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.88);
+        border: 1px solid #fff;
+        font-size: 7px;
+        font-weight: 800;
+        line-height: 11px;
+        color: #fff;
+        text-align: center;
+        pointer-events: none;
+    }
+    .map-legend-pin {
+        position: relative;
+        display: inline-flex;
+        width: 16px;
+        height: 20px;
+        --pin-color: #9ca3af;
+        flex-shrink: 0;
+        align-items: flex-start;
+        justify-content: center;
+    }
+    .map-legend-pin-svg { display: block; }
+    .map-legend-pin .map-legend-mark {
+        position: absolute;
+        right: -2px;
+        top: 2px;
+        font-size: 7px;
+        font-weight: 800;
+        line-height: 1;
+        color: #fff;
+        text-shadow: 0 0 2px rgba(0,0,0,.9);
+    }
+    /* Legacy circle classes kept for any residual markup */
     .map-marker-wrap { position: relative; width: 18px; height: 18px; }
     .map-marker-dot {
         width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff;
@@ -1001,16 +1070,18 @@
     .map-marker-ring.kind-gps { border-color: #22c55e; }
     .map-marker-ring.kind-adjusted { border-color: #3b82f6; }
     .map-marker-ring.kind-low_accuracy { border-color: #eab308; }
+    .map-marker-dragging .map-house-pin { transform: scale(1.12); transform-origin: 50% 100%; }
     .map-marker-dragging .map-marker-dot { transform: scale(1.25); }
     .commercial-cluster { background: transparent !important; border: 0 !important; }
     .commercial-cluster-bubble {
-        border-radius: 999px; background: color-mix(in srgb, var(--cluster-color) 88%, #0f172a);
-        color: #0f172a; font-weight: 800; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; box-shadow: 0 0 0 2px #fff, 0 4px 14px rgba(0,0,0,.35);
+        border-radius: 999px; background: color-mix(in srgb, var(--cluster-color) 82%, #0f172a);
+        color: #f8fafc; font-weight: 800; display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        box-shadow: 0 0 0 2px #fff, 0 3px 12px rgba(0,0,0,.4);
         line-height: 1.05; font-size: 12px;
     }
-    .commercial-cluster-bubble strong { font-size: 13px; }
-    .commercial-cluster-mix { font-size: 8px; font-weight: 600; max-width: 90%; overflow: hidden; white-space: nowrap; }
+    .commercial-cluster-bubble strong { font-size: 13px; color: #fff; }
+    .commercial-cluster-mix { font-size: 8px; font-weight: 600; max-width: 90%; overflow: hidden; white-space: nowrap; opacity: 0.92; }
     .basemap-btn.is-active { border-color: #38bdf8; color: #e0f2fe; background: rgba(14,165,233,.15); }
     .leaflet-region-select { stroke: #38bdf8; stroke-width: 2; stroke-dasharray: 6 4; fill: rgba(56,189,248,.12); }
     #metrics-panel.open, #marker-drawer.open { transform: translateX(0); }
@@ -1233,8 +1304,9 @@
     body.field-seller .drawer-history-block { display: none; }
     body.field-seller .drawer-client-dossier { display: block; }
     .map-marker-selected {
-        filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.95));
-        transform: scale(1.28);
+        filter: drop-shadow(0 0 7px rgba(56, 189, 248, 0.95));
+        transform: scale(1.18);
+        transform-origin: 50% 100%;
         z-index: 600 !important;
     }
     #map-search-results button {
@@ -1432,7 +1504,7 @@
 <script src="https://maps.googleapis.com/maps/api/js?key={{ urlencode($mapFrontendConfig->browserKey()) }}&v=weekly" async defer></script>
 <script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.1/Leaflet.GoogleMutant.js" crossorigin=""></script>
 @endif
-<script src="{{ asset('js/map-provider.js') }}?v=5"></script>
+<script src="{{ asset('js/map-provider.js') }}?v=6"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=57"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=58"></script>
 @endpush

@@ -93,7 +93,7 @@ class Sprint8223CommissionRewardHotfixTest extends TestCase
             ->assertSee('data-commission-awarded-flash', false)
             ->assertSee('"awarded":true', false)
             ->assertSee('id="commission-reward"', false)
-            ->assertSee('operational-map.js?v=57', false)
+            ->assertSee('operational-map.js?v=58', false)
             ->assertSee('Venda fechada!', false)
             ->assertSee('Comissão adicionada ao seu resultado.', false);
 
