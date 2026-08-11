@@ -2,7 +2,102 @@
  * Sprint 8.2.2 — Client Area UI
  * Estilos compartilhados dos componentes resources/views/components/client/*
  * Usa as variáveis de tema já definidas pelo ThemeService (--primary, --border, etc.)
+ *
+ * Sprint 8.2.30 — aliases de design tokens (não substitui ThemeService).
  */
+:root {
+    --color-primary: var(--primary);
+    --color-primary-hover: color-mix(in srgb, var(--primary) 82%, #000);
+    --color-background: var(--bg);
+    --color-surface: var(--bg-elevated);
+    --color-surface-muted: var(--bg-soft);
+    --color-border: var(--border);
+    --color-text: var(--text, var(--text-on-bg));
+    --color-text-muted: var(--muted, var(--muted-on-bg));
+    --color-success: var(--success);
+    --color-warning: var(--warning);
+    --color-danger: var(--highlight, #EF4444);
+    --color-info: var(--primary);
+    --control-height: 2.75rem;
+    --radius-control: 0.75rem;
+    --radius-card: 1rem;
+    --shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.35);
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --font-page-title: 1.4rem;
+    --font-section-title: 1.05rem;
+    --font-card-title: 1.02rem;
+    --font-body: 0.95rem;
+    --font-label: 0.88rem;
+    --font-helper: 0.85rem;
+    --font-caption: 0.75rem;
+}
+
+/* Map local team/field-ops buttons onto the shared button language */
+.team-btn-primary {
+    background: var(--primary) !important;
+    color: var(--button-text, #fff) !important;
+}
+.team-btn-ghost {
+    background: transparent;
+    color: var(--text, var(--text-on-bg));
+    border: 1px solid var(--border);
+}
+.team-btn-danger {
+    background: color-mix(in srgb, var(--highlight, #EF4444) 14%, transparent);
+    color: #fecaca;
+    border: 1px solid color-mix(in srgb, var(--highlight, #EF4444) 40%, transparent);
+}
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--control-height);
+    height: var(--control-height);
+    min-height: var(--client-touch, 44px);
+    padding: 0;
+    border-radius: var(--client-radius, 0.875rem);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+.btn-icon:hover,
+.btn-icon:focus-visible {
+    color: var(--text);
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.btn:focus-visible,
+.form-control:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.btn,
+.client-btn {
+    min-height: var(--control-height);
+}
+.btn:disabled,
+.btn[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.table-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* Tables: keep desktop table, controlled scroll on small screens */
+@media (max-width: 640px) {
+    .client-data-table,
+    .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
 
 /* Page header */
 .client-page-header {
@@ -23,7 +118,7 @@
 }
 .client-page-header__title {
     margin: 0;
-    font-size: 1.4rem;
+    font-size: var(--font-page-title, 1.4rem);
     font-weight: 750;
     color: var(--text, var(--text-on-bg));
 }

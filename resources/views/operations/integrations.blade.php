@@ -3,13 +3,12 @@
 @section('title', 'Integrações')
 
 @section('page')
-    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap;">
-        <div>
-            <h1 class="page-title" style="margin:0;">Integrações</h1>
-            <p class="header-meta">Conecte serviços externos liberados pelo seu plano.</p>
-        </div>
-        <a class="btn btn-ghost" href="{{ route('operations.settings') }}">Voltar</a>
-    </div>
+    <x-client.page-header
+        title="Integrações"
+        description="Conecte serviços externos liberados pelo seu plano."
+    >
+        <x-client.secondary-button :href="route('operations.settings')">Voltar</x-client.secondary-button>
+    </x-client.page-header>
 
     @if(session('success'))
         <div class="card" style="margin-bottom:1rem; border-color:#86efac;">{{ session('success') }}</div>

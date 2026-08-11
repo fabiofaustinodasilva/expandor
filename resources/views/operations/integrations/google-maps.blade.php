@@ -3,22 +3,21 @@
 @section('title', 'Google Maps')
 
 @section('page')
-    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap;">
-        <div>
-            <h1 class="page-title" style="margin:0;">Google Maps</h1>
-            <p class="header-meta">Integração tenant — credenciais da sua empresa.</p>
-        </div>
-        <a class="btn btn-ghost" href="{{ route('operations.integrations') }}">Voltar</a>
-    </div>
+    <x-client.page-header
+        title="Google Maps"
+        description="Conecte as credenciais da sua empresa. Sem esta configuração, o mapa padrão Expandor continua funcionando."
+    >
+        <x-client.secondary-button :href="route('operations.integrations')">Voltar</x-client.secondary-button>
+    </x-client.page-header>
 
     @if(session('success'))
-        <div class="card" style="margin-bottom:1rem; border-color:#86efac;">{{ session('success') }}</div>
+        <div class="alert alert-success">{{ session('success') }}</div>
     @endif
     @if(session('error'))
-        <div class="card" style="margin-bottom:1rem; border-color:#fca5a5;">{{ session('error') }}</div>
+        <div class="alert alert-error">{{ session('error') }}</div>
     @endif
     @if($errors->any())
-        <div class="card" style="margin-bottom:1rem; border-color:#fca5a5;">
+        <div class="alert alert-error">
             <ul style="margin:0; padding-left:1.1rem;">
                 @foreach($errors->all() as $error)
                     <li>{{ $error }}</li>

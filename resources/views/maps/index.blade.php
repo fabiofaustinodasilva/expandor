@@ -402,7 +402,7 @@
     <aside id="marker-drawer" class="absolute right-0 top-0 bottom-0 z-40 w-[360px] max-w-[100vw] translate-x-full transition-transform duration-300 bg-slate-950 border-l border-slate-700 flex flex-col" aria-hidden="true">
         <div class="p-4 border-b border-slate-800 flex items-start justify-between gap-3">
             <div class="min-w-0">
-                <div class="text-xs text-slate-400 uppercase tracking-wide">📍 Residência</div>
+                <div class="text-xs text-slate-400 uppercase tracking-wide">Ponto</div>
                 <h2 id="drawer-name" class="text-xl font-bold truncate">—</h2>
                 <div id="drawer-status" class="mt-2 inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-slate-800">
                     <span id="drawer-status-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
@@ -635,7 +635,7 @@
     <div id="post-visit-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
         <div id="post-visit-backdrop" class="absolute inset-0 bg-black/60"></div>
         <div class="relative w-full max-w-sm rounded-2xl bg-slate-950 border border-slate-700 p-5 text-center">
-            <div class="text-3xl mb-2">✅</div>
+            <div class="text-3xl mb-2" aria-hidden="true"><i data-lucide="check-circle-2" class="w-8 h-8 mx-auto text-emerald-400"></i></div>
             <h3 class="text-lg font-semibold mb-1">Visita salva</h3>
             <p class="text-slate-400 text-sm mb-4">Pronto. Continuar na rua?</p>
             <button type="button" id="post-visit-next" class="w-full h-14 rounded-xl bg-sky-500 text-slate-950 font-bold mb-2">Continuar no mapa</button>
@@ -812,17 +812,17 @@
             <p class="text-slate-400 text-sm mb-5">Resumo do seu dia</p>
             <div class="grid grid-cols-3 gap-2 mb-4">
                 <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3 text-center">
-                    <div class="text-lg mb-0.5" aria-hidden="true">🏠</div>
+                    <div class="text-lg mb-0.5" aria-hidden="true"><i data-lucide="map-pin" class="w-5 h-5 mx-auto text-slate-300"></i></div>
                     <div class="text-2xl font-bold text-white" id="brief-visits">{{ $dayMetrics->visits_total ?? 0 }}</div>
                     <div class="text-[11px] text-slate-400 mt-1 leading-tight">Casas visitadas hoje</div>
                 </div>
                 <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3 text-center">
-                    <div class="text-lg mb-0.5" aria-hidden="true">⭐</div>
+                    <div class="text-lg mb-0.5" aria-hidden="true"><i data-lucide="star" class="w-5 h-5 mx-auto text-sky-300"></i></div>
                     <div class="text-2xl font-bold text-sky-300" id="brief-interested">{{ $dayMetrics->interested_total ?? 0 }}</div>
                     <div class="text-[11px] text-slate-400 mt-1 leading-tight">Interessados</div>
                 </div>
                 <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3 text-center">
-                    <div class="text-lg mb-0.5" aria-hidden="true">📄</div>
+                    <div class="text-lg mb-0.5" aria-hidden="true"><i data-lucide="file-check" class="w-5 h-5 mx-auto text-emerald-400"></i></div>
                     <div class="text-2xl font-bold text-emerald-400" id="brief-contracts">{{ $dayMetrics->installations_total ?? 0 }}</div>
                     <div class="text-[11px] text-slate-400 mt-1 leading-tight">{{ $commercial::sales() }}</div>
                 </div>

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Administração') — {{ config('app.name') }}</title>
+    <link rel="stylesheet" href="{{ asset('css/client-ui.css') }}">
     <style>
         :root {
             --bg: #0F1117;
@@ -17,6 +18,13 @@
             --accent-2: #EF4444;
             --success: #22C55E;
             --warning: #F59E0B;
+            --primary: var(--accent);
+            --highlight: var(--accent-2);
+            --color-primary: var(--accent);
+            --color-surface: var(--bg-elevated);
+            --color-border: var(--border);
+            --color-text: var(--text);
+            --control-height: 2.75rem;
         }
         * { box-sizing: border-box; }
         body {

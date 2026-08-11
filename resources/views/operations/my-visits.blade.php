@@ -3,21 +3,22 @@
 @section('title', 'Histórico de atendimentos')
 
 @section('page')
-    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1.25rem; flex-wrap:wrap;">
-        <div>
-            <h1 class="page-title" style="margin:0;">Histórico de atendimentos</h1>
-            <p class="header-meta" style="margin:.35rem 0 0;">Seus atendimentos e resultados comerciais.</p>
-        </div>
-        <a class="btn btn-ghost" href="{{ route('map.index') }}">Abrir mapa</a>
-    </div>
+    <x-client.page-header
+        title="Histórico de atendimentos"
+        description="Suas visitas e resultados comerciais."
+    >
+        <x-client.secondary-button :href="route('map.index')">Abrir mapa</x-client.secondary-button>
+    </x-client.page-header>
 
     @if($visits->isEmpty())
         <div class="card">
-            <div class="empty-friendly">
-                <div style="font-weight:700; font-size:1.05rem;">Você ainda não registrou atendimentos</div>
-                <p>Abra o mapa, escolha a próxima casa e registre o resultado comercial.</p>
-                <a class="btn btn-primary" href="{{ route('map.index') }}">Ir para o mapa</a>
-            </div>
+            <x-client.empty-state
+                title="Você ainda não registrou visitas"
+                description="Abra o mapa, escolha o próximo ponto e registre o resultado comercial."
+                action-href="{{ route('map.index') }}"
+                action-label="Ir para o mapa"
+                icon="map-pinned"
+            />
         </div>
     @else
         <div class="history-list" style="display:grid; gap:0.85rem;">
@@ -26,7 +27,7 @@
                     <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
                         <div style="min-width:0; flex:1;">
                             <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:.4rem;">
-                                <span class="badge" style="background:#0c4a6e;color:#bae6fd;">{{ $card['visited_at'] }}</span>
+                                <span class="badge badge-primary">{{ $card['visited_at'] }}</span>
                                 <span class="badge">{{ $card['result'] }}</span>
                             </div>
                             <h2 style="margin:0; font-size:1.05rem; font-weight:700;">{{ $card['client'] }}</h2>
@@ -79,7 +80,9 @@
                     <h2 id="history-detail-title" class="page-title" style="margin:0; font-size:1.15rem;">Detalhe do atendimento</h2>
                     <p id="history-detail-subtitle" class="header-meta" style="margin:.3rem 0 0;"></p>
                 </div>
-                <button type="button" class="btn btn-ghost" data-history-close aria-label="Fechar">✕</button>
+                <button type="button" class="btn-icon" data-history-close aria-label="Fechar">
+                    <i data-lucide="x" class="w-4 h-4" aria-hidden="true"></i>
+                </button>
             </div>
 
             <section class="history-section">

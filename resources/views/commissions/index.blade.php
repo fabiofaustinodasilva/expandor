@@ -110,7 +110,7 @@
     </x-client.crud-toolbar>
 
     <div class="card client-data-table" style="overflow-x:auto;">
-        <table class="table" style="width:100%;">
+        <table class="table client-data-table--responsive" style="width:100%;">
             <thead>
             <tr>
                 @if($isManager)<th>Vendedor</th>@endif
@@ -141,8 +141,8 @@
                     <td data-label="Cliente / Ponto">{{ $client }}</td>
                     <td data-label="Produto">{{ $row->product_name }}</td>
                     <td data-label="Qtd">{{ $row->quantity }}</td>
-                    <td data-label="Valor da venda">{{ $row->historicalSaleAmountLabel() }}</td>
-                    <td data-label="Comissão (R$)">R$ {{ number_format((float) $row->commission_amount, 2, ',', '.') }}</td>
+                    <td class="table-num" data-label="Valor da venda">{{ $row->historicalSaleAmountLabel() }}</td>
+                    <td class="table-num" data-label="Comissão (R$)">R$ {{ number_format((float) $row->commission_amount, 2, ',', '.') }}</td>
                     <td data-label="Status"><span class="comm-status {{ $statusClass }}">{{ $row->status->label() }}</span></td>
                     <td data-label="Data">{{ \App\Support\AppTime::formatInstant($row->earned_at, 'd/m/Y') ?? '—' }}</td>
                     @if($isManager)
@@ -163,7 +163,13 @@
                     @endif
                 </tr>
             @empty
-                <tr><td colspan="{{ $isManager ? 9 : 7 }}">Nenhuma comissão no período.</td></tr>
+                <tr><td colspan="{{ $isManager ? 9 : 7 }}">
+                    <x-client.empty-state
+                        title="Nenhuma comissão no período"
+                        description="Quando houver vendas no filtro selecionado, elas aparecem aqui."
+                        icon="wallet"
+                    />
+                </td></tr>
             @endforelse
             </tbody>
         </table>

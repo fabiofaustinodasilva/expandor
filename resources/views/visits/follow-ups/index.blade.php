@@ -20,17 +20,23 @@
 
     @if($followUps->isEmpty())
         <div class="card">
-            <div class="empty-friendly">
-                @if(($dayFilter ?? null) === 'today')
-                    <div style="font-weight:700; font-size:1.05rem;">Nenhum retorno hoje</div>
-                    <p>Não há retornos pendentes agendados para hoje.</p>
-                    <a class="btn btn-ghost" href="{{ route('follow-ups.index') }}">Ver todos</a>
-                @else
-                    <div style="font-weight:700; font-size:1.05rem;">Nenhum retorno na agenda</div>
-                    <p>Quando o resultado for “Retornar”, o ponto aparece aqui na data combinada.</p>
-                @endif
-                <a class="btn btn-primary" href="{{ route('map.index') }}">Ir ao mapa</a>
-            </div>
+            @if(($dayFilter ?? null) === 'today')
+                <x-client.empty-state
+                    title="Nenhum retorno hoje"
+                    description="Não há retornos pendentes agendados para hoje."
+                    action-href="{{ route('follow-ups.index') }}"
+                    action-label="Ver todos"
+                    icon="calendar-clock"
+                />
+            @else
+                <x-client.empty-state
+                    title="Nenhum retorno na agenda"
+                    description="Quando o resultado for Retornar, o ponto aparece aqui na data combinada."
+                    action-href="{{ route('map.index') }}"
+                    action-label="Ir ao mapa"
+                    icon="calendar-clock"
+                />
+            @endif
         </div>
     @else
         <div class="agenda-list" style="display:grid; gap:0.85rem;">
@@ -129,7 +135,9 @@
                     <h2 id="agenda-outcome-title" class="page-title" style="margin:0; font-size:1.15rem;">Resultado do retorno</h2>
                     <p id="agenda-outcome-client" class="header-meta" style="margin:.3rem 0 0;"></p>
                 </div>
-                <button type="button" class="btn btn-ghost" data-agenda-close aria-label="Fechar">✕</button>
+                <button type="button" class="btn-icon" data-agenda-close aria-label="Fechar">
+                    <i data-lucide="x" class="w-4 h-4" aria-hidden="true"></i>
+                </button>
             </div>
 
             <form id="agenda-outcome-form" method="POST" action="#">

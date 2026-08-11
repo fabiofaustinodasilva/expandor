@@ -3,21 +3,16 @@
 @section('title', $dossier['name'])
 
 @section('page')
-    <div style="margin-bottom:1rem;">
-        <a href="{{ route('customers.index') }}" class="header-meta" style="text-decoration:none;">← Clientes</a>
-    </div>
-
-    <div style="display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; margin-bottom:1.1rem;">
-        <div>
-            <h1 class="page-title" style="margin:0;">{{ $dossier['name'] }}</h1>
-            <p class="header-meta" style="margin:.4rem 0 0;">
-                <span class="badge">{{ $dossier['situation'] }}</span>
-                @if($dossier['seller'])
-                    <span style="margin-left:.5rem;">Vendedor: {{ $dossier['seller'] }}</span>
-                @endif
-            </p>
-        </div>
-    </div>
+    <x-client.page-header
+        :title="$dossier['name']"
+        :description="$dossier['seller'] ? 'Vendedor: '.$dossier['seller'] : null"
+        eyebrow="Cliente"
+    >
+        <x-client.secondary-button :href="route('customers.index')">Voltar</x-client.secondary-button>
+    </x-client.page-header>
+    <p class="header-meta" style="margin:-0.5rem 0 1rem;">
+        <span class="badge">{{ $dossier['situation'] }}</span>
+    </p>
 
     <div class="actions" style="margin-bottom:1.15rem;">
         @if($dossier['actions']['whatsapp'])

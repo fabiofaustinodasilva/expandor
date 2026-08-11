@@ -355,9 +355,11 @@
             <a class="team-icon-btn" href="{{ route('operations.team') }}" aria-label="Fechar"><i data-lucide="x" class="w-4 h-4"></i></a>
         </header>
 
+        <h3 class="team-section-title">Acesso</h3>
+        <p class="header-meta" style="margin:0 0 .5rem;">Login é o acesso à conta. Atividade é o último uso no app.</p>
         <dl class="team-facts" style="margin-top:.75rem;">
-            <div><dt>Última atividade</dt><dd>{{ $performance['access_label'] ?? '—' }}</dd></div>
             <div><dt>Último login</dt><dd>{{ $performance['last_login_at']?->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i') ?? '—' }}</dd></div>
+            <div><dt>Última atividade</dt><dd>{{ $performance['access_label'] ?? '—' }}</dd></div>
         </dl>
 
         <h3 class="team-section-title">Resumo de hoje</h3>
@@ -457,7 +459,7 @@
         border:1px solid #334155; color:#cbd5e1; text-decoration:none; font-size:.82rem; font-weight:700;
         background: rgba(15,23,42,.6);
     }
-    .team-filter-chip.is-active { border-color:#38bdf8; color:#e0f2fe; background:rgba(56,189,248,.12); }
+    .team-filter-chip.is-active { border-color:var(--primary); color:var(--text); background:color-mix(in srgb, var(--primary) 18%, transparent); }
     .team-presence-line { display:flex; align-items:center; gap:.35rem; flex-wrap:wrap; margin-top:.2rem; font-size:.8rem; color:#94a3b8; }
     .team-dot { width:.55rem; height:.55rem; border-radius:999px; display:inline-block; }
     .team-dot.is-online { background:#34d399; box-shadow:0 0 0 3px rgba(52,211,153,.2); }
@@ -476,7 +478,7 @@
     .team-timeline { display:grid; gap:.65rem; }
     .team-timeline-item { display:grid; grid-template-columns:3.6rem 1fr; gap:.55rem; align-items:start; }
     .team-timeline-time { font-size:.75rem; color:#64748b; font-weight:700; padding-top:.15rem; }
-    .team-timeline-kind { font-size:.68rem; font-weight:800; letter-spacing:.05em; color:#38bdf8; }
+    .team-timeline-kind { font-size:.68rem; font-weight:800; letter-spacing:.05em; color:var(--primary); }
     .team-card-id h2 { margin:0; font-size:1.05rem; }
     .team-meta-line { color:#94a3b8; font-size:.82rem; margin-top:.15rem; }
     .team-facts { display:grid; gap:.35rem; margin:0; }
@@ -497,7 +499,7 @@
         border-radius:.85rem; padding:.65rem .95rem; font-weight:700; cursor:pointer; border:0; text-decoration:none;
         font-size:.86rem;
     }
-    .team-btn-primary { background:#38bdf8; color:#0f172a; }
+    .team-btn-primary { background:var(--primary); color:var(--button-text, #fff); }
     .team-btn-ghost { background:transparent; color:#e2e8f0; border:1px solid #334155; }
     .team-btn-danger { background:rgba(239,68,68,.12); color:#fecaca; border:1px solid rgba(239,68,68,.35); }
     .team-empty {
@@ -511,7 +513,7 @@
     .team-drawer-backdrop { position:absolute; inset:0; background:rgba(2,6,23,.62); }
     .team-drawer-panel {
         position:absolute; top:0; right:0; height:100%; width:min(420px,100%);
-        background:#0f172a; border-left:1px solid #334155; padding:1rem 1.1rem 1.5rem;
+        background:var(--bg-elevated, #0f172a); border-left:1px solid var(--border, #334155); padding:1rem 1.1rem 1.5rem;
         overflow:auto; box-shadow:-20px 0 50px rgba(0,0,0,.35);
     }
     .team-drawer-panel header { display:flex; justify-content:space-between; align-items:center; margin-bottom:.75rem; }
@@ -528,7 +530,7 @@
         border:1px solid #1e293b; border-radius:.85rem; margin-bottom:.4rem;
         background: rgba(15,23,42,.55); cursor:pointer;
     }
-    .team-check input { width:1.15rem; height:1.15rem; margin-top:.15rem; accent-color:#38bdf8; }
+    .team-check input { width:1.15rem; height:1.15rem; margin-top:.15rem; accent-color:var(--primary); }
     .team-check span { color:#e2e8f0; font-size:.92rem; font-weight:600; }
     .team-check small { display:block; color:#64748b; font-size:.72rem; font-weight:500; margin-top:.15rem; }
     .team-perm-badge {

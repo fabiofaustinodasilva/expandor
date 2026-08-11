@@ -3,20 +3,22 @@
 @section('title', 'Produtos')
 
 @section('page')
-    <div class="products-admin-header" style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-start;margin-bottom:1rem;">
-        <div style="min-width:0;flex:1;">
-            <h1 class="page-title" style="margin:0;">Produtos</h1>
-            <p class="header-meta" style="margin:.35rem 0 0;">Área da Empresa → Produtos — catálogo comercial exibido pelo vendedor no campo.</p>
-        </div>
-        <div class="actions" style="display:flex;gap:.5rem;flex-wrap:wrap;width:100%;max-width:100%;">
-            <a class="btn btn-primary" id="btn-new-product" href="{{ route('commissions.products.create') }}" style="min-height:44px;flex:1 1 12rem;">+ Novo produto</a>
-        </div>
-    </div>
+    <x-client.page-header
+        title="Produtos"
+        description="Área da Empresa → Produtos — catálogo comercial exibido pelo vendedor no campo."
+    >
+        <x-client.primary-button id="btn-new-product" :href="route('commissions.products.create')">+ Novo produto</x-client.primary-button>
+    </x-client.page-header>
 
     @if($products->isEmpty())
-        <div class="card" style="text-align:center;padding:2rem 1.25rem;margin-bottom:1.25rem;">
-            <p style="margin:0 0 1rem;color:var(--muted);">Nenhum produto cadastrado ainda.</p>
-            <a class="btn btn-primary" href="{{ route('commissions.products.create') }}" style="min-height:48px;display:inline-flex;">+ Novo produto</a>
+        <div class="card" style="margin-bottom:1.25rem;">
+            <x-client.empty-state
+                title="Nenhum produto cadastrado"
+                description="Cadastre o primeiro produto para disponibilizá-lo aos vendedores."
+                action-href="{{ route('commissions.products.create') }}"
+                action-label="Cadastrar produto"
+                icon="package"
+            />
         </div>
     @endif
 
@@ -42,7 +44,7 @@
         <a class="btn btn-ghost" href="{{ route('commissions.index') }}">Ver comissões</a>
     </form>
 
-    <div class="card" style="overflow-x:auto;margin-bottom:1.25rem;">
+    <div class="card client-data-table" style="margin-bottom:1.25rem;">
         <table class="table client-data-table--responsive" style="width:100%;">
             <thead>
             <tr>
@@ -71,7 +73,7 @@
                         </div>
                     </td>
                     <td data-label="Categoria">{{ $product->category ?: '—' }}</td>
-                    <td data-label="Preço">R$ {{ number_format((float) $product->price, 2, ',', '.') }}</td>
+                    <td class="table-num" data-label="Preço">R$ {{ number_format((float) $product->price, 2, ',', '.') }}</td>
                     <td data-label="Estoque">{{ $product->stock_control ? $product->stock_quantity : 'Sem controle' }}</td>
                     <td data-label="Status">{{ $product->status === 'active' ? 'Ativo' : 'Inativo' }}</td>
                     <td data-label="Ações" style="white-space:nowrap;">
@@ -110,7 +112,7 @@
                                       onsubmit="return confirm('Excluir este produto?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button class="btn btn-ghost" type="submit" style="min-height:44px;">Excluir</button>
+                                    <button class="btn btn-danger" type="submit" style="min-height:44px;">Excluir</button>
                                 </form>
                             @endunless
                         </div>

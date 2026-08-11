@@ -3,14 +3,13 @@
 @section('title', 'Operação de Campo')
 
 @section('page')
-    <div style="margin-bottom:1rem;">
-        <a href="{{ route('operations.settings') }}" class="header-meta" style="text-decoration:none;">← Configurações</a>
-    </div>
-    <h1 class="page-title">Operação de Campo</h1>
-    <p class="header-meta" style="margin-bottom:1.25rem;">
-        Regras da empresa para o mapa e o fluxo de campo. Valem para todos os vendedores (tenancy).
-        Em breve estas opções poderão ser refinadas por campanha.
-    </p>
+    <x-client.page-header
+        title="Operação de Campo"
+        description="Regras da empresa para o mapa e o fluxo de campo. Valem para todos os vendedores."
+        eyebrow="Configurações"
+    >
+        <x-client.secondary-button :href="route('operations.settings')">Voltar</x-client.secondary-button>
+    </x-client.page-header>
 
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -72,9 +71,9 @@
             @error('points_delete')<div class="header-meta" style="color:#fca5a5;">{{ $message }}</div>@enderror
         </fieldset>
 
-        <div style="display:flex;gap:.75rem;justify-content:flex-end;">
-            <a href="{{ route('operations.settings') }}" class="team-btn-ghost" style="text-decoration:none;padding:.55rem 1rem;">Cancelar</a>
-            <button type="submit" class="team-btn-primary" style="border:0;cursor:pointer;padding:.55rem 1rem;border-radius:.75rem;background:#38bdf8;color:#0f172a;font-weight:700;">Salvar</button>
+        <div style="display:flex;gap:.75rem;justify-content:flex-end;flex-wrap:wrap;">
+            <a href="{{ route('operations.settings') }}" class="btn btn-ghost">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Salvar regras</button>
         </div>
     </form>
 @endsection

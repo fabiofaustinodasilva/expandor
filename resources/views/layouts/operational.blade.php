@@ -80,9 +80,10 @@
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         .empty-friendly { text-align: center; padding: 2rem 1rem; }
         .empty-friendly p { color: var(--muted); margin: .5rem 0 1.25rem; }
-        .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; border: 1px solid transparent; border-radius: .75rem; padding: .7rem 1rem; font-weight: 700; cursor: pointer; text-decoration: none; color: inherit; transition: .18s ease; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; border: 1px solid transparent; border-radius: .75rem; padding: .7rem 1rem; font-weight: 700; cursor: pointer; text-decoration: none; color: inherit; transition: .18s ease; min-height: 2.75rem; }
         .btn-primary { background: var(--primary, var(--accent)); color: var(--button-text); }
         .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-danger { background: color-mix(in srgb, var(--highlight) 16%, transparent); color: var(--highlight); border-color: color-mix(in srgb, var(--highlight) 40%, transparent); }
         .table { width: 100%; border-collapse: collapse; }
         .table th, .table td { padding: .7rem .5rem; border-bottom: 1px solid var(--border); text-align: left; font-size: .92rem; }
         .page-title { margin: 0 0 .75rem; font-size: 1.35rem; }
@@ -98,6 +99,7 @@
         .badge-success { background: color-mix(in srgb, var(--success) 22%, transparent); }
         .badge-warning { background: color-mix(in srgb, var(--warning) 22%, transparent); }
         .badge-danger { background: color-mix(in srgb, var(--highlight) 22%, transparent); }
+        .badge-info { background: color-mix(in srgb, var(--primary) 22%, transparent); }
         .alert { padding: .85rem 1rem; border-radius: .75rem; margin-bottom: 1rem; }
         .alert-success { background: color-mix(in srgb, var(--success) 15%, transparent); border: 1px solid color-mix(in srgb, var(--success) 35%, transparent); }
         .alert-error { background: color-mix(in srgb, var(--highlight) 15%, transparent); border: 1px solid color-mix(in srgb, var(--highlight) 35%, transparent); }
