@@ -139,7 +139,7 @@
             <tbody>
             @forelse($recentMovements as $mov)
                 <tr>
-                    <td>{{ optional($mov->created_at)->format('d/m/Y H:i') }}</td>
+                    <td>{{ optional($mov->created_at) ? \App\Support\AppTime::formatInstant($mov->created_at) : '—' }}</td>
                     <td>{{ $mov->product?->name }}</td>
                     <td>{{ $mov->type->label() }}</td>
                     <td>{{ $mov->quantity > 0 ? '+'.$mov->quantity : $mov->quantity }}</td>

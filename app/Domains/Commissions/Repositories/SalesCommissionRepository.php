@@ -5,6 +5,7 @@ namespace App\Domains\Commissions\Repositories;
 use App\Domains\Commissions\Enums\SalesCommissionStatus;
 use App\Domains\Commissions\Models\SalesCommission;
 use App\Domains\Company\Models\User;
+use App\Support\AppTime;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -36,10 +37,12 @@ class SalesCommissionRepository
         }
 
         if (! empty($filters['date_from'])) {
-            $query->whereDate('earned_at', '>=', $filters['date_from']);
+            [$start] = AppTime::dayBoundsUtc($filters['date_from']);
+            $query->where('earned_at', '>=', $start);
         }
         if (! empty($filters['date_to'])) {
-            $query->whereDate('earned_at', '<=', $filters['date_to']);
+            [, $end] = AppTime::dayBoundsUtc($filters['date_to']);
+            $query->where('earned_at', '<=', $end);
         }
         if (! empty($filters['product_id'])) {
             $query->where('product_id', (int) $filters['product_id']);

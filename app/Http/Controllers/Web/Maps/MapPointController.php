@@ -16,6 +16,7 @@ use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Models\FollowUp;
 use App\Domains\Visits\Support\FollowUpSchedule;
 use App\Http\Controllers\Controller;
+use App\Support\AppTime;
 use App\Support\CommercialTerminology;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -216,7 +217,7 @@ class MapPointController extends Controller
                     ?? $createdHistory?->user?->name
                     ?? $lastVisit?->user?->name,
                 'campaign' => $lastVisit?->campaign?->name,
-                'last_visit_at' => $lastVisit?->visited_at?->timezone(config('app.timezone'))->format('d/m/Y H:i'),
+                'last_visit_at' => $lastVisit?->visited_at?->timezone(AppTime::zone())->format('d/m/Y H:i'),
                 'last_visit_relative' => $lastVisit?->visited_at?->diffForHumans(),
                 'last_visit_result' => $lastVisitResult,
                 'sold_product' => $soldProduct,
@@ -235,15 +236,15 @@ class MapPointController extends Controller
                     ? 'Retorno agendado'
                     : ($lastVisitResult ?: null),
                 'created_by' => $property->creator?->name ?? $createdHistory?->user?->name,
-                'created_at' => ($property->created_at ?? $createdHistory?->created_at)?->format('d/m/Y'),
-                'updated_at' => $property->updated_at?->format('d/m/Y H:i'),
+                'created_at' => AppTime::formatInstant($property->created_at ?? $createdHistory?->created_at, 'd/m/Y'),
+                'updated_at' => AppTime::formatInstant($property->updated_at),
                 'can_edit' => $user?->can('update', $property) ?? false,
                 'can_delete' => $user ? $this->canDeletePoint($user, $property) : false,
                 'can_adjust' => $user ? $this->canAdjustPoint($user, $property) : false,
                 'location_kind' => $locationKind,
                 'location_label' => $this->locationKindLabel($locationKind),
                 'history' => $property->histories->sortByDesc('id')->values()->map(fn ($h) => [
-                    'at' => $h->created_at?->format('d/m/Y H:i'),
+                    'at' => AppTime::formatInstant($h->created_at),
                     'user' => $h->user?->name,
                     'from' => $h->old_status
                         ? CommercialTerminology::propertyStatusLabel($h->old_status)

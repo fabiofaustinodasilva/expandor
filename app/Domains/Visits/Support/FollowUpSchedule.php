@@ -2,12 +2,16 @@
 
 namespace App\Domains\Visits\Support;
 
+use App\Support\AppTime;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 
 /**
  * Convenção sem migration: horário 00:00:00 em scheduled_at = data sem horário definido.
  * Compatível com retornos antigos criados só com type=date.
+ *
+ * scheduled_at armazena dígitos de parede no fuso operacional (APP_TIMEZONE),
+ * rotulados como UTC no app.timezone — ver AppTime::parseWall / formatWall.
  */
 final class FollowUpSchedule
 {
@@ -29,13 +33,13 @@ final class FollowUpSchedule
             return '—';
         }
 
-        $date = $at->timezone(config('app.timezone'))->format('d/m/Y');
+        $date = AppTime::formatWall($at, 'd/m/Y') ?? '—';
 
         if (! self::hasTime($at)) {
             return $date;
         }
 
-        return $date.' às '.$at->timezone(config('app.timezone'))->format('H:i');
+        return $date.' às '.(AppTime::formatWall($at, 'H:i') ?? '');
     }
 
     public static function timeHint(?CarbonInterface $at): ?string
@@ -53,10 +57,13 @@ final class FollowUpSchedule
             return false;
         }
 
-        $local = $at->timezone(config('app.timezone'));
+        $local = AppTime::wall($at);
+        if ($local === null) {
+            return false;
+        }
 
-        if (! self::hasTime($local)) {
-            return $local->toDateString() < now()->timezone(config('app.timezone'))->toDateString();
+        if (! self::hasTime($at)) {
+            return $local->toDateString() < AppTime::today();
         }
 
         return $local->isPast();
@@ -68,14 +75,7 @@ final class FollowUpSchedule
             return null;
         }
 
-        $date = trim($date);
-        $time = $time !== null ? trim($time) : '';
-
-        if ($time === '') {
-            return Carbon::parse($date, config('app.timezone'))->startOfDay();
-        }
-
-        return Carbon::parse($date.' '.$time, config('app.timezone'));
+        return AppTime::parseWall(trim($date), $time);
     }
 
     /**
@@ -83,24 +83,6 @@ final class FollowUpSchedule
      */
     public static function normalize(mixed $value): ?Carbon
     {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        if ($value instanceof CarbonInterface) {
-            return Carbon::instance($value)->timezone(config('app.timezone'));
-        }
-
-        $raw = trim((string) $value);
-
-        // Só data (YYYY-MM-DD) → meia-noite = sem horário
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) === 1) {
-            return Carbon::parse($raw, config('app.timezone'))->startOfDay();
-        }
-
-        $parsed = Carbon::parse($raw, config('app.timezone'));
-
-        // datetime-local / ISO sem segundos às vezes chega com 00:00 intencional
-        return $parsed;
+        return AppTime::parseWallValue($value);
     }
 }

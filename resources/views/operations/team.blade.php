@@ -124,7 +124,7 @@
                         <div class="team-activity-label">Última atividade</div>
                         <div class="team-activity-title">{{ $card['last_visit']['client'] }}</div>
                         <div class="team-activity-meta">
-                            {{ optional($card['last_visit']['at'])->timezone(config('app.timezone'))->format('H:i') ?? '—' }}
+                            {{ optional($card['last_visit']['at'])->timezone(\App\Support\AppTime::zone())->format('H:i') ?? '—' }}
                             · Visita
                             · {{ $card['last_visit']['result'] }}
                         </div>
@@ -136,7 +136,7 @@
                         <div class="team-activity-label">Última venda</div>
                         <div class="team-activity-title">{{ $card['last_sale']['client'] }}</div>
                         <div class="team-activity-meta">
-                            {{ optional($card['last_sale']['at'])->timezone(config('app.timezone'))->format('H:i') ?? '—' }}
+                            {{ optional($card['last_sale']['at'])->timezone(\App\Support\AppTime::zone())->format('H:i') ?? '—' }}
                             · {{ $card['last_sale']['product'] }}
                         </div>
                     </div>
@@ -357,7 +357,7 @@
 
         <dl class="team-facts" style="margin-top:.75rem;">
             <div><dt>Última atividade</dt><dd>{{ $performance['access_label'] ?? '—' }}</dd></div>
-            <div><dt>Último login</dt><dd>{{ $performance['last_login_at']?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—' }}</dd></div>
+            <div><dt>Último login</dt><dd>{{ $performance['last_login_at']?->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i') ?? '—' }}</dd></div>
         </dl>
 
         <h3 class="team-section-title">Resumo de hoje</h3>
@@ -373,7 +373,7 @@
             <div class="team-activity-block is-solid">
                 <div class="team-activity-title">{{ $performance['last_visit']['client'] }}</div>
                 <div class="team-activity-meta">
-                    {{ optional($performance['last_visit']['at'])->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—' }}
+                    {{ optional($performance['last_visit']['at'])->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i') ?? '—' }}
                     · {{ $performance['last_visit']['result'] }}
                 </div>
             </div>
@@ -384,7 +384,7 @@
             <div class="team-activity-block is-solid">
                 <div class="team-activity-title">{{ $performance['last_sale']['client'] }}</div>
                 <div class="team-activity-meta">
-                    {{ optional($performance['last_sale']['at'])->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—' }}
+                    {{ optional($performance['last_sale']['at'])->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i') ?? '—' }}
                     · {{ $performance['last_sale']['product'] }}
                     @if(!empty($performance['last_sale']['amount']))
                         · {{ $performance['last_sale']['amount'] }}
@@ -397,7 +397,7 @@
         <div class="team-timeline">
             @forelse(($performance['timeline'] ?? []) as $event)
                 <div class="team-timeline-item">
-                    <div class="team-timeline-time">{{ optional($event['at'])->timezone(config('app.timezone'))->format('H:i') ?? '—' }}</div>
+                    <div class="team-timeline-time">{{ optional($event['at'])->timezone(\App\Support\AppTime::zone())->format('H:i') ?? '—' }}</div>
                     <div>
                         <div class="team-timeline-kind">{{ $event['kind_label'] }}</div>
                         <div class="team-activity-title">{{ $event['client'] }}</div>
@@ -415,7 +415,7 @@
         <div class="team-timeline">
             @forelse(($performance['connections'] ?? []) as $conn)
                 <div class="team-timeline-item">
-                    <div class="team-timeline-time">{{ $conn['at']->timezone(config('app.timezone'))->format('d/m H:i') }}</div>
+                    <div class="team-timeline-time">{{ $conn['at']->timezone(\App\Support\AppTime::zone())->format('d/m H:i') }}</div>
                     <div class="team-activity-meta">{{ $conn['label'] }}</div>
                 </div>
             @empty

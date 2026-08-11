@@ -31,7 +31,7 @@
                     <label for="scheduled_date">Data do retorno *</label>
                     <input class="form-control" type="date" id="scheduled_date" name="scheduled_date"
                            value="{{ $oldDate ?: now()->addDay()->format('Y-m-d') }}"
-                           min="{{ now()->toDateString() }}" required>
+                           min="{{ \App\Support\AppTime::today() }}" required>
                     @error('scheduled_date')<div class="alert alert-error" style="margin-top:.5rem;">{{ $message }}</div>@enderror
                     @error('scheduled_at')<div class="alert alert-error" style="margin-top:.5rem;">{{ $message }}</div>@enderror
                 </div>

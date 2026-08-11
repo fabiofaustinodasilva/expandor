@@ -8,6 +8,7 @@ use App\Domains\Commissions\Services\SalesCommissionService;
 use App\Domains\Sales\Products\Models\Product;
 use App\Domains\Sales\Products\Services\ProductCatalogService;
 use App\Http\Controllers\Controller;
+use App\Support\AppTime;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -39,8 +40,8 @@ class SalesCommissionController extends Controller
         ];
 
         if (! $filters['date_from'] && ! $filters['date_to']) {
-            $filters['date_from'] = now()->subDays(30)->toDateString();
-            $filters['date_to'] = now()->toDateString();
+            $filters['date_from'] = AppTime::now()->subDays(30)->toDateString();
+            $filters['date_to'] = AppTime::today();
         }
 
         $repo = $this->commissions->repository();

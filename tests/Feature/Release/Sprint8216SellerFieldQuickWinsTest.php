@@ -12,14 +12,19 @@ use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Domains\Visits\Models\FollowUp;
 use App\Domains\Visits\Models\Visit;
+use App\Support\AppTime;
 use App\Support\ClientArea\ClientNav;
 use App\Tenancy\TenantContext;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\CreatesTenantUsers;
 use Tests\TestCase;
 
 /**
  * Sprint 8.2.16 — Quick wins do fluxo de campo (Retorno → FollowUp → Agenda + Hoje + Mais + Apresentar).
+ *
+ * Sprint 8.2.28: testes que dependem de "Hoje" congelam o relogio em America/Sao_Paulo
+ * (dia operacional). Nao assumir o calendario UTC do runner.
  */
 class Sprint8216SellerFieldQuickWinsTest extends TestCase
 {
@@ -30,6 +35,38 @@ class Sprint8216SellerFieldQuickWinsTest extends TestCase
     {
         parent::setUp();
         $this->seedFoundation();
+        config([
+            'app.timezone' => 'UTC',
+            'app.display_timezone' => 'America/Sao_Paulo',
+        ]);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
+
+    /**
+     * Congela "agora" no fuso operacional (default: fronteira 10/08 22:30 BRT = 11/08 01:30 UTC).
+     */
+    protected function freezeOperationalClock(string $localDateTime = '2026-08-10 22:30:00'): void
+    {
+        Carbon::setTestNow(Carbon::parse($localDateTime, 'America/Sao_Paulo'));
+        $this->assertSame('2026-08-10', AppTime::today(), 'Operational day must stay on BRT calendar');
+        $this->assertSame(
+            '2026-08-11 01:30:00',
+            now()->timezone('UTC')->format('Y-m-d H:i:s'),
+            'Frozen instant must be 01:30 UTC while still day 10 in BRT'
+        );
+    }
+
+    /**
+     * Wall-clock string for follow_ups.scheduled_at (business-local digits).
+     */
+    protected function wallOnOperationalDay(string $time = '10:00:00'): string
+    {
+        return AppTime::today().' '.$time;
     }
 
     public function test_return_later_requires_follow_up_at(): void
@@ -52,9 +89,11 @@ class Sprint8216SellerFieldQuickWinsTest extends TestCase
 
     public function test_saving_return_creates_follow_up_for_company(): void
     {
+        $this->freezeOperationalClock();
         [$seller, $city, $campaign] = $this->sellerWithCampaign('Empresa 8216 Create FU');
 
-        $when = now()->addDay()->setTime(18, 0)->format('Y-m-d H:i:s');
+        // Wall clock the seller typed (operational TZ digits) — not a UTC conversion.
+        $when = '2026-08-11 18:00:00';
 
         $response = $this->actingAs($seller)->postJson(route('map.first-approach'), [
             'city_id' => $city->id,
@@ -63,7 +102,7 @@ class Sprint8216SellerFieldQuickWinsTest extends TestCase
             'longitude' => -46.64,
             'status' => VisitStatus::RETURN_LATER->value,
             'campaign_id' => $campaign->id,
-            'notes' => 'Voltar às 18h',
+            'notes' => 'Voltar as 18h',
             'follow_up_at' => $when,
         ]);
 
@@ -77,22 +116,20 @@ class Sprint8216SellerFieldQuickWinsTest extends TestCase
         $this->assertSame($seller->company_id, $followUp->company_id);
         $this->assertSame($seller->id, $followUp->user_id);
         $this->assertSame(FollowUpStatus::PENDING, $followUp->status);
-        $this->assertSame('Voltar às 18h', $followUp->notes);
-        $this->assertSame(
-            now()->addDay()->setTime(18, 0)->format('Y-m-d H:i'),
-            $followUp->scheduled_at->timezone(config('app.timezone'))->format('Y-m-d H:i')
-        );
+        $this->assertSame('Voltar as 18h', $followUp->notes);
+        $this->assertSame('2026-08-11 18:00', $followUp->scheduled_at->format('Y-m-d H:i'));
     }
 
     public function test_return_appears_on_agenda(): void
     {
+        $this->freezeOperationalClock();
         [$seller, $city, $campaign] = $this->sellerWithCampaign('Empresa 8216 Agenda');
 
-        $when = now()->addDays(2)->toDateString();
+        $when = '2026-08-12';
 
         $this->actingAs($seller)->postJson(route('map.first-approach'), [
             'city_id' => $city->id,
-            'street' => 'Rua Agenda Visível',
+            'street' => 'Rua Agenda Visivel',
             'latitude' => -23.55,
             'longitude' => -46.63,
             'status' => VisitStatus::RETURN_LATER->value,
@@ -105,18 +142,33 @@ class Sprint8216SellerFieldQuickWinsTest extends TestCase
             ->get(route('follow-ups.index'))
             ->assertOk()
             ->assertSee('Nota agenda 8216')
-            ->assertSee('Rua Agenda Visível')
+            ->assertSee('Rua Agenda Visivel')
             ->assertSee('Pendente');
     }
 
     public function test_today_filter_shows_only_todays_returns(): void
     {
+        $this->freezeOperationalClock(); // 10/08 22:30 BRT — still operational day 10
+
         $company = $this->makeCompanyWithPlan('Empresa 8216 Hoje Filter');
         $seller = $this->makeUser($company, Role::SELLER, ['email' => 'seller-hoje@sprint8216.test']);
         app(TenantContext::class)->set($company, $seller);
 
-        $today = $this->makeFollowUpAt($company, $seller, now()->setTime(10, 0), 'Retorno HOJE 8216');
-        $future = $this->makeFollowUpAt($company, $seller, now()->addDays(3)->setTime(10, 0), 'Retorno FUTURO 8216');
+        $today = $this->makeFollowUpAt(
+            $company,
+            $seller,
+            $this->wallOnOperationalDay('10:00:00'),
+            'Retorno HOJE 8216'
+        );
+        $future = $this->makeFollowUpAt(
+            $company,
+            $seller,
+            '2026-08-13 10:00:00',
+            'Retorno FUTURO 8216'
+        );
+
+        $this->assertSame('2026-08-10', $today->scheduled_at->format('Y-m-d'));
+        $this->assertSame('2026-08-10', AppTime::today());
 
         $this->actingAs($seller)
             ->get(route('follow-ups.index', ['day' => 'today']))
@@ -135,13 +187,14 @@ class Sprint8216SellerFieldQuickWinsTest extends TestCase
 
     public function test_seller_cannot_see_other_tenant_return(): void
     {
+        $this->freezeOperationalClock();
         $companyA = $this->makeCompanyWithPlan('Empresa 8216 Tenant A');
         $companyB = $this->makeCompanyWithPlan('Empresa 8216 Tenant B');
         $sellerA = $this->makeUser($companyA, Role::SELLER, ['email' => 'a@sprint8216.test']);
         $sellerB = $this->makeUser($companyB, Role::SELLER, ['email' => 'b@sprint8216.test']);
 
         app(TenantContext::class)->set($companyA, $sellerA);
-        $followA = $this->makeFollowUpAt($companyA, $sellerA, now()->addDay(), 'Segredo tenant A');
+        $followA = $this->makeFollowUpAt($companyA, $sellerA, '2026-08-11 10:00:00', 'Segredo tenant A');
 
         app(TenantContext::class)->set($companyB, $sellerB);
         $this->actingAs($sellerB)
@@ -153,18 +206,20 @@ class Sprint8216SellerFieldQuickWinsTest extends TestCase
             ->post(route('follow-ups.complete', $followA), [
                 'status' => VisitStatus::NO_INTEREST->value,
             ])
-            ->assertNotFound(); // tenancy scope: recurso de outro tenant não resolve (404)
+            ->assertNotFound(); // tenancy scope: recurso de outro tenant nao resolve (404)
     }
 
     public function test_map_today_chip_uses_real_pending_count(): void
     {
+        $this->freezeOperationalClock(); // UTC already "tomorrow"; chip must still count day 10
+
         $company = $this->makeCompanyWithPlan('Empresa 8216 Chip');
         $seller = $this->makeUser($company, Role::SELLER, ['email' => 'chip@sprint8216.test']);
         app(TenantContext::class)->set($company, $seller);
 
-        $this->makeFollowUpAt($company, $seller, now()->setTime(9, 0), 'Chip hoje 1');
-        $this->makeFollowUpAt($company, $seller, now()->setTime(15, 0), 'Chip hoje 2');
-        $this->makeFollowUpAt($company, $seller, now()->addDays(5), 'Chip futuro');
+        $this->makeFollowUpAt($company, $seller, $this->wallOnOperationalDay('09:00:00'), 'Chip hoje 1');
+        $this->makeFollowUpAt($company, $seller, $this->wallOnOperationalDay('15:00:00'), 'Chip hoje 2');
+        $this->makeFollowUpAt($company, $seller, '2026-08-15 10:00:00', 'Chip futuro');
 
         $html = $this->actingAs($seller)->get(route('map.index'))->assertOk()->getContent();
 
@@ -185,7 +240,7 @@ class Sprint8216SellerFieldQuickWinsTest extends TestCase
             'name' => 'Plano Campo 8216',
             'status' => Product::STATUS_ACTIVE,
             'description' => 'Detalhe do produto',
-            'benefits' => ['Benefício A'],
+            'benefits' => ['Beneficio A'],
             'price' => 99.9,
         ]);
 

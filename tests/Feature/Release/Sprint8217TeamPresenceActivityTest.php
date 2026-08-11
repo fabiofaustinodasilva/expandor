@@ -153,7 +153,9 @@ class Sprint8217TeamPresenceActivityTest extends TestCase
 
     public function test_last_visit_sale_day_summary_and_timeline(): void
     {
-        Carbon::setTestNow(now()->setTime(16, 42));
+        // Freeze in operational TZ so "Visitas hoje" matches BRT day (not UTC runner calendar).
+        Carbon::setTestNow(Carbon::parse('2026-08-10 16:42:00', 'America/Sao_Paulo'));
+        config(['app.timezone' => 'UTC', 'app.display_timezone' => 'America/Sao_Paulo']);
 
         $company = $this->makeCompanyWithPlan('Empresa 8217 Activity');
         $admin = $this->makeUser($company, Role::ADMINISTRATOR, ['email' => 'admin-act@sprint8217.test']);
@@ -168,9 +170,10 @@ class Sprint8217TeamPresenceActivityTest extends TestCase
             'stock_control' => false,
         ]);
 
-        $this->makeVisit($company, $seller, VisitStatus::INTERESTED, 'Maria Aparecida', now()->setTime(16, 42));
-        $this->makeVisit($company, $seller, VisitStatus::NO_INTEREST, null, now()->setTime(15, 10));
-        $saleVisit = $this->makeContractVisit($company, $seller, $product, 'José Carlos', now()->setTime(15, 18));
+        // Instants stored as UTC walls (true UTC from BRT local times).
+        $this->makeVisit($company, $seller, VisitStatus::INTERESTED, 'Maria Aparecida', Carbon::parse('2026-08-10 16:42:00', 'America/Sao_Paulo')->utc());
+        $this->makeVisit($company, $seller, VisitStatus::NO_INTEREST, null, Carbon::parse('2026-08-10 15:10:00', 'America/Sao_Paulo')->utc());
+        $saleVisit = $this->makeContractVisit($company, $seller, $product, 'José Carlos', Carbon::parse('2026-08-10 15:18:00', 'America/Sao_Paulo')->utc());
 
         $html = $this->actingAs($admin)
             ->get(route('operations.team', ['member' => $seller->id]))

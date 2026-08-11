@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Operations\StoreTeamMemberRequest;
 use App\Http\Requests\Operations\UpdateTeamMemberRequest;
 use App\Http\Requests\Operations\UpdateTeamPermissionsRequest;
+use App\Support\AppTime;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,7 +33,7 @@ class TeamController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $today = now()->toDateString();
+        $today = AppTime::today();
         $dayMetrics = $this->metrics->metrics(new AnalyticsFiltersDTO(
             date_from: $today,
             date_to: $today,
@@ -223,8 +224,8 @@ class TeamController extends Controller
      */
     protected function buildPerformance(User $user, array $summary): array
     {
-        $today = now()->toDateString();
-        $weekStart = now()->startOfWeek()->toDateString();
+        $today = AppTime::today();
+        $weekStart = AppTime::now()->startOfWeek()->toDateString();
 
         $todayMetrics = $this->metrics->metrics(new AnalyticsFiltersDTO(
             date_from: $today,

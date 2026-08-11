@@ -24,7 +24,7 @@
             <h2 style="margin-top:0; font-size:1.05rem;">Dados da visita</h2>
             <p><strong>Status:</strong> {{ $visit->status ? \App\Support\CommercialTerminology::visitResult($visit->status) : '—' }}</p>
             <p><strong>Vendedor:</strong> {{ $visit->user?->name }}</p>
-            <p><strong>Visitado em:</strong> {{ $visit->visited_at?->format('d/m/Y H:i') }}</p>
+            <p><strong>Visitado em:</strong> {{ $visit->visited_at ? \App\Support\AppTime::formatInstant($visit->visited_at) : null }}</p>
             <p><strong>Observações:</strong> {{ $visit->notes ?: '—' }}</p>
             <p><strong>Coordenadas:</strong>
                 {{ $visit->latitude ?: '—' }}, {{ $visit->longitude ?: '—' }}
@@ -77,7 +77,7 @@
             <tbody>
             @forelse($visit->property?->histories ?? [] as $history)
                 <tr>
-                    <td>{{ $history->created_at?->format('d/m/Y H:i') }}</td>
+                    <td>{{ $history->created_at ? \App\Support\AppTime::formatInstant($history->created_at) : null }}</td>
                     <td>{{ $history->old_status ? \App\Support\CommercialTerminology::propertyStatusLabel($history->old_status) : '—' }}</td>
                     <td>{{ $history->new_status ? \App\Support\CommercialTerminology::propertyStatusLabel($history->new_status) : '—' }}</td>
                     <td>{{ $history->description ?: '—' }}</td>

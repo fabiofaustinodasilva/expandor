@@ -159,7 +159,7 @@
                     <div class="grid grid-2" style="margin-bottom:.65rem;">
                         <div class="form-group" style="margin:0;">
                             <label for="agenda-follow-date">Data do retorno *</label>
-                            <input class="form-control" type="date" id="agenda-follow-date" min="{{ now()->toDateString() }}" required>
+                            <input class="form-control" type="date" id="agenda-follow-date" min="{{ \App\Support\AppTime::today() }}" required>
                         </div>
                         <div class="form-group" style="margin:0;">
                             <label for="agenda-follow-time">Horário <span style="font-weight:400; color:#64748b;">(opcional)</span></label>

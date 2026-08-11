@@ -13,6 +13,7 @@ use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Sales\Properties\Models\PropertyHistory;
 use App\Domains\Sales\Residents\Enums\ResidentStatus;
 use App\Domains\Sales\Residents\Models\Resident;
+use App\Support\AppTime;
 use App\Support\CommercialTerminology;
 use Illuminate\Support\Collection;
 
@@ -143,7 +144,7 @@ class MapQueryService
             resident_phone: $resident?->phone,
             resident_whatsapp: $resident?->whatsapp,
             resident_document: $resident?->document,
-            updated_at: $property->updated_at?->timezone(config('app.timezone'))->format('d/m/Y H:i'),
+            updated_at: $property->updated_at?->timezone(AppTime::zone())->format('d/m/Y H:i'),
             location_kind: $locationKind,
             commercial_group: $group->value,
             owner_user_id: $property->created_by ? (int) $property->created_by : null,

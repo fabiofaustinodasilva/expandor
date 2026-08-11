@@ -8,6 +8,7 @@ use App\Domains\Sales\Models\Sale;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Domains\Visits\Models\Visit;
 use App\Domains\Visits\Support\VisitHistoryPresenter;
+use App\Support\AppTime;
 use App\Support\CommercialTerminology;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -236,7 +237,7 @@ class TeamPresenceActivityService
                 continue;
             }
             $events[] = [
-                'at' => $log->created_at->timezone(config('app.timezone')),
+                'at' => AppTime::local($log->created_at),
                 'label' => 'Sessão iniciada',
                 'kind' => 'login',
             ];
@@ -244,7 +245,7 @@ class TeamPresenceActivityService
 
         if ($user->last_seen_at !== null) {
             $events[] = [
-                'at' => $user->last_seen_at->timezone(config('app.timezone')),
+                'at' => AppTime::local($user->last_seen_at),
                 'label' => 'Última atividade',
                 'kind' => 'last_seen',
             ];
@@ -280,11 +281,15 @@ class TeamPresenceActivityService
             return 'Sem acesso registrado';
         }
 
-        $local = $ref->timezone(config('app.timezone'));
-        if ($local->isToday()) {
+        $local = AppTime::local($ref);
+        if ($local === null) {
+            return 'Sem acesso registrado';
+        }
+
+        if (AppTime::isTodayInstant($ref)) {
             return 'Último acesso hoje às '.$local->format('H:i');
         }
-        if ($local->isYesterday()) {
+        if (AppTime::isYesterdayInstant($ref)) {
             return 'Último acesso ontem às '.$local->format('H:i');
         }
 

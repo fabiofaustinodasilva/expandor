@@ -9,6 +9,7 @@ use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Models\FollowUp;
 use App\Domains\Visits\Models\Visit;
+use App\Support\AppTime;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -117,7 +118,7 @@ class SalesAppRepository
                 ->count(),
             'visits_today' => Visit::query()
                 ->where('user_id', $seller->id)
-                ->whereDate('visited_at', now()->toDateString())
+                ->whereBetween('visited_at', AppTime::dayBoundsUtc())
                 ->count(),
             'pending_follow_ups' => FollowUp::query()
                 ->where('user_id', $seller->id)

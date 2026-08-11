@@ -124,7 +124,7 @@
             </p>
 
             @if($expiresAt)
-                <p class="pix-hint">Válido até {{ $expiresAt->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</p>
+                <p class="pix-hint">Válido até {{ $expiresAt->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i') }}</p>
             @endif
 
             <div class="pix-actions">

@@ -12,6 +12,7 @@ use App\Domains\Sales\Residents\Models\Resident;
 use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Domains\Visits\Support\FollowUpSchedule;
+use App\Support\AppTime;
 use App\Support\CommercialTerminology;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -90,7 +91,7 @@ class CustomerQueryService
             'address' => $address?->label() ?: '—',
             'neighborhood' => $address?->neighborhood,
             'city' => $address?->city?->name,
-            'last_visit_at' => $lastVisit?->visited_at?->timezone(config('app.timezone'))->format('d/m/Y H:i'),
+            'last_visit_at' => $lastVisit?->visited_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i'),
             'situation' => CommercialTerminology::customerSituation(
                 $status,
                 $lastVisit?->status instanceof VisitStatus ? $lastVisit->status : null
@@ -145,7 +146,7 @@ class CustomerQueryService
                         'quantity' => (int) $item->quantity,
                         'unit_price' => (float) $item->unit_price,
                         'line_total' => (float) $item->line_total,
-                        'date' => $visit->visited_at?->timezone(config('app.timezone'))->format('d/m/Y'),
+                        'date' => $visit->visited_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y'),
                     ];
                 }
             } elseif ($visit->plan || $visit->product) {
@@ -154,7 +155,7 @@ class CustomerQueryService
                     'quantity' => 1,
                     'unit_price' => null,
                     'line_total' => null,
-                    'date' => $visit->visited_at?->timezone(config('app.timezone'))->format('d/m/Y'),
+                    'date' => $visit->visited_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y'),
                 ];
             }
         }
@@ -185,11 +186,11 @@ class CustomerQueryService
                 $lastVisit?->status instanceof VisitStatus ? $lastVisit->status : null
             ),
             'status_label' => CommercialTerminology::propertyStatusLabel($status),
-            'first_visit_at' => $firstVisit?->visited_at?->timezone(config('app.timezone'))->format('d/m/Y H:i'),
-            'last_visit_at' => $lastVisit?->visited_at?->timezone(config('app.timezone'))->format('d/m/Y H:i'),
+            'first_visit_at' => $firstVisit?->visited_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i'),
+            'last_visit_at' => $lastVisit?->visited_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i'),
             'seller' => $property->creator?->name ?? $lastVisit?->user?->name ?? '—',
             'created_by' => $property->creator?->name,
-            'updated_at' => $property->updated_at?->timezone(config('app.timezone'))->format('d/m/Y H:i'),
+            'updated_at' => $property->updated_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i'),
             'campaign' => $lastVisit?->campaign?->name,
             'timeline' => $this->buildTimeline($property, $visits),
             'products' => $products,
@@ -197,7 +198,7 @@ class CustomerQueryService
                 'product_name' => $c->product_name,
                 'amount' => (float) $c->commission_amount,
                 'status' => $c->status?->label() ?? (string) $c->status,
-                'earned_at' => $c->earned_at?->timezone(config('app.timezone'))->format('d/m/Y'),
+                'earned_at' => $c->earned_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y'),
             ])->all(),
             'next_follow_up' => $pendingFollowUp ? [
                 'at' => FollowUpSchedule::label($pendingFollowUp->scheduled_at),
@@ -207,7 +208,7 @@ class CustomerQueryService
             ] : null,
             'visits' => $visits->map(fn ($visit) => [
                 'id' => $visit->id,
-                'at' => $visit->visited_at?->timezone(config('app.timezone'))->format('d/m/Y H:i'),
+                'at' => $visit->visited_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i'),
                 'result' => CommercialTerminology::visitResult($visit->status),
                 'notes' => $visit->notes,
                 'seller' => $visit->user?->name,
@@ -336,7 +337,7 @@ class CustomerQueryService
         foreach ($property->histories as $history) {
             $events[] = [
                 'sort' => $history->created_at?->timestamp ?? 0,
-                'at' => $history->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—',
+                'at' => $history->created_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i') ?? '—',
                 'title' => $history->description
                     ?: trim(
                         ($history->old_status ? CommercialTerminology::propertyStatusLabel($history->old_status) : '')
@@ -355,7 +356,7 @@ class CustomerQueryService
 
             $events[] = [
                 'sort' => $visit->visited_at?->timestamp ?? 0,
-                'at' => $visit->visited_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—',
+                'at' => $visit->visited_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i') ?? '—',
                 'title' => CommercialTerminology::visitResult($visit->status),
                 'detail' => trim(implode(' · ', array_filter([
                     $visit->user?->name,

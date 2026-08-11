@@ -34,7 +34,7 @@
             <tbody>
             @forelse($visits as $visit)
                 <tr>
-                    <td>{{ $visit->visited_at?->format('d/m/Y H:i') }}</td>
+                    <td>{{ $visit->visited_at ? \App\Support\AppTime::formatInstant($visit->visited_at) : null }}</td>
                     <td>{{ $visit->property?->address?->label() ?: '—' }}</td>
                     <td>{{ $visit->user?->name }}</td>
                     <td><span class="badge">{{ $visit->status ? \App\Support\CommercialTerminology::visitResult($visit->status) : '—' }}</span></td>

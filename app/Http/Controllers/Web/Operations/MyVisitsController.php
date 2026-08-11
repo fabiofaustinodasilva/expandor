@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\Operations;
 use App\Domains\Visits\Repositories\VisitRepository;
 use App\Domains\Visits\Support\VisitHistoryPresenter;
 use App\Http\Controllers\Controller;
+use App\Support\AppTime;
 use App\Support\CommercialTerminology;
 use Illuminate\View\View;
 
@@ -55,8 +56,8 @@ class MyVisitsController extends Controller
 
             return [
                 'id' => $visit->id,
-                'visited_at' => $visit->visited_at?->format('d/m H:i') ?? '—',
-                'visited_at_full' => $visit->visited_at?->format('d/m/Y H:i') ?? '—',
+                'visited_at' => AppTime::formatInstant($visit->visited_at, 'd/m H:i') ?? '—',
+                'visited_at_full' => AppTime::formatInstant($visit->visited_at) ?? '—',
                 'client' => $clientTitle,
                 'address' => $addressLabel,
                 'phone' => $phoneDisplay,

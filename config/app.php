@@ -65,7 +65,20 @@ return [
     |
     */
 
+    // Storage / now() wall clocks stay UTC. Do not flip this to APP_TIMEZONE
+    // without a data migration — historical instants are UTC-labeled strings.
     'timezone' => 'UTC',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Display / business timezone (Sprint 8.2.28)
+    |--------------------------------------------------------------------------
+    |
+    | Civil day boundaries ("Hoje"), relative labels, and user-facing clocks
+    | use this IANA zone. Prefer America/Sao_Paulo over a fixed UTC-3 offset.
+    |
+    */
+    'display_timezone' => env('APP_TIMEZONE', 'America/Sao_Paulo'),
 
     /*
     |--------------------------------------------------------------------------

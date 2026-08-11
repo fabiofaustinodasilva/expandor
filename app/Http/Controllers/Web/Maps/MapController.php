@@ -17,6 +17,7 @@ use App\Domains\Sales\Territory\Repositories\TerritoryRepository;
 use App\Domains\Visits\Actions\RegisterFirstApproachAction;
 use App\Domains\Visits\Repositories\VisitRepository;
 use App\Http\Controllers\Controller;
+use App\Support\AppTime;
 use App\Support\CommercialTerminology;
 use Illuminate\View\View;
 
@@ -40,7 +41,7 @@ class MapController extends Controller
 
         $user = auth()->user();
         $user?->loadMissing(['role.permissions', 'permissionOverrides', 'company']);
-        $today = now()->toDateString();
+        $today = AppTime::today();
         $isFieldSeller = $user?->role?->slug === \App\Domains\Company\Models\Role::SELLER;
 
         $forceFailure = app()->environment(['local', 'testing'])

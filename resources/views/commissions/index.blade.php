@@ -144,7 +144,7 @@
                     <td data-label="Valor da venda">{{ $row->historicalSaleAmountLabel() }}</td>
                     <td data-label="Comissão (R$)">R$ {{ number_format((float) $row->commission_amount, 2, ',', '.') }}</td>
                     <td data-label="Status"><span class="comm-status {{ $statusClass }}">{{ $row->status->label() }}</span></td>
-                    <td data-label="Data">{{ optional($row->earned_at)->format('d/m/Y') }}</td>
+                    <td data-label="Data">{{ \App\Support\AppTime::formatInstant($row->earned_at, 'd/m/Y') ?? '—' }}</td>
                     @if($isManager)
                         <td data-label="Ações" style="white-space:nowrap;">
                             @if($row->status->value === 'pending')

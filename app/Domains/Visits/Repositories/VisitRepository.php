@@ -9,6 +9,7 @@ use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Models\FollowUp;
 use App\Domains\Visits\Models\Visit;
+use App\Support\AppTime;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
@@ -50,8 +51,7 @@ class VisitRepository
         }
 
         if ($dayFilter === 'today') {
-            $today = now()->timezone(config('app.timezone'))->toDateString();
-            $query->whereDate('scheduled_at', $today);
+            $query->whereDate('scheduled_at', AppTime::today());
         }
 
         return $query->paginate($perPage)->withQueryString();
@@ -64,7 +64,7 @@ class VisitRepository
     {
         $query = FollowUp::query()
             ->where('status', FollowUpStatus::PENDING)
-            ->whereDate('scheduled_at', now()->timezone(config('app.timezone'))->toDateString());
+            ->whereDate('scheduled_at', AppTime::today());
 
         if ($this->scopesAgendaToOwnFollowUps($viewer)) {
             $query->where('user_id', $viewer->id);

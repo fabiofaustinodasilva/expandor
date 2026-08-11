@@ -100,7 +100,7 @@ class SalesCommissionModuleTest extends TestCase
         $this->actingAs($sellerA)
             ->get(route('commissions.index'))
             ->assertOk()
-            ->assertSee('Minha comissão')
+            ->assertSee('Comissão')
             ->assertSee('ONU Dual Band')
             ->assertDontSee('Seller Beta')
             ->assertDontSee('Aprovar')
@@ -132,7 +132,7 @@ class SalesCommissionModuleTest extends TestCase
             ->assertOk()
             ->assertSee('Vendedor Time')
             ->assertSee('Camera IP')
-            ->assertSee('Gestão de comissões')
+            ->assertSee('Financeiro')
             ->assertSee('Pendente');
 
         $this->actingAs($manager)

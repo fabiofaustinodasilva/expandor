@@ -13,6 +13,7 @@ use App\Domains\Onboarding\Services\SaasOnboardingService;
 use App\Domains\Platform\Services\ActivationIntelligenceService;
 use App\Domains\Sales\Territory\Repositories\TerritoryRepository;
 use App\Http\Controllers\Controller;
+use App\Support\AppTime;
 use App\Support\CommercialTerminology;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -114,11 +115,11 @@ class DashboardController extends Controller
      */
     protected function periodRange(string $period): array
     {
-        $to = now()->toDateString();
+        $to = AppTime::today();
 
         return match ($period) {
-            '7d' => [now()->subDays(6)->toDateString(), $to],
-            '30d' => [now()->subDays(29)->toDateString(), $to],
+            '7d' => [AppTime::now()->subDays(6)->toDateString(), $to],
+            '30d' => [AppTime::now()->subDays(29)->toDateString(), $to],
             default => [$to, $to],
         };
     }
@@ -129,14 +130,14 @@ class DashboardController extends Controller
             return '';
         }
 
-        $today = now()->toDateString();
+        $today = AppTime::today();
         if ($from === $today && $to === $today) {
             return 'today';
         }
-        if ($from === now()->subDays(6)->toDateString() && $to === $today) {
+        if ($from === AppTime::now()->subDays(6)->toDateString() && $to === $today) {
             return '7d';
         }
-        if ($from === now()->subDays(29)->toDateString() && $to === $today) {
+        if ($from === AppTime::now()->subDays(29)->toDateString() && $to === $today) {
             return '30d';
         }
 

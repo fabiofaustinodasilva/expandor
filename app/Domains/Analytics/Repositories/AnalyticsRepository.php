@@ -10,6 +10,7 @@ use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Domains\Visits\Models\FollowUp;
 use App\Domains\Visits\Models\Visit;
+use App\Support\AppTime;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -42,11 +43,17 @@ class AnalyticsRepository
             )
             ->when(
                 $filters->date_from,
-                fn (Builder $q) => $q->whereDate('created_at', '>=', $filters->date_from)
+                function (Builder $q) use ($filters): void {
+                    [$start] = AppTime::dayBoundsUtc($filters->date_from);
+                    $q->where('created_at', '>=', $start);
+                }
             )
             ->when(
                 $filters->date_to,
-                fn (Builder $q) => $q->whereDate('created_at', '<=', $filters->date_to)
+                function (Builder $q) use ($filters): void {
+                    [, $end] = AppTime::dayBoundsUtc($filters->date_to);
+                    $q->where('created_at', '<=', $end);
+                }
             )
             ->count();
     }
@@ -236,13 +243,14 @@ class AnalyticsRepository
      */
     public function sellersWithoutVisitsToday(?int $companyId = null): array
     {
-        $today = now()->toDateString();
+        $today = AppTime::today();
+        [$start, $end] = AppTime::dayBoundsUtc($today);
 
         return User::query()
             ->when($companyId, fn (Builder $q) => $q->where('company_id', $companyId))
             ->where('status', User::STATUS_ACTIVE)
             ->whereHas('role', fn (Builder $q) => $q->where('slug', Role::SELLER))
-            ->whereDoesntHave('visits', fn (Builder $q) => $q->whereDate('visited_at', $today))
+            ->whereDoesntHave('visits', fn (Builder $q) => $q->whereBetween('visited_at', [$start, $end]))
             ->orderBy('name')
             ->get(['id', 'name'])
             ->map(fn (User $user) => [
@@ -294,11 +302,17 @@ class AnalyticsRepository
             )
             ->when(
                 $filters->date_from,
-                fn (Builder $q) => $q->whereDate('visits.visited_at', '>=', $filters->date_from)
+                function (Builder $q) use ($filters): void {
+                    [$start] = AppTime::dayBoundsUtc($filters->date_from);
+                    $q->where('visits.visited_at', '>=', $start);
+                }
             )
             ->when(
                 $filters->date_to,
-                fn (Builder $q) => $q->whereDate('visits.visited_at', '<=', $filters->date_to)
+                function (Builder $q) use ($filters): void {
+                    [, $end] = AppTime::dayBoundsUtc($filters->date_to);
+                    $q->where('visits.visited_at', '<=', $end);
+                }
             )
             ->when(
                 $filters->city_id || $filters->sector_id,

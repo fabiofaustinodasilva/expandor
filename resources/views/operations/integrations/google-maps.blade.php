@@ -55,7 +55,7 @@
                         <div class="header-meta" style="margin-top:.5rem;">API Key: <code>{{ $maskedKey }}</code></div>
                     @endif
                     @if($integration?->last_tested_at)
-                        <div class="header-meta">Último teste: {{ $integration->last_tested_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</div>
+                        <div class="header-meta">Último teste: {{ $integration->last_tested_at->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i') }}</div>
                     @endif
                 </div>
             </div>
