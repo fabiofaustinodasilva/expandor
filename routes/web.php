@@ -340,6 +340,7 @@ Route::middleware([
 
     Route::get('/clientes', [\App\Http\Controllers\Web\Customers\CustomerController::class, 'index'])->name('customers.index');
     Route::get('/clientes/{property}', [\App\Http\Controllers\Web\Customers\CustomerController::class, 'show'])->name('customers.show');
+    Route::delete('/clientes/{property}', [\App\Http\Controllers\Web\Customers\CustomerController::class, 'destroy'])->name('customers.destroy');
 
     Route::get('/comissoes', [SalesCommissionController::class, 'index'])->name('commissions.index');
     Route::post('/comissoes/{commission}/aprovar', [SalesCommissionController::class, 'approve'])->name('commissions.approve');

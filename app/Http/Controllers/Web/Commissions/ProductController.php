@@ -28,13 +28,22 @@ class ProductController extends Controller
 
         $dateFrom = $request->input('date_from', now()->subDays(30)->toDateString());
         $dateTo = $request->input('date_to', now()->toDateString());
+        $statusFilter = $request->input('status', Product::STATUS_ACTIVE);
+        if (! in_array($statusFilter, [Product::STATUS_ACTIVE, Product::STATUS_INACTIVE, 'all'], true)) {
+            $statusFilter = Product::STATUS_ACTIVE;
+        }
 
         $products = Product::query()
             ->withCount([
                 'salesCommissions as sold_in_period' => fn ($q) => $q
                     ->whereDate('earned_at', '>=', $dateFrom)
                     ->whereDate('earned_at', '<=', $dateTo),
+                'salesCommissions',
+                'saleItems',
+                'sales',
+                'visits',
             ])
+            ->when($statusFilter !== 'all', fn ($q) => $q->where('status', $statusFilter))
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
@@ -53,6 +62,7 @@ class ProductController extends Controller
             'recentMovements' => $recentMovements,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
+            'statusFilter' => $statusFilter,
         ]);
     }
 

@@ -36,7 +36,7 @@ class CustomerQueryService
                     ->orderByDesc('is_primary_contact')
                     ->orderBy('name'),
                 'visits' => fn ($v) => $v
-                    ->with(['user:id,name', 'campaign:id,name'])
+                    ->with(['user:id,name', 'campaign:id,name', 'sale:id,visit_id,negotiated_amount'])
                     ->orderByDesc('visited_at'),
             ])
             ->orderByDesc('updated_at');
@@ -77,11 +77,14 @@ class CustomerQueryService
     {
         $resident = $this->primaryResident($property);
         $lastVisit = $property->visits->first();
+        $lastSale = $property->visits->first(fn ($visit) => $visit->sale !== null)?->sale;
         $status = $property->status instanceof PropertyStatus
             ? $property->status
             : PropertyStatus::from((string) $property->status);
 
         $address = $property->address;
+        $lastSaleAmount = $lastSale?->negotiated_amount;
+        $hasHistory = $property->visits->isNotEmpty();
 
         return [
             'id' => $property->id,
@@ -91,7 +94,13 @@ class CustomerQueryService
             'address' => $address?->label() ?: '—',
             'neighborhood' => $address?->neighborhood,
             'city' => $address?->city?->name,
-            'last_visit_at' => $lastVisit?->visited_at?->timezone(\App\Support\AppTime::zone())->format('d/m/Y H:i'),
+            'last_visit_at' => $lastVisit?->visited_at
+                ? AppTime::formatInstant($lastVisit->visited_at, 'd/m/Y H:i')
+                : null,
+            'last_sale' => $lastSaleAmount !== null
+                ? 'R$ '.number_format((float) $lastSaleAmount, 2, ',', '.')
+                : '—',
+            'has_history' => $hasHistory,
             'situation' => CommercialTerminology::customerSituation(
                 $status,
                 $lastVisit?->status instanceof VisitStatus ? $lastVisit->status : null

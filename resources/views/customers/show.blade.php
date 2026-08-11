@@ -9,7 +9,18 @@
         eyebrow="Cliente"
     >
         <x-client.secondary-button :href="route('customers.index')">Voltar</x-client.secondary-button>
+        @if(!empty($dossier['can_delete']))
+            <form method="POST" action="{{ route('customers.destroy', $dossier['id']) }}" style="display:inline;"
+                  onsubmit="return confirm('Excluir cliente?\nEsta ação só é permitida para clientes sem histórico.');">
+                @csrf
+                @method('DELETE')
+                <button class="btn btn-danger" type="submit">Excluir</button>
+            </form>
+        @endif
     </x-client.page-header>
+    @if(!empty($dossier['delete_blocked']))
+        <p class="header-meta" style="margin:-0.35rem 0 1rem;">{{ $dossier['delete_blocked_message'] }}</p>
+    @endif
     <p class="header-meta" style="margin:-0.5rem 0 1rem;">
         <span class="badge">{{ $dossier['situation'] }}</span>
     </p>

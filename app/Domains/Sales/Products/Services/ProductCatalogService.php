@@ -141,7 +141,7 @@ class ProductCatalogService
     {
         if ($product->hasLinkedSales()) {
             throw ValidationException::withMessages([
-                'product' => 'Produto com vendas vinculadas não pode ser excluído. Inative-o.',
+                'product' => 'Produto possui histórico de vendas e não pode ser excluído. Desative-o para tirá-lo de uso futuro.',
             ]);
         }
 

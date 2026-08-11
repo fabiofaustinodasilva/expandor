@@ -38,6 +38,19 @@ class CustomerPolicy
         return $user->hasPermission('customers.manage');
     }
 
+    public function delete(User $user, Property $property): bool
+    {
+        if (! $this->manage($user)) {
+            return false;
+        }
+
+        if ((int) $user->company_id !== (int) $property->company_id) {
+            return false;
+        }
+
+        return $user->role?->slug !== Role::SELLER;
+    }
+
     public function sellerOwns(User $user, Property $property): bool
     {
         if ((int) $property->created_by === (int) $user->id) {

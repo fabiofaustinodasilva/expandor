@@ -30,52 +30,64 @@
 
     @if($customers->isEmpty())
         <div class="card">
-            <div class="empty-friendly">
-                <div style="font-weight:700; font-size:1.05rem;">
-                    {{ $q !== '' ? 'Nenhum cliente encontrado' : 'Ainda não há clientes' }}
-                </div>
-                <p>
-                    {{ $q !== ''
-                        ? 'Tente outro termo ou limpe a busca.'
-                        : 'Registre atendimentos no mapa — cada residência visitada aparece aqui.' }}
-                </p>
-                <a class="btn btn-primary" href="{{ route('map.index') }}">Ir para o mapa</a>
-            </div>
+            <x-client.empty-state
+                :title="$q !== '' ? 'Nenhum cliente encontrado' : 'Ainda não há clientes'"
+                :description="$q !== '' ? 'Tente outro termo ou limpe a busca.' : 'Registre atendimentos no mapa — cada residência visitada aparece aqui.'"
+                action-href="{{ route('map.index') }}"
+                action-label="Ir para o mapa"
+                icon="users"
+            />
         </div>
     @else
-        <div class="customer-grid" style="display:grid; gap:.85rem; grid-template-columns:repeat(auto-fill,minmax(280px,1fr));">
-            @foreach($customers as $card)
-                <a href="{{ $card['show_url'] }}" class="card customer-card"
-                   style="padding:1rem 1.05rem; text-decoration:none; color:inherit; display:block; transition:.15s ease;">
-                    <div style="display:flex; justify-content:space-between; gap:.5rem; align-items:flex-start; margin-bottom:.45rem;">
-                        <h2 style="margin:0; font-size:1.05rem; font-weight:700; line-height:1.3;">{{ $card['name'] }}</h2>
-                        <span class="badge" style="white-space:nowrap;">{{ $card['situation'] }}</span>
-                    </div>
-                    @if($card['phone'] || $card['whatsapp'])
-                        <p class="header-meta" style="margin:0 0 .25rem;">
-                            {{ $card['phone'] ?: $card['whatsapp'] }}
-                            @if($card['whatsapp'] && $card['phone'] && $card['whatsapp'] !== $card['phone'])
-                                · WhatsApp {{ $card['whatsapp'] }}
+        <div class="card client-data-table customer-list">
+            <table class="table client-data-table--responsive" data-customer-list="1">
+                <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Telefone</th>
+                    <th>Local / Endereço</th>
+                    <th>Status</th>
+                    <th>Última visita</th>
+                    <th>Última venda</th>
+                    <th>Ações</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach($customers as $card)
+                    <tr>
+                        <td data-label="Cliente">
+                            <strong>{{ $card['name'] }}</strong>
+                        </td>
+                        <td data-label="Telefone">{{ $card['phone'] ?: $card['whatsapp'] ?: '—' }}</td>
+                        <td data-label="Local / Endereço">
+                            {{ $card['address'] }}
+                            @if($card['neighborhood'] || $card['city'])
+                                <div class="header-meta">{{ implode(' · ', array_filter([$card['neighborhood'], $card['city']])) }}</div>
                             @endif
-                        </p>
-                    @endif
-                    <p class="header-meta" style="margin:0 0 .2rem;">{{ $card['address'] }}</p>
-                    @if($card['neighborhood'] || $card['city'])
-                        <p class="header-meta" style="margin:0 0 .45rem;">
-                            {{ implode(' · ', array_filter([$card['neighborhood'], $card['city']])) }}
-                        </p>
-                    @endif
-                    <div style="display:flex; justify-content:space-between; gap:.5rem; flex-wrap:wrap; margin-top:.55rem; font-size:.82rem; color:#94a3b8;">
-                        <span>Última visita: <strong style="color:#cbd5e1; font-weight:600;">{{ $card['last_visit_at'] ?: '—' }}</strong></span>
-                        <span>{{ $card['seller'] }}</span>
-                    </div>
-                </a>
-            @endforeach
+                        </td>
+                        <td data-label="Status"><x-client.status-badge>{{ $card['situation'] }}</x-client.status-badge></td>
+                        <td data-label="Última visita">{{ $card['last_visit_at'] ?: '—' }}</td>
+                        <td class="table-num" data-label="Última venda">{{ $card['last_sale'] }}</td>
+                        <td data-label="Ações">
+                            <div class="actions">
+                                <a class="btn btn-ghost" href="{{ $card['show_url'] }}">Ver</a>
+                                @if(!empty($card['can_delete']))
+                                    <form method="POST" action="{{ route('customers.destroy', $card['id']) }}" style="display:inline;"
+                                          onsubmit="return confirm('Excluir cliente?\nEsta ação só é permitida para clientes sem histórico.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="btn btn-danger" type="submit">Excluir</button>
+                                    </form>
+                                @elseif(!empty($card['delete_blocked']))
+                                    <span class="header-meta" title="{{ \App\Domains\Customers\Services\CustomerDeletionService::BLOCKED_MESSAGE }}">Excluir indisponível</span>
+                                @endif
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
         </div>
         <x-client.pagination-bar :paginator="$paginator" />
     @endif
-
-    <style>
-        .customer-card:hover { border-color: rgba(56,189,248,.45); background:#0f172a; }
-    </style>
 @endsection

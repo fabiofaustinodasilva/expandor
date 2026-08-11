@@ -13,10 +13,10 @@
     @if($products->isEmpty())
         <div class="card" style="margin-bottom:1.25rem;">
             <x-client.empty-state
-                title="Nenhum produto cadastrado"
-                description="Cadastre o primeiro produto para disponibilizá-lo aos vendedores."
-                action-href="{{ route('commissions.products.create') }}"
-                action-label="Cadastrar produto"
+                :title="$statusFilter === 'inactive' ? 'Nenhum produto desativado' : ($statusFilter === 'all' ? 'Nenhum produto cadastrado' : 'Nenhum produto ativo')"
+                :description="$statusFilter === 'inactive' ? 'Produtos desativados aparecem aqui. Eles saem do catálogo de venda, mas o histórico permanece.' : 'Cadastre o primeiro produto para disponibilizá-lo aos vendedores.'"
+                :action-href="$statusFilter === 'active' ? route('commissions.products.create') : null"
+                :action-label="$statusFilter === 'active' ? 'Cadastrar produto' : null"
                 icon="package"
             />
         </div>
@@ -32,6 +32,14 @@
     @endif
 
     <form method="GET" class="card" style="margin-bottom:1rem;display:flex;gap:.75rem;flex-wrap:wrap;align-items:end;">
+        <div>
+            <label for="product-status">Exibir</label>
+            <select class="form-control" id="product-status" name="status">
+                <option value="active" @selected($statusFilter === 'active')>Ativos</option>
+                <option value="inactive" @selected($statusFilter === 'inactive')>Desativados</option>
+                <option value="all" @selected($statusFilter === 'all')>Todos</option>
+            </select>
+        </div>
         <div>
             <label for="date_from">Vendidos de</label>
             <input class="form-control" type="date" id="date_from" name="date_from" value="{{ $dateFrom }}">
@@ -75,7 +83,11 @@
                     <td data-label="Categoria">{{ $product->category ?: '—' }}</td>
                     <td class="table-num" data-label="Preço">R$ {{ number_format((float) $product->price, 2, ',', '.') }}</td>
                     <td data-label="Estoque">{{ $product->stock_control ? $product->stock_quantity : 'Sem controle' }}</td>
-                    <td data-label="Status">{{ $product->status === 'active' ? 'Ativo' : 'Inativo' }}</td>
+                    <td data-label="Status">
+                        <x-client.status-badge :tone="$product->isActive() ? 'success' : 'neutral'">
+                            {{ $product->isActive() ? 'Ativo' : 'Desativado' }}
+                        </x-client.status-badge>
+                    </td>
                     <td data-label="Ações" style="white-space:nowrap;">
                         <div class="actions" style="flex-wrap:wrap;">
                             <a class="btn btn-ghost" href="{{ route('commissions.products.edit', $product) }}" style="min-height:44px;">Editar</a>
@@ -107,14 +119,16 @@
                                     </div>
                                 </details>
                             @endif
-                            @unless($product->hasLinkedSales())
+                            @if($product->hasLinkedSales())
+                                <span class="header-meta" title="Produto possui histórico de vendas.">Excluir indisponível</span>
+                            @else
                                 <form method="POST" action="{{ route('commissions.products.destroy', $product) }}" style="display:inline;"
-                                      onsubmit="return confirm('Excluir este produto?');">
+                                      onsubmit="return confirm('Excluir produto?\nEste produto nunca foi utilizado em vendas e será removido permanentemente.');">
                                     @csrf
                                     @method('DELETE')
                                     <button class="btn btn-danger" type="submit" style="min-height:44px;">Excluir</button>
                                 </form>
-                            @endunless
+                            @endif
                         </div>
                     </td>
                 </tr>

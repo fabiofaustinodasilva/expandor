@@ -5,6 +5,9 @@ namespace App\Domains\Sales\Products\Models;
 use App\Domains\Commissions\Enums\ProductCommissionType;
 use App\Domains\Company\Models\Company;
 use App\Domains\Commissions\Models\SalesCommission;
+use App\Domains\Sales\Models\Sale;
+use App\Domains\Sales\Models\SaleItem;
+use App\Domains\Visits\Models\Visit;
 use App\Tenancy\Concerns\BelongsToTenant;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -78,6 +81,21 @@ class Product extends Model
         return $this->hasMany(SalesCommission::class);
     }
 
+    public function saleItems(): HasMany
+    {
+        return $this->hasMany(SaleItem::class);
+    }
+
+    public function sales(): HasMany
+    {
+        return $this->hasMany(Sale::class);
+    }
+
+    public function visits(): HasMany
+    {
+        return $this->hasMany(Visit::class);
+    }
+
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
@@ -122,7 +140,28 @@ class Product extends Model
 
     public function hasLinkedSales(): bool
     {
-        return $this->salesCommissions()->exists();
+        $counts = [
+            'sales_commissions_count',
+            'sale_items_count',
+            'sales_count',
+            'visits_count',
+        ];
+        $loaded = false;
+        $total = 0;
+        foreach ($counts as $attr) {
+            if (array_key_exists($attr, $this->attributes)) {
+                $loaded = true;
+                $total += (int) $this->attributes[$attr];
+            }
+        }
+        if ($loaded) {
+            return $total > 0;
+        }
+
+        return $this->salesCommissions()->exists()
+            || $this->saleItems()->exists()
+            || $this->sales()->exists()
+            || $this->visits()->exists();
     }
 
     public function imageUrl(): ?string
