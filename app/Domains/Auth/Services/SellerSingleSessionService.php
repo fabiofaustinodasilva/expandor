@@ -73,6 +73,18 @@ class SellerSingleSessionService
         return $version;
     }
 
+    public function revokeAccessTokens(User $user): void
+    {
+        if (method_exists($user, 'tokens')) {
+            $user->tokens()->delete();
+        }
+    }
+
+    public static function hashDeviceId(string $deviceId): string
+    {
+        return substr(hash('sha256', $deviceId), 0, 16);
+    }
+
     /**
      * Após login bem-sucedido: grava a geração vigente na sessão atual.
      * Sellers: claimSellerLogin já incrementou. Outros papéis: só bind.

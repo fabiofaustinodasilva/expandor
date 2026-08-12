@@ -33,7 +33,34 @@ class EnforceSellerSingleSession
             return $next($request);
         }
 
-        // Bearer-only / API sem cookie de sessão: não aplica (mapa web usa sessão stateful).
+        $token = $user->currentAccessToken();
+        if (is_object($token) && method_exists($token, 'isDeviceBound') && $token->isDeviceBound()) {
+            $code = $this->assertDeviceBoundToken($token, $request, $user);
+            if ($code !== null) {
+                if ($code === 'session_replaced') {
+                    $this->security->recordAudit(
+                        action: 'auth.mobile_session_replaced',
+                        user: $user,
+                        auditable: $user,
+                        newValues: [
+                            'reason' => 'device_or_version_mismatch',
+                            'session_version' => (int) $user->session_version,
+                            'device_id' => SellerSingleSessionService::hashDeviceId((string) $token->device_id),
+                            'platform' => $token->platform ?? null,
+                            'app_version' => $request->header('X-App-Version'),
+                        ],
+                        request: $request,
+                        companyId: $user->company_id,
+                    );
+                }
+
+                return $this->rejected($request, $code, $user);
+            }
+
+            return $next($request);
+        }
+
+        // Bearer legado (sem device_id) ou API sem cookie: não aplica sessão web.
         if (! $request->hasSession()) {
             return $next($request);
         }
@@ -68,12 +95,40 @@ class EnforceSellerSingleSession
             $request->session()->regenerateToken();
         }
 
-        $message = SellerSingleSessionService::REPLACED_MESSAGE;
+        return $this->rejected($request, 'session_replaced', $user);
+    }
 
-        if ($this->wantsJson($request)) {
+    protected function assertDeviceBoundToken(object $token, Request $request, User $user): ?string
+    {
+        $headerDevice = trim((string) $request->header('X-Device-Id', ''));
+        if ($headerDevice === '') {
+            return 'unauthenticated';
+        }
+
+        $boundDevice = (string) $token->device_id;
+        if (! hash_equals($boundDevice, $headerDevice)) {
+            return 'session_replaced';
+        }
+
+        if ($token->session_version !== null
+            && (int) $token->session_version !== (int) $user->session_version) {
+            return 'session_replaced';
+        }
+
+        return null;
+    }
+
+    protected function rejected(Request $request, string $code, User $user): Response
+    {
+        $message = $code === 'unauthenticated'
+            ? 'Dispositivo não informado.'
+            : SellerSingleSessionService::REPLACED_MESSAGE;
+
+        if ($this->wantsJson($request) || ! $request->hasSession()) {
             return response()->json([
+                'success' => false,
                 'message' => $message,
-                'code' => 'session_replaced',
+                'code' => $code,
             ], 401);
         }
 

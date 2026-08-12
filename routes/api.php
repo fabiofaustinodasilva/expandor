@@ -45,6 +45,7 @@ Route::prefix('mobile/v1')->middleware('throttle:api')->group(function (): void 
 
     Route::middleware([
         'auth:sanctum',
+        'seller.single-session',
         'tenancy.initialize',
         'tenancy.active',
         'permission:sales_app.access',

@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'webhooks/*',
             'webhooks/mercadopago',
+            'api/mobile/*',
         ]);
 
         $middleware->alias([
@@ -44,6 +45,10 @@ return Application::configure(basePath: dirname(__DIR__))
             prepend: \App\Tenancy\Middleware\InitializeTenancy::class,
         );
 
+        $middleware->prependToGroup('api', [
+            \App\Http\Middleware\PreferStatelessBearer::class,
+        ]);
+
         $middleware->appendToGroup('api', [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
@@ -56,5 +61,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->job(new \App\Domains\Platform\Jobs\DetectInactiveTenantsJob)->daily();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Não autenticado.',
+                    'code' => 'unauthenticated',
+                ], 401);
+            }
+
+            return null;
+        });
     })->create();

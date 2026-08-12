@@ -5,6 +5,7 @@
  * Lucide ESM requires createIcons({ icons }). The UMD CDN did that implicitly.
  */
 import '../css/seller-app.css';
+import './mobile/bootstrap-shell.js';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.gridlayer.googlemutant';

@@ -2,90 +2,162 @@
 
 namespace App\Http\Controllers\Api\Mobile\V1\Auth;
 
+use App\Domains\Auth\Services\MobileAuthService;
 use App\Domains\Company\Models\User;
 use App\Domains\Mobile\Support\MobileApiTransformer;
+use App\Domains\Mobile\Support\MobileAuthResponse;
+use App\Domains\Security\Services\SecurityService;
 use App\Http\Controllers\Controller;
 use App\Tenancy\TenantManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        protected MobileAuthService $mobileAuth,
+        protected SecurityService $security,
+    ) {}
+
     public function login(Request $request): JsonResponse
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-            'company_id' => ['nullable', 'integer'],
-        ]);
+        try {
+            $credentials = $request->validate([
+                'email' => ['required', 'email'],
+                'password' => ['required', 'string'],
+                'device_id' => ['required', 'uuid'],
+                'device_name' => ['nullable', 'string', 'max:120'],
+                'platform' => ['nullable', 'string', 'max:32'],
+                'app_version' => ['nullable', 'string', 'max:32'],
+                'company_id' => ['nullable', 'integer'],
+            ]);
+        } catch (ValidationException $exception) {
+            return MobileAuthResponse::error(
+                'Verifique os dados informados.',
+                'validation_error',
+                422,
+                $exception->errors(),
+            );
+        }
 
-        $query = User::query()->withoutGlobalScopes()
-            ->whereRaw('LOWER(email) = ?', [strtolower(trim($credentials['email']))]);
+        $candidates = $this->mobileAuth->candidatesForEmail(
+            $credentials['email'],
+            isset($credentials['company_id']) ? (int) $credentials['company_id'] : null,
+        );
 
-        if (! empty($credentials['company_id'])) {
-            $query->where('company_id', $credentials['company_id']);
+        $matches = $this->mobileAuth->matchingPasswords($candidates, $credentials['password']);
+
+        if ($matches->count() > 1) {
+            return MobileAuthResponse::error(
+                'Informe a empresa para concluir o login.',
+                'tenant_required',
+                422,
+                ['company_id' => ['E-mail encontrado em mais de uma empresa.']],
+                [
+                    'companies' => $matches->map(fn (User $candidate): array => [
+                        'id' => $candidate->company_id,
+                        'name' => $candidate->company?->name,
+                    ])->values()->all(),
+                ],
+            );
         }
 
         /** @var User|null $user */
-        $user = $query->first();
+        $user = $matches->first();
 
-        if ($user === null || ! Hash::check($credentials['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Credenciais inválidas.'],
-            ]);
+        if ($user === null) {
+            $this->security->recordFailedLogin($credentials['email'], $request);
+
+            return MobileAuthResponse::error(
+                'Credenciais inválidas.',
+                'invalid_credentials',
+                401,
+            );
         }
 
         if ($user->status !== User::STATUS_ACTIVE) {
-            throw ValidationException::withMessages([
-                'email' => ['Usuário inativo ou bloqueado.'],
-            ]);
+            $this->security->recordFailedLogin($credentials['email'], $request);
+
+            return MobileAuthResponse::error(
+                'Usuário inativo ou bloqueado.',
+                'forbidden',
+                403,
+            );
         }
 
-        if (! $user->hasPermission('sales_app.access')) {
-            throw ValidationException::withMessages([
-                'email' => ['Usuário sem acesso ao aplicativo mobile.'],
-            ]);
+        if (! $this->mobileAuth->isSeller($user) || ! $user->hasPermission('sales_app.access')) {
+            return MobileAuthResponse::error(
+                'Este aplicativo é exclusivo para vendedores.',
+                'forbidden',
+                403,
+            );
         }
 
-        $user->load(['company', 'role.permissions']);
-
-        $token = $user->createToken('mobile')->plainTextToken;
-        $user->forceFill(['last_login_at' => now()])->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Login realizado com sucesso.',
-            'data' => [
-                'token' => $token,
-                'token_type' => 'Bearer',
-                'user' => MobileApiTransformer::user($user),
-            ],
+        $issued = $this->mobileAuth->issueSellerAppToken($user, $request, [
+            'device_id' => $credentials['device_id'],
+            'device_name' => $credentials['device_name'] ?? null,
+            'platform' => $credentials['platform'] ?? null,
+            'app_version' => $credentials['app_version'] ?? $request->header('X-App-Version'),
         ]);
+
+        return MobileAuthResponse::ok(
+            'Login realizado com sucesso.',
+            $this->mobileAuth->loginPayload(
+                $user->fresh(['company', 'role.permissions']),
+                $issued['token'],
+                $issued['version'],
+                $credentials['device_id'],
+            ),
+        );
     }
 
     public function me(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
+        $profile = MobileApiTransformer::user($user);
+        $token = $user->currentAccessToken();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Usuário autenticado.',
-            'data' => MobileApiTransformer::user($user),
-        ]);
+        return MobileAuthResponse::ok('Usuário autenticado.', array_merge($profile, [
+            'user' => $profile,
+            'company' => $profile['company'],
+            'permissions' => $profile['permissions'],
+            'session' => $this->mobileAuth->sessionPayload(
+                $user,
+                is_object($token) && isset($token->device_id) ? (string) $token->device_id : $request->header('X-Device-Id'),
+            ),
+        ]));
     }
 
     public function logout(Request $request): JsonResponse
     {
-        $request->user()?->currentAccessToken()?->delete();
+        /** @var User|null $user */
+        $user = $request->user();
+        $token = $user?->currentAccessToken();
+        $deviceHash = is_object($token) && ! empty($token->device_id)
+            ? SellerSingleSessionService::hashDeviceId((string) $token->device_id)
+            : null;
+
+        $token?->delete();
+        auth()->forgetGuards();
         app(TenantManager::class)->clear();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Logout realizado.',
-            'data' => [],
-        ]);
+        if ($user instanceof User) {
+            $this->security->recordAudit(
+                action: 'auth.mobile_logout',
+                user: $user,
+                auditable: $user,
+                newValues: [
+                    'device_id' => $deviceHash,
+                    'platform' => is_object($token) ? ($token->platform ?? null) : null,
+                    'app_version' => is_object($token) ? ($token->app_version ?? null) : $request->header('X-App-Version'),
+                ],
+                request: $request,
+                companyId: $user->company_id,
+            );
+        }
+
+        return MobileAuthResponse::ok('Logout realizado.');
     }
 }

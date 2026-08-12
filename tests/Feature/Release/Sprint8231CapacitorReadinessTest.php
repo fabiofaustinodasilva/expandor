@@ -122,7 +122,10 @@ class Sprint8231CapacitorReadinessTest extends TestCase
         $this->assertStringContainsString('Keychain', $authDoc);
         $this->assertStringContainsString('/api/mobile/v1/login', $authDoc);
 
-        $this->assertFileDoesNotExist(config_path('cors.php'));
+        $this->assertFileExists(config_path('cors.php'));
+        $cors = (string) file_get_contents(config_path('cors.php'));
+        $this->assertStringContainsString('capacitor://localhost', $cors);
+        $this->assertStringContainsString("'supports_credentials' => false", $cors);
         $security = (string) file_get_contents(base_path('docs/sprint-8231-capacitor-app-readiness/SECURITY.md'));
         $this->assertStringContainsString('config/cors.php', $security);
         $this->assertStringContainsString('capacitor://localhost', $security);

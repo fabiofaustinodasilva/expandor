@@ -38,6 +38,9 @@ class MobileApiTest extends TestCase
         $this->postJson('/api/mobile/v1/login', [
             'email' => 'seller@mobile-auth.test',
             'password' => 'password',
+            'device_id' => '11111111-1111-4111-8111-111111111111',
+            'device_name' => 'Android',
+            'platform' => 'android',
         ])
             ->assertOk()
             ->assertJsonPath('success', true)

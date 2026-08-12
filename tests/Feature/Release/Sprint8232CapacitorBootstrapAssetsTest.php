@@ -80,7 +80,8 @@ class Sprint8232CapacitorBootstrapAssetsTest extends TestCase
         $prepare = (string) file_get_contents(base_path('scripts/prepare-capacitor-shell.mjs'));
         $this->assertStringContainsString('viewport-fit=cover', $prepare);
         $this->assertStringContainsString('safe-area-inset-top', $prepare);
-        $this->assertStringContainsString('Bootstrap Capacitor OK', $prepare);
+        $this->assertStringContainsString('expandor-login-form', $prepare);
+        $this->assertStringContainsString('Esqueceu sua senha?', $prepare);
 
         $operational = (string) file_get_contents(resource_path('views/layouts/operational.blade.php'));
         $this->assertStringContainsString('viewport-fit=cover', $operational);

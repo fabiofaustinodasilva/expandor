@@ -19,6 +19,7 @@ use App\Domains\Communication\Models\Message;
 use App\Domains\Communication\Models\MessageTemplate;
 use App\Domains\Communication\Policies\MessagePolicy;
 use App\Domains\Communication\Policies\MessageTemplatePolicy;
+use App\Domains\Auth\Models\PersonalAccessToken;
 use App\Domains\Company\Models\Company;
 use App\Domains\Company\Models\User;
 use App\Domains\Company\Policies\CompanyPolicy;
@@ -97,6 +98,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -108,6 +110,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+
+        Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
 
         // Terminologia comercial (UX) — disponível em todas as views Blade.
         View::share('commercial', CommercialTerminology::class);
