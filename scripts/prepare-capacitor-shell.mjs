@@ -89,8 +89,18 @@ const csp = [
     "media-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "frame-ancestors 'none'",
+    // frame-ancestors is ignored on <meta> CSP (browser warning). Keep framing controls
+    // on HTTP responses when the shell is hosted; Capacitor WebView uses local assets.
 ].join('; ');
+
+const runtimeConfig = [
+    `window.EXPANDOR_API_BASE = ${JSON.stringify(apiBase)};`,
+    `window.EXPANDOR_WEB_ORIGIN = ${JSON.stringify(apiBase)};`,
+    'window.EXPANDOR_APP_VERSION = "8.2.34";',
+    '',
+].join('\n');
+
+writeFileSync(join(outDir, 'runtime-config.js'), runtimeConfig);
 
 const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -390,11 +400,7 @@ const html = `<!DOCTYPE html>
         </div>
         <audio id="commission-audio" src="./sounds/commission-coins.wav" preload="auto"></audio>
     </div>
-    <script>
-        window.EXPANDOR_API_BASE = ${JSON.stringify(apiBase)};
-        window.EXPANDOR_WEB_ORIGIN = ${JSON.stringify(apiBase)};
-        window.EXPANDOR_APP_VERSION = "8.2.34";
-    </script>
+    <script src="./runtime-config.js"></script>
     <script src="./vendor/seller-app.js"></script>
 </body>
 </html>
@@ -402,3 +408,4 @@ const html = `<!DOCTYPE html>
 
 writeFileSync(join(outDir, 'index.html'), html);
 console.log('capacitor-shell ready:', outDir);
+console.log('capacitor-shell runtime-config.js baked with API base');

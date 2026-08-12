@@ -10,4 +10,6 @@
 
 `npx cap sync android` concluiu localmente e registrou `@capacitor/geolocation@7.1.8`. Sem APK release. Se outro ambiente não tiver Android SDK/Gradle, o sync pode falhar; plugin e manifest já ficam no repo.
 
-Ver também: `HOTFIX-LOGIN-ENVELOPE.md`.
+Ver também: `HOTFIX-LOGIN-ENVELOPE.md`, `HOTFIX-CSP-RUNTIME-CONFIG.md`.
+
+Runtime config do shell: arquivo externo `runtime-config.js` (CSP `script-src 'self'`, sem inline).

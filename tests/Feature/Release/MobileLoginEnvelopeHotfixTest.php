@@ -69,7 +69,13 @@ class MobileLoginEnvelopeHotfixTest extends TestCase
         $this->assertStringContainsString('loadEnvFile', $prepare);
         $this->assertStringContainsString('CAP_API_URL', $prepare);
         $this->assertStringContainsString('is required to bake Expandor shell API base', $prepare);
+        $this->assertStringContainsString('runtime-config.js', $prepare);
+        $this->assertStringContainsString('src="./runtime-config.js"', $prepare);
         $this->assertStringContainsString('window.EXPANDOR_API_BASE = ${JSON.stringify(apiBase)}', $prepare);
+        $this->assertStringNotContainsString('<script>\n        window.EXPANDOR_API_BASE', $prepare);
+        $this->assertStringNotContainsString("script-src 'self' 'unsafe-inline'", $prepare);
+        $this->assertStringContainsString("script-src 'self'", $prepare);
+        $this->assertStringNotContainsString('script-src *', $prepare);
 
         $storage = (string) file_get_contents(resource_path('js/mobile/secure-auth-storage.js'));
         $this->assertDoesNotMatchRegularExpression('/localStorage\.(get|set|remove)/', $storage);
