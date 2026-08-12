@@ -59,6 +59,10 @@ async function capacitorGetCurrentPosition(options) {
     }
 }
 
+function isLocationGranted(status = {}) {
+    return status.location === 'granted' || status.coarseLocation === 'granted';
+}
+
 export const LocationService = {
     async getCurrentPosition(options = {}) {
         const opts = {
@@ -73,6 +77,27 @@ export const LocationService = {
         }
 
         return webGetCurrentPosition(opts);
+    },
+
+    async ensureForegroundPermission() {
+        const geo = window.Capacitor?.Plugins?.Geolocation;
+        if (!geo?.checkPermissions) {
+            return { granted: true, source: 'web' };
+        }
+
+        let status = await geo.checkPermissions();
+        if (isLocationGranted(status)) {
+            return { granted: true, source: 'capacitor' };
+        }
+
+        if (geo.requestPermissions) {
+            status = await geo.requestPermissions({ permissions: ['location', 'coarseLocation'] });
+        }
+
+        return {
+            granted: isLocationGranted(status),
+            source: 'capacitor',
+        };
     },
 
     async permissionStatus() {

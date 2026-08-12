@@ -75,7 +75,7 @@ body.seller-app-mode {
     margin: 0 auto 0.75rem;
     display: block;
     object-fit: contain;
-    border-radius: 0.85rem;
+    background: transparent;
 }
 
 .login-brand__title {

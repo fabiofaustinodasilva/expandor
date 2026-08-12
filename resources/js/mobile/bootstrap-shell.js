@@ -18,10 +18,14 @@ import {
 } from './seller-labels.js';
 
 const GPS_FAIL = 'Não foi possível acessar sua localização.';
+const GPS_UNAVAILABLE_HINT = 'Localização indisponível. Use Meu Local quando quiser.';
+const GPS_PERMISSION_HINT = 'Permita localização para centralizar o mapa, ou use Meu Local.';
+const INITIAL_GPS_TIMEOUT_MS = 8000;
 const OFFLINE_MUTATION = 'Sem conexão. Esta ação ainda não pode ser concluída offline.';
 let bootstrap = null;
 let searchTimer = null;
 let layersOpen = false;
+let initialMapGpsDone = false;
 
 function $(id) {
     return document.getElementById(id);
@@ -511,6 +515,38 @@ async function onGps() {
     }
 }
 
+async function tryInitialMapGps() {
+    if (initialMapGpsDone) {
+        return;
+    }
+
+    initialMapGpsDone = true;
+
+    try {
+        const permission = await LocationService.ensureForegroundPermission();
+        if (!permission.granted) {
+            toast(GPS_PERMISSION_HINT, 'status');
+
+            return;
+        }
+
+        const position = await LocationService.getCurrentPosition({
+            timeout: INITIAL_GPS_TIMEOUT_MS,
+            maximumAge: 0,
+        });
+        MapAdapter.recenterGps(position);
+        await loadMarkers();
+    } catch (error) {
+        if (error?.code === 'permission_denied') {
+            toast(GPS_PERMISSION_HINT, 'status');
+
+            return;
+        }
+
+        toast(GPS_UNAVAILABLE_HINT, 'status');
+    }
+}
+
 async function onCreatePoint(event) {
     event.preventDefault();
     if (navigator.onLine === false) {
@@ -749,6 +785,7 @@ async function enterApp(data) {
         await hydrateCatalog();
         renderVisitOutcomes();
         await loadMarkers();
+        void tryInitialMapGps();
         paintIcons();
     } catch (error) {
         toast(error.message || 'Não foi possível carregar o app.', 'error');
@@ -804,6 +841,7 @@ async function onSubmit(event) {
 async function onLogout() {
     await MobileAuthService.logout();
     PresentationScreen.close();
+    initialMapGpsDone = false;
     showLogin();
     const password = $('login-password');
     if (password) {

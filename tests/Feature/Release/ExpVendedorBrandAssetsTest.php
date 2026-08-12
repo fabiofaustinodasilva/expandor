@@ -73,6 +73,7 @@ class ExpVendedorBrandAssetsTest extends TestCase
         if (is_file($logo) && is_file($icon)) {
             $this->assertGreaterThan(1000, filesize($logo));
             $this->assertGreaterThan(1000, filesize($icon));
+            $this->assertSame(6, ord((string) file_get_contents($logo, false, null, 25, 1)));
         }
     }
 }
