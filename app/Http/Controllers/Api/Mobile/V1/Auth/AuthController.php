@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Mobile\V1\Auth;
 
 use App\Domains\Auth\Services\MobileAuthService;
+use App\Domains\Auth\Services\SellerSingleSessionService;
 use App\Domains\Company\Models\User;
 use App\Domains\Mobile\Support\MobileApiTransformer;
 use App\Domains\Mobile\Support\MobileAuthResponse;

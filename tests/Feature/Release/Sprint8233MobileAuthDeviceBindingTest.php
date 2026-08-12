@@ -10,6 +10,7 @@ use App\Domains\Company\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\CreatesTenantUsers;
 use Tests\TestCase;
@@ -343,6 +344,26 @@ class Sprint8233MobileAuthDeviceBindingTest extends TestCase
         $this->assertStringContainsString('https://localhost', $cors);
         $this->assertStringContainsString("'supports_credentials' => false", $cors);
         $this->assertStringNotContainsString("allowed_origins' => ['*']", $cors);
+    }
+
+    public function test_device_binding_index_name_fits_mysql_limit(): void
+    {
+        $path = base_path('database/migrations/2026_08_12_223300_add_device_binding_to_personal_access_tokens_table.php');
+        $source = (string) file_get_contents($path);
+        $name = 'pat_tokenable_device_idx';
+
+        $this->assertLessThanOrEqual(64, strlen($name));
+        $this->assertStringContainsString($name, $source);
+        $this->assertStringContainsString("dropIndex(self::INDEX)", $source);
+        $this->assertStringNotContainsString(
+            "index(['tokenable_type', 'tokenable_id', 'device_id'])",
+            $source,
+        );
+        $this->assertFalse(
+            Schema::hasIndex('personal_access_tokens', 'personal_access_tokens_tokenable_type_tokenable_id_device_id_index'),
+        );
+        $this->assertTrue(Schema::hasIndex('personal_access_tokens', $name));
+        $this->assertTrue(Schema::hasColumn('personal_access_tokens', 'device_id'));
     }
 
     public function test_docs_inventory_exists(): void

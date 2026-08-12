@@ -9,5 +9,6 @@
 - SecureAuthStorage + apiFetch + MobileAuthService
 - CSRF except `api/mobile/*` para WebView Bearer
 - Testes `Sprint8233MobileAuthDeviceBindingTest`
+- Hotfix: índice `pat_tokenable_device_idx` (MySQL 1059 — nome automático > 64)
 
 Sem offline, sem push, sem APK, sem merge.
