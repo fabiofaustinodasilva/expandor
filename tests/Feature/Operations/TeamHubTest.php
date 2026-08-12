@@ -198,6 +198,7 @@ class TeamHubTest extends TestCase
             'company_id' => $company->id,
             'city_id' => $city->id,
             'name' => 'Campanha Centro',
+            'status' => \App\Domains\Campaigns\Enums\CampaignStatus::ACTIVE,
             'created_by' => $manager->id,
         ]);
 

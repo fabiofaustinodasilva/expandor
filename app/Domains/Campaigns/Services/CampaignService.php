@@ -121,6 +121,10 @@ class CampaignService
      */
     protected function syncAssociations(Campaign $campaign, array $data): void
     {
+        $shouldSyncUsers = array_key_exists('user_ids', $data);
+        $shouldSyncSectors = array_key_exists('sector_ids', $data)
+            || ($data['territory_mode'] ?? null) === 'all';
+
         $userIds = collect($data['user_ids'] ?? [])
             ->filter()
             ->map(fn ($id) => (int) $id)
@@ -135,19 +139,27 @@ class CampaignService
             ->values()
             ->all();
 
-        if ($userIds !== []) {
-            $validUserIds = User::query()
-                ->whereIn('id', $userIds)
-                ->pluck('id')
-                ->all();
+        if ($shouldSyncUsers) {
+            if ($userIds !== []) {
+                $validUserIds = User::query()
+                    ->whereIn('id', $userIds)
+                    ->pluck('id')
+                    ->all();
 
-            if (count($validUserIds) !== count($userIds)) {
-                throw ValidationException::withMessages([
-                    'user_ids' => 'Um ou mais vendedores selecionados são inválidos.',
-                ]);
+                if (count($validUserIds) !== count($userIds)) {
+                    throw ValidationException::withMessages([
+                        'user_ids' => 'Um ou mais vendedores selecionados são inválidos.',
+                    ]);
+                }
+            } else {
+                $validUserIds = [];
             }
-        } else {
-            $validUserIds = [];
+
+            $campaign->users()->sync($validUserIds);
+        }
+
+        if (! $shouldSyncSectors) {
+            return;
         }
 
         if ($sectorIds !== []) {
@@ -171,7 +183,6 @@ class CampaignService
             $validSectorIds = [];
         }
 
-        $campaign->users()->sync($validUserIds);
         $campaign->sectors()->sync($validSectorIds);
     }
 

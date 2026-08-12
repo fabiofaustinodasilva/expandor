@@ -164,6 +164,20 @@
         @if(session('success'))
             <div class="op-page" style="padding-bottom:0;"><div class="alert alert-success">{{ session('success') }}</div></div>
         @endif
+        @if(session('error'))
+            <div class="op-page" style="padding-bottom:0;"><div class="alert alert-error">{{ session('error') }}</div></div>
+        @endif
+        @if($errors->any())
+            <div class="op-page" style="padding-bottom:0;">
+                <div class="alert alert-error">
+                    <ul style="margin:0; padding-left:1.1rem;">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @endif
         @hasSection('page')
             <div class="op-page">@yield('page')</div>
         @else

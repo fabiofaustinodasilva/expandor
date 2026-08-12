@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Operations;
 
-use App\Domains\Campaigns\Models\Campaign;
+use App\Domains\Campaigns\Enums\CampaignStatus;
 use App\Domains\Company\Models\Role;
 use App\Domains\Company\Models\User;
 use App\Domains\Company\Support\CommercialProfileCatalog;
@@ -38,7 +38,10 @@ class StoreTeamMemberRequest extends FormRequest
             'role_id' => ['required', Rule::in($commercialRoleIds)],
             'campaign_id' => [
                 'nullable',
-                Rule::exists('campaigns', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
+                Rule::exists('campaigns', 'id')->where(
+                    fn ($q) => $q->where('company_id', $companyId)
+                        ->where('status', CampaignStatus::ACTIVE->value)
+                ),
             ],
             'status' => ['nullable', Rule::in([User::STATUS_ACTIVE, User::STATUS_INACTIVE, User::STATUS_BLOCKED])],
         ];

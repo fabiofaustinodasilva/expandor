@@ -235,7 +235,7 @@ class CampaignController extends Controller
 
         return [
             'geoStates' => $this->geo->states(),
-            'sellers' => $this->repository->sellerOptions(),
+            'sellers' => $this->repository->sellerOptions($campaign),
             'statuses' => CampaignStatus::options(),
             'selectedUf' => $selectedUf ? strtoupper((string) $selectedUf) : '',
             'selectedGeoMunicipalityId' => $geoMunicipalityId ? (int) $geoMunicipalityId : null,

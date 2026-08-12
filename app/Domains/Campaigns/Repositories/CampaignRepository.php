@@ -50,20 +50,30 @@ class CampaignRepository
 
     /**
      * Active sellers available for campaign assignment.
+     * Inclui vendedores já vinculados mesmo se inativos (evita wipe silencioso no update).
      *
      * @return Collection<int, User>
      */
-    public function sellerOptions(): Collection
+    public function sellerOptions(?Campaign $campaign = null): Collection
     {
+        $assignedIds = $campaign
+            ? $campaign->users()->pluck('users.id')->map(fn ($id) => (int) $id)->all()
+            : [];
+
         return User::query()
             ->with('role:id,name,slug')
-            ->where('status', User::STATUS_ACTIVE)
+            ->where(function ($query) use ($assignedIds) {
+                $query->where('status', User::STATUS_ACTIVE);
+                if ($assignedIds !== []) {
+                    $query->orWhereIn('id', $assignedIds);
+                }
+            })
             ->whereHas('role', fn ($q) => $q->whereIn('slug', [
                 Role::SELLER,
                 Role::SUPERVISOR,
                 Role::MANAGER,
             ]))
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'role_id']);
+            ->get(['id', 'name', 'email', 'role_id', 'status']);
     }
 }

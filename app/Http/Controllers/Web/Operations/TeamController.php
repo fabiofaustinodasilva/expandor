@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Operations;
 
 use App\Domains\Analytics\DTOs\AnalyticsFiltersDTO;
 use App\Domains\Analytics\Services\DashboardMetricsService;
+use App\Domains\Campaigns\Enums\CampaignStatus;
 use App\Domains\Campaigns\Models\Campaign;
 use App\Domains\Company\Models\Role;
 use App\Domains\Company\Models\User;
@@ -18,6 +19,7 @@ use App\Support\AppTime;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class TeamController extends Controller
@@ -58,7 +60,7 @@ class TeamController extends Controller
         }
 
         $cards = $members->map(function (User $member) use ($productivity, $summary) {
-            $campaign = $member->campaigns->first();
+            $campaign = $this->primaryCampaignFor($member);
             $row = $productivity->get($member->id);
             $id = (int) $member->id;
             $pres = $summary['presence'][$id] ?? [
@@ -118,7 +120,10 @@ class TeamController extends Controller
                 ->whereIn('slug', CommercialProfileCatalog::commercialRoleSlugs())
                 ->orderByRaw("CASE slug WHEN 'seller' THEN 1 WHEN 'supervisor' THEN 2 WHEN 'manager' THEN 3 ELSE 4 END")
                 ->get(),
-            'campaignOptions' => Campaign::query()->orderBy('name')->get(['id', 'name', 'status']),
+            'campaignOptions' => Campaign::query()
+                ->where('status', CampaignStatus::ACTIVE)
+                ->orderBy('name')
+                ->get(['id', 'name', 'status']),
             'canManage' => $actor?->can('create', User::class) ?? false,
             'canEditMembers' => ($actor?->hasPermission('users.update') || $actor?->hasPermission('users.manage')) ?? false,
             'canManagePermissions' => ($actor?->hasPermission('users.manage_permissions') || $actor?->hasPermission('users.manage')) ?? false,
@@ -272,14 +277,38 @@ class TeamController extends Controller
         ];
     }
 
+    /**
+     * Atribuição exclusiva: substitui vínculos anteriores.
+     * Somente campanha ACTIVE (mesma regra do mobile activeCampaignsFor).
+     */
     protected function syncCampaign(User $user, mixed $campaignId): void
     {
         if ($campaignId === null || $campaignId === '') {
             return;
         }
 
-        $campaign = Campaign::query()->find((int) $campaignId);
-        $campaign?->users()->syncWithoutDetaching([$user->id]);
+        $campaign = Campaign::query()
+            ->where('status', CampaignStatus::ACTIVE)
+            ->find((int) $campaignId);
+
+        if ($campaign === null) {
+            throw ValidationException::withMessages([
+                'campaign_id' => 'Selecione uma campanha ativa. Campanhas em rascunho/pausadas não liberam o app.',
+            ]);
+        }
+
+        // sync() no belongsToMany do user substitui todas as campanhas do vendedor.
+        $user->campaigns()->sync([$campaign->id]);
+    }
+
+    protected function primaryCampaignFor(User $member): ?Campaign
+    {
+        $campaigns = $member->campaigns;
+        $active = $campaigns->first(
+            fn (Campaign $campaign) => $campaign->status === CampaignStatus::ACTIVE
+        );
+
+        return $active ?? $campaigns->first();
     }
 
     protected function assertCommercialMember(User $user): void

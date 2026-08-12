@@ -233,7 +233,7 @@
                     @endforeach
                 </select>
             </label>
-            <label>Campanha (cidade/região derivadas)
+            <label>Campanha ativa (cidade/região derivadas)
                 <select name="campaign_id" class="form-control">
                     <option value="">— Sem campanha —</option>
                     @foreach($campaignOptions as $campaign)
@@ -241,7 +241,7 @@
                     @endforeach
                 </select>
             </label>
-            <p class="header-meta" style="margin:0;">Cidade e região vêm da campanha ativa. Supervisor fica preparado para evolução com Teams.</p>
+            <p class="header-meta" style="margin:0;">Somente campanhas ativas. Ative a campanha em Campanhas antes de atribuir.</p>
             <div class="team-form-actions">
                 <button type="button" class="team-btn-ghost" data-close>Cancelar</button>
                 <button type="submit" class="team-btn-primary">Salvar vendedor</button>
@@ -259,7 +259,7 @@
             <h2 id="edit-title">Editar vendedor</h2>
             <button type="button" class="team-icon-btn" data-close aria-label="Fechar"><i data-lucide="x" class="w-4 h-4"></i></button>
         </header>
-        <form id="form-edit" method="POST" action="#" class="team-form">
+        <form id="form-edit" method="POST" action="{{ url('/operacao/equipe') }}" class="team-form" data-action-placeholder="1">
             @csrf
             @method('PUT')
             <label>Nome<input name="name" id="edit-name" required class="form-control"></label>
@@ -273,7 +273,7 @@
                     @endforeach
                 </select>
             </label>
-            <label>Campanha
+            <label>Campanha ativa
                 <select name="campaign_id" id="edit-campaign" class="form-control">
                     <option value="">— Sem alteração —</option>
                     @foreach($campaignOptions as $campaign)
@@ -281,6 +281,7 @@
                     @endforeach
                 </select>
             </label>
+            <p class="header-meta" style="margin:0;">Somente campanhas <strong>ativas</strong> liberam o EXP Vendedor. Rascunho/pausada não aparece aqui.</p>
             <label>Status
                 <select name="status" id="edit-status" required class="form-control">
                     <option value="{{ User::STATUS_ACTIVE }}">Ativo</option>
