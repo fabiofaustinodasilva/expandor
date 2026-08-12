@@ -1,3 +1,9 @@
+/**
+ * mobileApi contract:
+ * - Uses apiFetch (raw Response).
+ * - Parses JSON and returns the FULL envelope: { success, message, data, meta? }.
+ * - Does NOT return only `data` — callers use `payload.data`.
+ */
 import { apiFetch } from './api-fetch.js';
 import { MobileAuthService } from './mobile-auth-service.js';
 
@@ -11,7 +17,8 @@ async function json(path, options = {}) {
     const response = await apiFetch(path, options);
     let payload = {};
     try {
-        payload = await response.json();
+        const text = await response.text();
+        payload = text && text.trim() ? JSON.parse(text) : {};
     } catch {
         payload = {};
     }

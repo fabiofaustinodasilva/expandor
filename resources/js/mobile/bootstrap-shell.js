@@ -373,11 +373,20 @@ async function onSubmit(event) {
     }
     setBanner('');
 
+    if (window.Capacitor?.isNativePlatform?.() && ! String(window.EXPANDOR_API_BASE || '').trim()) {
+        setBanner('App sem URL da API. Recompile com CAP_API_URL apontando para o servidor.', 'error');
+        if (button) {
+            button.disabled = false;
+        }
+
+        return;
+    }
+
     try {
         const data = await MobileAuthService.login(email, password);
         await enterApp(data);
     } catch (error) {
-        if (error.code === 'network_offline') {
+        if (error.code === 'network_offline' || error.code === 'api_base_missing') {
             setBanner(error.message, 'error');
         } else if (error.status === 500) {
             setBanner('Serviço indisponível. Tente novamente em instantes.', 'error');

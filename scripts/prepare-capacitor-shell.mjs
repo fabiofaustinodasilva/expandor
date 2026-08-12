@@ -2,13 +2,50 @@
  * Copies the seller IIFE vendor into public/capacitor-shell
  * with relative URLs (Capacitor WebView / file).
  */
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const vendor = join(root, 'public/vendor/expandor');
 const outDir = join(root, 'public/capacitor-shell');
+
+function loadEnvFile(filePath) {
+    if (!existsSync(filePath)) {
+        return;
+    }
+
+    const text = readFileSync(filePath, 'utf8');
+    for (const raw of text.split(/\r?\n/)) {
+        const line = raw.trim();
+        if (!line || line.startsWith('#')) {
+            continue;
+        }
+
+        const eq = line.indexOf('=');
+        if (eq < 1) {
+            continue;
+        }
+
+        const key = line.slice(0, eq).trim();
+        if (!/^[A-Z0-9_]+$/.test(key) || process.env[key] !== undefined) {
+            continue;
+        }
+
+        let value = line.slice(eq + 1).trim();
+        if (
+            (value.startsWith('"') && value.endsWith('"'))
+            || (value.startsWith("'") && value.endsWith("'"))
+        ) {
+            value = value.slice(1, -1);
+        }
+
+        process.env[key] = value;
+    }
+}
+
+loadEnvFile(join(root, '.env'));
+loadEnvFile(join(root, '.env.local'));
 
 if (!existsSync(join(vendor, 'seller-app.js')) || !existsSync(join(vendor, 'seller-app.css'))) {
     throw new Error('Missing public/vendor/expandor/seller-app.{js,css}. Run the seller Vite build first.');
@@ -25,15 +62,22 @@ if (existsSync(sound)) {
 }
 
 const apiBase = String(process.env.CAP_API_URL || process.env.APP_URL || '').replace(/\/$/, '');
+if (!apiBase) {
+    throw new Error(
+        'CAP_API_URL (or APP_URL) is required to bake Expandor shell API base. '
+        + 'Example: CAP_API_URL=https://seu-dominio.com npm run build',
+    );
+}
+
 let connectSrc = "'self'";
 try {
-    if (apiBase) {
-        const origin = new URL(apiBase).origin;
-        connectSrc = `'self' ${origin}`;
-    }
+    const origin = new URL(apiBase).origin;
+    connectSrc = `'self' ${origin}`;
 } catch {
-    connectSrc = "'self'";
+    throw new Error(`Invalid CAP_API_URL/APP_URL for Capacitor shell: ${apiBase}`);
 }
+
+console.log('capacitor-shell API base:', apiBase);
 
 const csp = [
     "default-src 'self'",

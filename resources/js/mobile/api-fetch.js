@@ -1,3 +1,12 @@
+/**
+ * apiFetch contract (A):
+ * - Returns the raw `Response` from fetch.
+ * - Does NOT unwrap `{ success, message, data }`.
+ * - Callers must read `payload.data` from the JSON envelope.
+ *
+ * Headers: Accept, X-App-Version, X-Device-Id, Authorization Bearer when stored.
+ * credentials: omit (no cookies). Never logs token/password/Authorization.
+ */
 import { SecureAuthStorage } from './secure-auth-storage.js';
 
 function apiBase() {
@@ -5,7 +14,7 @@ function apiBase() {
 }
 
 function appVersion() {
-    return String(window.EXPANDOR_APP_VERSION || '8.2.33');
+    return String(window.EXPANDOR_APP_VERSION || '8.2.34');
 }
 
 function resolveUrl(path) {
@@ -20,6 +29,12 @@ function resolveUrl(path) {
 }
 
 export async function apiFetch(path, options = {}) {
+    if (! apiBase() && window.Capacitor?.isNativePlatform?.()) {
+        const error = new Error('App sem URL da API. Recompile com CAP_API_URL apontando para o servidor.');
+        error.code = 'api_base_missing';
+        throw error;
+    }
+
     const headers = new Headers(options.headers || {});
     headers.set('Accept', 'application/json');
     headers.set('X-App-Version', appVersion());
