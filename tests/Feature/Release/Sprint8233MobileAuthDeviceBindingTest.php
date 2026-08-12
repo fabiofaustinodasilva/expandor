@@ -7,8 +7,10 @@ use App\Domains\Auth\Models\PersonalAccessToken;
 use App\Domains\Auth\Services\SellerSingleSessionService;
 use App\Domains\Company\Models\Role;
 use App\Domains\Company\Models\User;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
@@ -366,6 +368,51 @@ class Sprint8233MobileAuthDeviceBindingTest extends TestCase
         $this->assertTrue(Schema::hasColumn('personal_access_tokens', 'device_id'));
     }
 
+    public function test_partial_production_state_only_creates_missing_index(): void
+    {
+        $migration = $this->deviceBindingMigration();
+        $seller = $this->makeSeller('pat.keep@8233.test');
+        $issued = $seller->createToken('seller-app', ['seller-app']);
+        $tokenId = $issued->accessToken->id;
+        $before = (int) DB::table('personal_access_tokens')->count();
+
+        Schema::table('personal_access_tokens', function (Blueprint $table): void {
+            $table->dropIndex('pat_tokenable_device_idx');
+        });
+
+        $this->assertFalse(Schema::hasIndex('personal_access_tokens', 'pat_tokenable_device_idx'));
+        foreach (['device_id', 'device_name', 'platform', 'app_version', 'session_version'] as $column) {
+            $this->assertTrue(Schema::hasColumn('personal_access_tokens', $column), $column);
+        }
+
+        $migration->up();
+        $migration->up();
+
+        $this->assertTrue(Schema::hasIndex('personal_access_tokens', 'pat_tokenable_device_idx'));
+        $this->assertFalse(
+            Schema::hasIndex('personal_access_tokens', 'personal_access_tokens_tokenable_type_tokenable_id_device_id_index'),
+        );
+        $this->assertDatabaseHas('personal_access_tokens', ['id' => $tokenId]);
+        $this->assertSame($before, (int) DB::table('personal_access_tokens')->count());
+    }
+
+    public function test_device_binding_migration_rollback_then_migrate_again(): void
+    {
+        $migration = $this->deviceBindingMigration();
+
+        $migration->down();
+        $this->assertFalse(Schema::hasColumn('personal_access_tokens', 'device_id'));
+        $this->assertFalse(Schema::hasIndex('personal_access_tokens', 'pat_tokenable_device_idx'));
+        $this->assertTrue(Schema::hasTable('personal_access_tokens'));
+        $this->assertTrue(Schema::hasColumn('personal_access_tokens', 'token'));
+
+        $migration->up();
+        foreach (['device_id', 'device_name', 'platform', 'app_version', 'session_version'] as $column) {
+            $this->assertTrue(Schema::hasColumn('personal_access_tokens', $column), $column);
+        }
+        $this->assertTrue(Schema::hasIndex('personal_access_tokens', 'pat_tokenable_device_idx'));
+    }
+
     public function test_docs_inventory_exists(): void
     {
         $dir = base_path('docs/sprint-8233-mobile-auth-device-binding');
@@ -449,6 +496,17 @@ class Sprint8233MobileAuthDeviceBindingTest extends TestCase
     {
         $this->app['auth']->forgetGuards();
         $this->flushSession();
+    }
+
+    private function deviceBindingMigration(): object
+    {
+        static $migration = null;
+
+        if ($migration === null) {
+            $migration = require base_path('database/migrations/2026_08_12_223300_add_device_binding_to_personal_access_tokens_table.php');
+        }
+
+        return $migration;
     }
 
     /**

@@ -10,5 +10,6 @@
 - CSRF except `api/mobile/*` para WebView Bearer
 - Testes `Sprint8233MobileAuthDeviceBindingTest`
 - Hotfix: índice `pat_tokenable_device_idx` (MySQL 1059 — nome automático > 64)
+- Hotfix: migration idempotente para produção com colunas já criadas e índice ausente
 
 Sem offline, sem push, sem APK, sem merge.

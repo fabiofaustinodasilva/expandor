@@ -6,12 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Sprint 8.2.33 — metadata de device binding no token Sanctum.
- * Hotfix: índice nomeado (MySQL identifier <= 64). Idempotente se o ALTER
- * anterior criou colunas e falhou no CREATE INDEX.
+ *
+ * A) Fresh: cria colunas + índice curto.
+ * B) Produção após falha parcial (colunas já existem, índice não,
+ *    migration não registrada): não recria colunas; só cria o índice;
+ *    registra a migration.
+ *
+ * Índice explícito: MySQL limita identifier a 64 chars.
+ * Nome automático ultrapassava o limite (1059).
  */
 return new class extends Migration
 {
     public const INDEX = 'pat_tokenable_device_idx';
+
+    /**
+     * @var list<string>
+     */
+    public const COLUMNS = [
+        'device_id',
+        'device_name',
+        'platform',
+        'app_version',
+        'session_version',
+    ];
 
     public function up(): void
     {
@@ -61,12 +78,10 @@ return new class extends Migration
             });
         }
 
-        $drop = [];
-        foreach (['device_id', 'device_name', 'platform', 'app_version', 'session_version'] as $column) {
-            if (Schema::hasColumn($table, $column)) {
-                $drop[] = $column;
-            }
-        }
+        $drop = array_values(array_filter(
+            self::COLUMNS,
+            fn (string $column): bool => Schema::hasColumn($table, $column),
+        ));
 
         if ($drop !== []) {
             Schema::table($table, function (Blueprint $blueprint) use ($drop): void {
