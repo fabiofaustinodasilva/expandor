@@ -122,17 +122,22 @@ const runtimeConfig = [
 
 writeFileSync(join(outDir, 'runtime-config.js'), runtimeConfig);
 
+const shellVersion = String(process.env.EXPANDOR_SHELL_VERSION || '8.2.34').trim();
+const buildStamp = new Date().toISOString();
+
 const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0B1F3A">
+    <meta name="exp-shell-version" content="${shellVersion}">
+    <meta name="exp-shell-built-at" content="${buildStamp}">
     <meta http-equiv="Content-Security-Policy" content="${csp}">
     <title>EXP Vendedor</title>
-    <link rel="stylesheet" href="./vendor/seller-app.css">
+    <link rel="stylesheet" href="./vendor/seller-app.css?v=${shellVersion}">
 </head>
-<body>
+<body data-shell-version="${shellVersion}" data-shell-built-at="${buildStamp}">
     <div class="login-card" id="screen-login">
         <header class="login-brand">
             <img class="login-brand__logo" src="./vendor/exp-vendedor-logo.png" alt="EXP Vendedor" width="120" height="120" decoding="async">
@@ -180,8 +185,9 @@ const html = `<!DOCTYPE html>
                         <button type="button" id="layer-street" data-active="1">Mapa</button>
                         <button type="button" id="layer-satellite">Satélite</button>
                     </div>
-                    <button class="map-fab map-fab--add" id="create-point-open" type="button" aria-label="Novo imóvel">
+                    <button class="map-fab map-fab--add map-fab--labeled" id="create-point-open" type="button" aria-label="Novo ponto">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                        <span class="map-fab__label">Novo ponto</span>
                     </button>
                     <button class="map-fab map-fab--layers" id="map-layers-btn" type="button" aria-label="Camadas">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
@@ -368,7 +374,7 @@ const html = `<!DOCTYPE html>
         <div class="sheet sheet--scroll" id="create-sheet" hidden>
             <div class="sheet__handle"></div>
             <h3 class="sheet__title">Novo imóvel</h3>
-            <p class="card__meta">Local selecionado</p>
+            <p class="card__meta" id="create-location-status">Localização definida ✓</p>
             <span class="location-chip" id="create-location-chip" hidden></span>
             <form id="create-point-form">
                 <input type="hidden" id="point-lat">
@@ -418,6 +424,7 @@ const html = `<!DOCTYPE html>
             <h3 class="sheet__title">Sobre o Expandor</h3>
             <p class="card__meta">EXP Vendedor é o aplicativo de campo da plataforma Expandor para vendas porta a porta.</p>
             <p class="app-version" id="about-version"></p>
+            <p class="app-version" id="about-shell-build"></p>
             <button class="btn btn-ghost btn-block" id="about-close" type="button">Fechar</button>
         </div>
 
@@ -438,12 +445,18 @@ const html = `<!DOCTYPE html>
         </div>
         <audio id="commission-audio" src="./sounds/commission-coins.wav" preload="auto"></audio>
     </div>
-    <script src="./runtime-config.js"></script>
-    <script src="./vendor/seller-app.js"></script>
+    <script src="./runtime-config.js?v=${shellVersion}"></script>
+    <script src="./vendor/seller-app.js?v=${shellVersion}"></script>
 </body>
 </html>
 `;
 
 writeFileSync(join(outDir, 'index.html'), html);
+writeFileSync(join(outDir, 'shell-build.json'), JSON.stringify({
+    version: shellVersion,
+    built_at: buildStamp,
+    flow: 'field-visit-parity-v2',
+}, null, 2));
 console.log('capacitor-shell ready:', outDir);
+console.log('capacitor-shell build stamp:', shellVersion, buildStamp);
 console.log('capacitor-shell runtime-config.js baked with API base');

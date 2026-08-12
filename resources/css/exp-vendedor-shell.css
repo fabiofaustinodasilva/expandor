@@ -349,6 +349,18 @@ body.seller-app-mode {
     justify-content: center;
 }
 
+.map-fab--labeled {
+    width: auto;
+    height: auto;
+    min-height: 2.75rem;
+    padding: 0.65rem 0.9rem;
+}
+
+.map-fab__label {
+    font-size: 0.82rem;
+    line-height: 1;
+}
+
 .map-layers-menu {
     background: var(--bg-card);
     border: 1px solid var(--border);

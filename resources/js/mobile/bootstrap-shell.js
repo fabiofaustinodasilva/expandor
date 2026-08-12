@@ -35,6 +35,14 @@ let layersOpen = false;
 let initialMapGpsDone = false;
 let catalogProducts = [];
 
+function debugFlow(step, detail = {}) {
+    try {
+        console.info('[EXP Vendedor]', step, detail);
+    } catch {
+        /* optional */
+    }
+}
+
 function $(id) {
     return document.getElementById(id);
 }
@@ -132,6 +140,14 @@ function paintUser(data) {
     if (aboutVersion) {
         aboutVersion.textContent = `Versão ${appVersionLabel()}`;
     }
+    const aboutBuild = $('about-shell-build');
+    if (aboutBuild) {
+        const version = document.body?.dataset?.shellVersion || appVersionLabel();
+        const builtAt = document.body?.dataset?.shellBuiltAt || '';
+        aboutBuild.textContent = builtAt
+            ? `Shell ${version} · ${builtAt}`
+            : `Shell ${version}`;
+    }
 }
 
 function toast(message, kind = 'error') {
@@ -218,23 +234,25 @@ async function openPoint(item) {
     paintIcons($('point-sheet'));
 }
 
-function openCreateSheet(lat, lng, label) {
+function openCreateSheet(lat, lng, label, source = 'unknown') {
+    debugFlow('openCreatePoint', { source, hasCoords: lat != null && lng != null });
     if (lat != null && lng != null) {
         $('point-lat').value = String(lat);
         $('point-lng').value = String(lng);
     }
+    const statusEl = $('create-location-status');
+    if (statusEl) {
+        statusEl.textContent = lat != null && lng != null
+            ? 'Localização definida ✓'
+            : 'Selecione um local no mapa ou use Meu Local';
+    }
     const chip = $('create-location-chip');
     if (chip) {
-        if (label) {
-            chip.textContent = label;
-            chip.hidden = false;
-        } else if (lat != null && lng != null) {
-            chip.textContent = `Local: ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
-            chip.hidden = false;
-        } else {
-            chip.hidden = true;
-        }
+        chip.hidden = true;
+        chip.textContent = '';
     }
+    show('visit-sheet', false);
+    show('point-sheet', false);
     show('create-sheet', true);
     paintIcons($('create-sheet'));
 }
@@ -344,6 +362,7 @@ function renderVisitOutcomes() {
 
 function selectVisitOutcome(status) {
     const value = status || '';
+    debugFlow('visitOutcomeSelected', { status: value || null });
     const hidden = $('visit-status');
     if (hidden) {
         hidden.value = value;
@@ -456,11 +475,18 @@ function openVisitSheet(propertyId, options = {}) {
         return;
     }
 
+    debugFlow('openVisitFlow', {
+        propertyId: id,
+        followUpId: options.followUpId || null,
+        source: options.source || 'unknown',
+    });
+
     $('visit-property-id').value = id;
     $('point-id').value = id;
     $('visit-follow-up-id').value = options.followUpId ? String(options.followUpId) : '';
     selectVisitOutcome('');
     resetSaleForm();
+    renderVisitOutcomes();
     const notes = $('visit-notes');
     if (notes) {
         notes.value = '';
@@ -683,15 +709,19 @@ async function onCreatePoint(event) {
 
     try {
         const created = await mobileApi.createPoint(body);
+        const pointId = created.data?.property_id || created.data?.id;
+        debugFlow('pointCreated', { propertyId: pointId || null });
         toast('Imóvel salvo.', 'status');
         show('create-sheet', false);
-        const pointId = created.data?.property_id || created.data?.id;
         await loadMarkers();
         if (pointId) {
             MapAdapter.selectProperty(pointId);
             openVisitSheet(pointId, {
                 subtitle: [body.street, body.number].filter(Boolean).join(', ') || 'Como foi a abordagem?',
+                source: 'after-create-point',
             });
+        } else {
+            toast('Imóvel salvo, mas não foi possível abrir a visita.', 'error');
         }
     } catch (error) {
         toast(error.message || OFFLINE_MUTATION, 'error');
@@ -768,6 +798,8 @@ async function submitVisit() {
             : (status === 'installation_requested'
                 ? await mobileApi.sale(id, body)
                 : await mobileApi.visit(id, body));
+
+        debugFlow('visitSubmitted', { status, propertyId: id, followUpId: followUpId || null });
 
         toast(
             status === 'installation_requested' ? 'Venda registrada.' : 'Visita registrada.',
@@ -903,11 +935,11 @@ async function enterApp(data) {
         paintCampaignContext();
         if (!MapAdapter.map) {
             MapAdapter.init('seller-map', { zoom: 13 });
-            MapAdapter.onMapClick = (lat, lng) => {
-                openCreateSheet(lat, lng);
-            };
             syncLayerButtons();
         }
+        MapAdapter.onMapClick = (lat, lng) => {
+            openCreateSheet(lat, lng, null, 'map-tap');
+        };
         await hydrateCatalog();
         renderVisitOutcomes();
         await loadMarkers();
@@ -997,11 +1029,12 @@ function bindApp() {
 
     $('gps-btn')?.addEventListener('click', onGps);
     $('create-point-open')?.addEventListener('click', async () => {
+        debugFlow('openCreatePoint', { source: 'novo-ponto-button' });
         try {
-            const position = await LocationService.getCurrentPosition();
-            openCreateSheet(position.latitude, position.longitude);
+            const position = await LocationService.getCurrentPosition({ timeout: 8000, maximumAge: 15000 });
+            openCreateSheet(position.latitude, position.longitude, null, 'novo-ponto-gps');
         } catch {
-            openCreateSheet(null, null);
+            openCreateSheet(null, null, null, 'novo-ponto-no-gps');
         }
     });
     $('map-layers-btn')?.addEventListener('click', (event) => {
