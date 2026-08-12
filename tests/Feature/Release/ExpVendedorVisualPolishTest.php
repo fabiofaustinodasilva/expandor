@@ -14,7 +14,8 @@ class ExpVendedorVisualPolishTest extends TestCase
         $prepare = (string) file_get_contents(base_path('scripts/prepare-capacitor-shell.mjs'));
 
         $this->assertStringContainsString('EXP Vendedor', $prepare);
-        $this->assertStringContainsString('EXP VENDEDOR', $prepare);
+        $this->assertStringContainsString('exp-vendedor-logo.png', $prepare);
+        $this->assertStringContainsString('Bem-vindo ao Expandor', $prepare);
         $this->assertStringContainsString('assets/exp-vendedor', $prepare);
         $this->assertStringContainsString('bottom-nav', $prepare);
         $this->assertStringContainsString('Meu Local', $prepare);
@@ -62,9 +63,10 @@ class ExpVendedorVisualPolishTest extends TestCase
 
         $html = (string) file_get_contents($shellIndex);
 
-        $this->assertStringContainsString('EXP VENDEDOR', $html);
+        $this->assertStringContainsString('EXP Vendedor', $html);
+        $this->assertStringContainsString('Bem-vindo ao Expandor', $html);
         $this->assertStringContainsString('runtime-config.js', $html);
-        $this->assertStringContainsString('./vendor/exp-vendedor-logo.svg', $html);
+        $this->assertStringContainsString('./vendor/exp-vendedor-logo.png', $html);
         $this->assertStringNotContainsString('${imgSrc}', $html);
         $this->assertStringNotContainsString('window.EXPANDOR_API_BASE', $html);
     }

@@ -70,10 +70,12 @@ body.seller-app-mode {
 }
 
 .login-brand__logo {
-    width: 72px;
-    height: 72px;
+    width: 7.5rem;
+    height: 7.5rem;
     margin: 0 auto 0.75rem;
     display: block;
+    object-fit: contain;
+    border-radius: 0.85rem;
 }
 
 .login-brand__title {
@@ -234,6 +236,9 @@ body.seller-app-mode {
     width: 2rem;
     height: 2rem;
     flex-shrink: 0;
+    object-fit: contain;
+    border-radius: 0.45rem;
+    background: transparent;
 }
 
 .app-header__text { min-width: 0; }

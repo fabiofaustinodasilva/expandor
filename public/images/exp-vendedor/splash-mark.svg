@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Expandor">
-  <rect width="240" height="240" fill="#0B1F3A"/>
-  <text x="120" y="118" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800" fill="#FFFFFF">EXP</text>
-  <path d="M72 150 L120 96 L168 150" fill="none" stroke="#F97316" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="120" y="188" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#93C5FD" letter-spacing="4">VENDEDOR</text>
-</svg>

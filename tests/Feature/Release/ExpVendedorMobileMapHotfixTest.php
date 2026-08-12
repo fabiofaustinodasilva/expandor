@@ -49,9 +49,11 @@ class ExpVendedorMobileMapHotfixTest extends TestCase
         $this->assertStringContainsString('id="map-present-products"', $prepare);
         $this->assertStringContainsString('Apresentar produtos', $prepare);
         $this->assertStringContainsString('map-toolbar--left', $prepare);
-        $this->assertStringContainsString('./vendor/exp-vendedor-logo.svg', $prepare);
-        $this->assertStringContainsString('vendor/exp-vendedor-logo.svg', $prepare);
-        $this->assertStringContainsString('logo-exp.svg', $prepare);
+        $this->assertStringContainsString('./vendor/exp-vendedor-logo.png', $prepare);
+        $this->assertStringContainsString('./vendor/exp-vendedor-icon.png', $prepare);
+        $this->assertStringContainsString('exp-vendedor-logo.png', $prepare);
+        $this->assertStringNotContainsString('exp-vendedor-logo.svg', $prepare);
+        $this->assertStringNotContainsString('logo-exp.svg', $prepare);
         $this->assertStringContainsString('runtime-config.js', $prepare);
     }
 
@@ -59,7 +61,7 @@ class ExpVendedorMobileMapHotfixTest extends TestCase
     {
         $shellIndex = public_path('capacitor-shell/index.html');
         $runtime = public_path('capacitor-shell/runtime-config.js');
-        $logo = public_path('capacitor-shell/vendor/exp-vendedor-logo.svg');
+        $logo = public_path('capacitor-shell/vendor/exp-vendedor-logo.png');
 
         if (! is_file($shellIndex) || ! is_file($runtime)) {
             $this->markTestSkipped('capacitor-shell not built in this environment');
@@ -68,7 +70,7 @@ class ExpVendedorMobileMapHotfixTest extends TestCase
         $html = (string) file_get_contents($shellIndex);
 
         $this->assertStringContainsString('map-present-products', $html);
-        $this->assertStringContainsString('./vendor/exp-vendedor-logo.svg', $html);
+        $this->assertStringContainsString('./vendor/exp-vendedor-logo.png', $html);
         $this->assertStringContainsString('https://a.tile.openstreetmap.org', $html);
         $this->assertStringNotContainsString('https://*.tile.openstreetmap.org', $html);
         $this->assertStringNotContainsString('${imgSrc}', $html);

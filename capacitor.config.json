@@ -1,6 +1,6 @@
 {
   "appId": "br.com.expandor.app",
-  "appName": "Expandor",
+  "appName": "EXP Vendedor",
   "webDir": "public/capacitor-shell",
   "plugins": {
     "Geolocation": {

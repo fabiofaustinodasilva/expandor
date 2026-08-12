@@ -1,17 +1,19 @@
-# Assets EXP Vendedor (Capacitor)
+# Assets EXP Vendedor (Capacitor + Android)
 
-Substitua os placeholders pelos arquivos oficiais do proprietário **sem alterar nomes**:
+Arquivos oficiais (PNG):
 
 | Arquivo | Uso |
 |---|---|
-| `logo-exp.svg` ou `logo-exp.png` | Login + cabeçalho |
-| `icon-app.png` (1024×1024) | Fonte ícone Android |
-| `splash-mark.svg` ou `splash-mark.png` | Splash Capacitor |
+| `exp-vendedor-logo.png` | Login (logo completa EXP VENDEDOR) |
+| `exp-vendedor-icon.png` | Header + ícone Android + splash |
 
-Cores de referência da identidade:
-- Azul Expandor escuro: `#0B1F3A`
-- Azul médio: `#1E4A8C`
-- Laranja seta: `#F97316`
-- Branco: `#FFFFFF`
+Cores da identidade:
+- Azul Expandor: `#1E4A8C`
+- Azul escuro: `#0B1F3A`
+- Laranja: `#F97316`
 
-O build copia esta pasta para `public/capacitor-shell/assets/exp-vendedor/`.
+Build:
+- `npm run build` copia PNGs para `public/capacitor-shell/vendor/`
+- `scripts/generate-exp-vendedor-android-assets.mjs` gera mipmap/splash Android
+
+Não usar SVG placeholder — substituir apenas os PNG acima quando a arte oficial mudar.

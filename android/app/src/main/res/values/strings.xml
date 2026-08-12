@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Expandor</string>
-    <string name="title_activity_main">Expandor</string>
+    <string name="app_name">EXP Vendedor</string>
+    <string name="title_activity_main">EXP Vendedor</string>
     <string name="package_name">br.com.expandor.app</string>
     <string name="custom_url_scheme">br.com.expandor.app</string>
 </resources>

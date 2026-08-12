@@ -63,25 +63,21 @@ if (existsSync(sound)) {
 }
 
 const brandAssets = join(root, 'public/images/exp-vendedor');
-const logoSrc = join(brandAssets, 'logo-exp.svg');
-if (!existsSync(logoSrc)) {
-    throw new Error('Missing public/images/exp-vendedor/logo-exp.svg — required for EXP Vendedor shell.');
+const logoPng = join(brandAssets, 'exp-vendedor-logo.png');
+const iconPng = join(brandAssets, 'exp-vendedor-icon.png');
+
+if (!existsSync(logoPng)) {
+    throw new Error('Missing public/images/exp-vendedor/exp-vendedor-logo.png — official EXP Vendedor logo required.');
+}
+if (!existsSync(iconPng)) {
+    throw new Error('Missing public/images/exp-vendedor/exp-vendedor-icon.png — official EXP Vendedor icon required.');
 }
 
 mkdirSync(join(outDir, 'assets/exp-vendedor'), { recursive: true });
-cpSync(logoSrc, join(outDir, 'assets/exp-vendedor/logo-exp.svg'));
-cpSync(logoSrc, join(outDir, 'vendor/exp-vendedor-logo.svg'));
-
-const splashSrc = join(brandAssets, 'splash-mark.svg');
-if (existsSync(splashSrc)) {
-    cpSync(splashSrc, join(outDir, 'assets/exp-vendedor/splash-mark.svg'));
-    cpSync(splashSrc, join(outDir, 'vendor/exp-vendedor-splash.svg'));
-}
-
-const brandReadme = join(brandAssets, 'README.md');
-if (existsSync(brandReadme)) {
-    cpSync(brandReadme, join(outDir, 'assets/exp-vendedor/README.md'));
-}
+cpSync(logoPng, join(outDir, 'assets/exp-vendedor/exp-vendedor-logo.png'));
+cpSync(iconPng, join(outDir, 'assets/exp-vendedor/exp-vendedor-icon.png'));
+cpSync(logoPng, join(outDir, 'vendor/exp-vendedor-logo.png'));
+cpSync(iconPng, join(outDir, 'vendor/exp-vendedor-icon.png'));
 
 const apiBase = String(process.env.CAP_API_URL || process.env.APP_URL || '').replace(/\/$/, '');
 if (!apiBase) {
@@ -139,10 +135,8 @@ const html = `<!DOCTYPE html>
 <body>
     <div class="login-card" id="screen-login">
         <header class="login-brand">
-            <img class="login-brand__logo" src="./vendor/exp-vendedor-logo.svg" alt="Expandor">
-            <p class="login-brand__title">EXP VENDEDOR</p>
-            <p class="login-brand__subtitle">Sistema de vendas porta a porta</p>
-            <p class="login-brand__welcome">Bem-vindo</p>
+            <img class="login-brand__logo" src="./vendor/exp-vendedor-logo.png" alt="EXP Vendedor" width="120" height="120" decoding="async">
+            <p class="login-brand__welcome">Bem-vindo ao Expandor</p>
             <p class="login-brand__hint">Acesse sua conta</p>
         </header>
         <div id="auth-banner" class="banner" hidden></div>
@@ -159,7 +153,7 @@ const html = `<!DOCTYPE html>
     <div id="screen-app" hidden>
         <header class="app-header">
             <div class="app-header__left">
-                <img class="app-header__logo" src="./vendor/exp-vendedor-logo.svg" alt="EXP Vendedor">
+                <img class="app-header__logo" src="./vendor/exp-vendedor-icon.png" alt="" width="32" height="32" decoding="async">
                 <div class="app-header__text">
                     <p class="app-header__hello" id="signed-hello">Olá</p>
                     <p class="app-header__company" id="signed-company"></p>
