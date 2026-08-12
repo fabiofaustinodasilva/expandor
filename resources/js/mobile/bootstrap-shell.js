@@ -16,6 +16,13 @@ import {
     appVersionLabel,
     escapeHtml,
 } from './seller-labels.js';
+import {
+    initSaleForm,
+    validateSaleForm,
+    collectSalePayload,
+    resetSaleForm,
+    addCartLine,
+} from './sale-cart.js';
 
 const GPS_FAIL = 'Não foi possível acessar sua localização.';
 const GPS_UNAVAILABLE_HINT = 'Localização indisponível. Use Meu Local quando quiser.';
@@ -26,6 +33,7 @@ let bootstrap = null;
 let searchTimer = null;
 let layersOpen = false;
 let initialMapGpsDone = false;
+let catalogProducts = [];
 
 function $(id) {
     return document.getElementById(id);
@@ -231,6 +239,94 @@ function openCreateSheet(lat, lng, label) {
     paintIcons($('create-sheet'));
 }
 
+function paintCampaignContext() {
+    const ctx = bootstrap?.data?.campaign_context;
+    const label = $('visit-campaign-label');
+    const select = $('visit-campaign');
+    const warning = $('visit-campaign-warning');
+
+    if (!ctx) {
+        return;
+    }
+
+    if (!ctx.has_campaign) {
+        if (warning) {
+            warning.hidden = false;
+            warning.textContent = ctx.no_campaign_message
+                || 'Você não possui campanha ativa. Solicite ao gestor.';
+        }
+        if (label) {
+            label.hidden = true;
+        }
+        if (select) {
+            select.hidden = true;
+            select.required = false;
+        }
+
+        return;
+    }
+
+    if (warning) {
+        warning.hidden = true;
+        warning.textContent = '';
+    }
+
+    if (!ctx.requires_selection && ctx.active_campaign_id) {
+        const campaign = (ctx.campaigns || []).find((row) => Number(row.id) === Number(ctx.active_campaign_id));
+        if (label) {
+            label.textContent = campaign?.name || 'Campanha ativa';
+            label.hidden = false;
+        }
+        if (select) {
+            select.hidden = true;
+            select.required = false;
+            select.innerHTML = `<option value="${ctx.active_campaign_id}">${escapeHtml(campaign?.name || 'Campanha')}</option>`;
+            select.value = String(ctx.active_campaign_id);
+        }
+
+        return;
+    }
+
+    if (label) {
+        label.hidden = true;
+    }
+    if (select) {
+        select.hidden = false;
+        select.required = true;
+        fillSelect('visit-campaign', ctx.campaigns || [], 'name');
+    }
+}
+
+function resolveCampaignIdForSubmit() {
+    const ctx = bootstrap?.data?.campaign_context;
+    if (ctx?.active_campaign_id && !ctx?.requires_selection) {
+        return Number(ctx.active_campaign_id);
+    }
+
+    return Number($('visit-campaign')?.value || $('point-campaign')?.value || 0);
+}
+
+async function resolveVisitCoordinates(propertyId) {
+    const marker = MapAdapter.markerRegistry?.get(Number(propertyId))?.data;
+    if (marker?.latitude != null && marker?.longitude != null) {
+        return {
+            latitude: Number(marker.latitude),
+            longitude: Number(marker.longitude),
+        };
+    }
+
+    try {
+        const position = await LocationService.getCurrentPosition({ timeout: 5000, maximumAge: 15000 });
+
+        return {
+            latitude: position.latitude,
+            longitude: position.longitude,
+        };
+    } catch {
+        return {};
+    }
+}
+
 function renderVisitOutcomes() {
     const el = $('visit-outcome-list');
     if (!el) {
@@ -289,9 +385,14 @@ function syncVisitOutcomeBlocks(status) {
         submit.textContent = isSale ? 'Confirmar venda' : 'Salvar visita';
     }
 
+    if (isSale) {
+        resetSaleForm();
+        initSaleForm(catalogProducts, bootstrap?.data?.sale_fields || {});
+    }
+
     if (isReturn) {
         ensureReturnDefaults();
-    } else {
+    } else if (!isSale) {
         const dateEl = $('visit-follow-up-date');
         const timeEl = $('visit-follow-up-time');
         if (dateEl) {
@@ -357,22 +458,25 @@ function openVisitSheet(propertyId, options = {}) {
 
     $('visit-property-id').value = id;
     $('point-id').value = id;
+    $('visit-follow-up-id').value = options.followUpId ? String(options.followUpId) : '';
     selectVisitOutcome('');
+    resetSaleForm();
     const notes = $('visit-notes');
     if (notes) {
         notes.value = '';
     }
     setVisitError('');
     MapAdapter.selectProperty(id);
+    paintCampaignContext();
 
     const subtitle = $('visit-sheet-subtitle');
     if (subtitle) {
-        subtitle.textContent = options.subtitle || $('point-meta')?.textContent || 'Como foi a visita?';
+        subtitle.textContent = options.subtitle || 'Como foi a abordagem?';
     }
 
     const campaignDefault = bootstrap?.data?.active_campaign_id || $('point-campaign')?.value;
     const campaignSelect = $('visit-campaign');
-    if (campaignDefault && campaignSelect) {
+    if (campaignDefault && campaignSelect && !campaignSelect.hidden) {
         campaignSelect.value = String(campaignDefault);
     }
 
@@ -401,7 +505,10 @@ async function loadAgenda() {
                 <p class="card__meta">${escapeHtml(item.address || 'Endereço não informado')}</p>
                 ${item.campaign ? `<p class="card__meta">${escapeHtml(item.campaign)}</p>` : ''}
                 ${item.notes ? `<p class="card__meta">${escapeHtml(item.notes)}</p>` : ''}
-                <button type="button" class="btn btn-ghost btn-block" data-open-point="${item.property_id || ''}">Ver imóvel</button>
+                <div class="sheet-actions" style="margin-top:0.65rem">
+                    <button type="button" class="btn btn-accent btn-block" data-complete-follow-up="${item.id}" data-property-id="${item.property_id || ''}">Registrar retorno</button>
+                    <button type="button" class="btn btn-ghost btn-block" data-open-point="${item.property_id || ''}">Ver imóvel</button>
+                </div>
             </article>
         `,
     );
@@ -570,10 +677,8 @@ async function onCreatePoint(event) {
         number: $('point-number')?.value,
         latitude: lat,
         longitude: lng,
-        status: $('point-status')?.value || 'new',
         contact_name: $('point-contact')?.value,
         contact_phone: $('point-phone')?.value,
-        notes: $('point-notes')?.value,
     };
 
     try {
@@ -585,7 +690,7 @@ async function onCreatePoint(event) {
         if (pointId) {
             MapAdapter.selectProperty(pointId);
             openVisitSheet(pointId, {
-                subtitle: [body.street, body.number].filter(Boolean).join(', ') || 'Como foi a visita?',
+                subtitle: [body.street, body.number].filter(Boolean).join(', ') || 'Como foi a abordagem?',
             });
         }
     } catch (error) {
@@ -602,18 +707,25 @@ async function submitVisit() {
 
     const id = $('visit-property-id')?.value || $('point-id')?.value;
     const status = $('visit-status')?.value;
-    const campaignId = Number($('visit-campaign')?.value || $('point-campaign')?.value || bootstrap?.data?.active_campaign_id);
+    const followUpId = $('visit-follow-up-id')?.value;
+    const campaignId = resolveCampaignIdForSubmit();
     const submitBtn = $('visit-submit');
 
     setVisitError('');
 
+    if (!bootstrap?.data?.campaign_context?.has_campaign) {
+        setVisitError(bootstrap?.data?.campaign_context?.no_campaign_message
+            || 'Você não possui campanha ativa.');
+
+        return;
+    }
     if (!campaignId) {
         setVisitError('Escolha a campanha desta visita.');
 
         return;
     }
     if (!status) {
-        setVisitError('Escolha como foi o atendimento.');
+        setVisitError('Escolha como foi a abordagem.');
 
         return;
     }
@@ -622,27 +734,28 @@ async function submitVisit() {
 
         return;
     }
-    if (status === 'installation_requested' && !$('sale-product')?.value) {
-        setVisitError('Selecione o produto da venda.');
+    if (status === 'installation_requested') {
+        const saleError = validateSaleForm();
+        if (saleError) {
+            setVisitError(saleError);
 
-        return;
+            return;
+        }
     }
 
+    const coords = await resolveVisitCoordinates(id);
     const body = {
         status,
         campaign_id: campaignId,
         notes: $('visit-notes')?.value || '',
+        ...coords,
     };
 
     if (status === 'return_later') {
         body.follow_up_at = combineFollowUpAt();
     }
     if (status === 'installation_requested') {
-        body.customer_name = $('sale-name')?.value;
-        body.customer_phone = $('sale-phone')?.value;
-        body.items = $('sale-product')?.value
-            ? [{ product_id: Number($('sale-product').value), quantity: 1 }]
-            : undefined;
+        Object.assign(body, collectSalePayload());
     }
 
     if (submitBtn) {
@@ -650,9 +763,11 @@ async function submitVisit() {
     }
 
     try {
-        const payload = status === 'installation_requested'
-            ? await mobileApi.sale(id, body)
-            : await mobileApi.visit(id, body);
+        const payload = followUpId
+            ? await mobileApi.completeFollowUp(followUpId, body)
+            : (status === 'installation_requested'
+                ? await mobileApi.sale(id, body)
+                : await mobileApi.visit(id, body));
 
         toast(
             status === 'installation_requested' ? 'Venda registrada.' : 'Visita registrada.',
@@ -674,6 +789,10 @@ async function submitVisit() {
 
         if (payload.data?.commission_awarded) {
             showReward(payload.data.commission_awarded);
+        }
+
+        if (followUpId || status === 'return_later') {
+            loadAgenda().catch(() => {});
         }
 
         loadMarkers().catch(() => {});
@@ -717,16 +836,22 @@ function hideReward() {
 
 async function hydrateCatalog() {
     try {
-        const [territory, products, campaigns] = await Promise.all([
+        const [territory, products, campaigns, bootPayload] = await Promise.all([
             mobileApi.territory(),
             mobileApi.products(),
             fetchCampaigns(),
+            bootstrap?.data ? Promise.resolve(bootstrap) : mobileApi.bootstrap(),
         ]);
+        if (!bootstrap?.data && bootPayload?.data) {
+            bootstrap = bootPayload;
+        }
+        catalogProducts = products.data || [];
         fillSelect('point-city', territory.data?.cities || [], 'name');
         fillSelect('point-sector', territory.data?.sectors || [], 'name');
-        fillSelect('sale-product', products.data || [], 'name');
         fillSelect('visit-campaign', campaigns, 'name');
         fillSelect('point-campaign', campaigns, 'name');
+        initSaleForm(catalogProducts, bootstrap?.data?.sale_fields || {});
+        paintCampaignContext();
     } catch {
         /* catalog optional until online */
     }
@@ -775,6 +900,7 @@ async function enterApp(data) {
     try {
         bootstrap = await mobileApi.bootstrap();
         paintUser(bootstrap.data || data);
+        paintCampaignContext();
         if (!MapAdapter.map) {
             MapAdapter.init('seller-map', { zoom: 13 });
             MapAdapter.onMapClick = (lat, lng) => {
@@ -961,7 +1087,23 @@ function bindApp() {
         }, 400);
     });
 
+    $('sale-cart-add')?.addEventListener('click', () => addCartLine(true));
+
     document.addEventListener('click', (event) => {
+        const followBtn = event.target.closest?.('[data-complete-follow-up]');
+        if (followBtn?.dataset.completeFollowUp) {
+            const propertyId = followBtn.dataset.propertyId;
+            if (propertyId) {
+                setPane('map');
+                openVisitSheet(propertyId, {
+                    followUpId: followBtn.dataset.completeFollowUp,
+                    subtitle: 'Como foi a abordagem?',
+                });
+            }
+
+            return;
+        }
+
         const openBtn = event.target.closest?.('[data-open-point]');
         if (openBtn?.dataset.openPoint) {
             openPoint({ id: openBtn.dataset.openPoint }).catch((error) => toast(error.message, 'error'));

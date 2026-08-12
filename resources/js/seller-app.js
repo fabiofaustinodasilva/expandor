@@ -11,6 +11,7 @@ import './mobile/map-adapter.js';
 import './mobile/mobile-api.js';
 import './mobile/map-tile-config.js';
 import './mobile/visit-outcomes.js';
+import './mobile/sale-cart.js';
 import './mobile/presentation-screen.js';
 import './mobile/bootstrap-shell.js';
 import L from 'leaflet';

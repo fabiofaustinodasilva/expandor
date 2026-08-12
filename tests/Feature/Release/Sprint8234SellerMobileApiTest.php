@@ -45,7 +45,13 @@ class Sprint8234SellerMobileApiTest extends TestCase
             ->assertJsonPath('data.role', Role::SELLER)
             ->assertJsonPath('data.map.fallback', 'leaflet_osm')
             ->assertJsonPath('data.capabilities.offline', false)
-            ->assertJsonPath('data.timezone.display', AppTime::zone());
+            ->assertJsonPath('data.timezone.display', AppTime::zone())
+            ->assertJsonStructure([
+                'data' => [
+                    'campaign_context' => ['campaigns', 'has_campaign', 'requires_selection'],
+                    'sale_fields' => ['required', 'labels'],
+                ],
+            ]);
 
         $json = strtolower((string) $response->getContent());
         $this->assertStringNotContainsString('app_key', $json);

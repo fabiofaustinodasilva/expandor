@@ -14,6 +14,8 @@ use App\Domains\Maps\Services\MapQueryService;
 use App\Domains\Mobile\Support\MobileApiTransformer;
 use App\Domains\Platform\Services\FeatureFlagService;
 use App\Domains\Sales\Products\Services\ProductCatalogService;
+use App\Domains\Sales\SaleFields\SaleFieldKeys;
+use App\Domains\Sales\SaleFields\SaleFieldsPolicyResolver;
 use App\Domains\Sales\Properties\Enums\PropertyStatus;
 use App\Domains\Sales\Properties\Enums\PropertyType;
 use App\Domains\Sales\Properties\Models\Property;
@@ -24,6 +26,7 @@ use App\Domains\Sales\Territory\Repositories\TerritoryRepository;
 use App\Domains\SalesApp\Services\SalesAppService;
 use App\Domains\Security\Services\SecurityService;
 use App\Domains\Visits\Actions\CompleteFollowUpAction;
+use App\Domains\Visits\Actions\RegisterFirstApproachAction;
 use App\Domains\Visits\Actions\RegisterVisitAction;
 use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Enums\VisitStatus;
@@ -49,9 +52,11 @@ class MobileSellerOpsService
         protected CustomerQueryService $customers,
         protected SalesAppService $salesApp,
         protected RegisterVisitAction $registerVisit,
+        protected RegisterFirstApproachAction $firstApproach,
         protected CompleteFollowUpAction $completeFollowUp,
         protected VisitService $visits,
         protected ProductCatalogService $catalog,
+        protected SaleFieldsPolicyResolver $saleFields,
         protected SalesCommissionRepository $commissions,
         protected TerritoryRepository $territory,
         protected FeatureFlagService $flags,
@@ -86,6 +91,9 @@ class MobileSellerOpsService
             ? 'Map data © Google'
             : '© OpenStreetMap contributors';
 
+        $activeCampaigns = $this->firstApproach->activeCampaignsFor($user);
+        $salePolicy = $this->saleFields->resolveForUser($user);
+
         return [
             'user' => $profile,
             'company' => $profile['company'],
@@ -96,6 +104,27 @@ class MobileSellerOpsService
             'timezone' => [
                 'display' => AppTime::zone(),
                 'today' => AppTime::today(),
+            ],
+            'campaign_context' => [
+                'campaigns' => $activeCampaigns->map(fn (Campaign $campaign) => [
+                    'id' => $campaign->id,
+                    'name' => $campaign->name,
+                ])->values()->all(),
+                'has_campaign' => $activeCampaigns->isNotEmpty(),
+                'requires_selection' => $activeCampaigns->count() > 1,
+                'active_campaign_id' => $activeCampaigns->count() === 1
+                    ? $activeCampaigns->first()->id
+                    : null,
+                'no_campaign_message' => $activeCampaigns->isEmpty()
+                    ? RegisterFirstApproachAction::NO_CAMPAIGN_MESSAGE
+                    : null,
+            ],
+            'active_campaign_id' => $activeCampaigns->count() === 1
+                ? $activeCampaigns->first()->id
+                : null,
+            'sale_fields' => [
+                'required' => $salePolicy->checklist(),
+                'labels' => SaleFieldKeys::labels(),
             ],
             'capabilities' => [
                 'gps' => true,
@@ -146,10 +175,12 @@ class MobileSellerOpsService
                 'longitude' => $data['longitude'],
             ]);
 
+            $status = $data['status'] ?? PropertyStatus::NEW->value;
+
             $property = $this->properties->createProperty([
                 'address_id' => $address->id,
                 'type' => PropertyType::HOUSE->value,
-                'status' => $data['status'],
+                'status' => $status instanceof PropertyStatus ? $status->value : (string) $status,
                 'latitude' => $data['latitude'],
                 'longitude' => $data['longitude'],
                 'notes' => $data['notes'] ?? null,
@@ -251,14 +282,8 @@ class MobileSellerOpsService
      */
     public function registerPointVisit(User $user, Property $property, array $data): array
     {
-        $campaignId = (int) ($data['campaign_id'] ?? 0);
-        if ($campaignId < 1) {
-            throw ValidationException::withMessages([
-                'campaign_id' => ['Informe a campanha.'],
-            ]);
-        }
-
-        $campaign = Campaign::query()->whereKey($campaignId)->firstOrFail();
+        $campaign = $this->firstApproach->resolveCampaign($user, $data['campaign_id'] ?? null);
+        $data['campaign_id'] = $campaign->id;
         $data['property_id'] = $property->id;
         $data['user_id'] = $user->id;
 

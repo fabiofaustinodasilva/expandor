@@ -280,20 +280,24 @@ const html = `<!DOCTYPE html>
             </div>
         </div>
 
-        <div class="sheet" id="visit-sheet" hidden>
+        <div class="sheet sheet--scroll" id="visit-sheet" hidden>
             <div class="sheet__handle"></div>
             <p class="sheet__section-title">RESULTADO DA ABORDAGEM</p>
             <h3 class="sheet__title" id="visit-sheet-title">Registrar visita</h3>
-            <p class="card__meta" id="visit-sheet-subtitle">Como foi a visita?</p>
+            <p class="card__meta" id="visit-sheet-subtitle">Como foi a abordagem?</p>
             <input type="hidden" id="visit-property-id">
             <input type="hidden" id="visit-status" value="">
+            <input type="hidden" id="visit-follow-up-id" value="">
             <select class="field-select" id="point-campaign" hidden></select>
 
-            <label class="field-label" for="visit-campaign">Campanha</label>
-            <select class="field-select" id="visit-campaign" required></select>
+            <div id="visit-campaign-block">
+                <label class="field-label">Campanha</label>
+                <p class="campaign-context__value" id="visit-campaign-label" hidden></p>
+                <select class="field-select" id="visit-campaign"></select>
+                <p class="banner" id="visit-campaign-warning" hidden data-kind="error"></p>
+            </div>
 
-            <p class="field-label" style="margin-top:0.85rem">Como foi a visita?</p>
-            <div id="visit-outcome-list" class="outcome-grid" role="listbox" aria-label="Resultado da abordagem"></div>
+            <div id="visit-outcome-list" class="outcome-grid" role="listbox" aria-label="Como foi a abordagem?"></div>
 
             <div class="visit-block" id="visit-notes-block">
                 <label class="field-label" for="visit-notes">Observações <span class="muted" id="visit-notes-hint">(opcional)</span></label>
@@ -320,23 +324,48 @@ const html = `<!DOCTYPE html>
             </div>
 
             <div class="visit-block" id="visit-sale-block" hidden>
-                <p class="sheet__section-title">VENDA</p>
-                <label class="field-label" for="sale-name">Nome do cliente</label>
-                <input class="field-input" id="sale-name" placeholder="Nome do cliente">
-                <label class="field-label" for="sale-phone">Telefone</label>
-                <input class="field-input" id="sale-phone" placeholder="Telefone">
-                <label class="field-label" for="sale-product">Produto</label>
-                <select class="field-select" id="sale-product"></select>
+                <p class="sheet__section-title">CONFIRMAR VENDA</p>
+                <p class="card__meta">Revise os produtos antes de finalizar.</p>
+                <label class="field-label" for="sale-name">Nome completo <span id="sale-name-required" class="req-star" hidden>*</span></label>
+                <input class="field-input" id="sale-name" placeholder="Nome completo" autocomplete="name">
+                <label class="field-label" for="sale-phone">Telefone <span id="sale-phone-required" class="req-star" hidden>*</span></label>
+                <input class="field-input" id="sale-phone" placeholder="Telefone" inputmode="tel" autocomplete="tel">
+                <label class="field-label" for="sale-whatsapp">WhatsApp <span id="sale-whatsapp-required" class="req-star" hidden>*</span></label>
+                <input class="field-input" id="sale-whatsapp" placeholder="WhatsApp" inputmode="tel">
+                <div class="sheet-actions" style="grid-template-columns:1fr 1fr">
+                    <div>
+                        <label class="field-label" for="sale-document">CPF <span id="sale-document-required" class="req-star" hidden>*</span></label>
+                        <input class="field-input" id="sale-document" placeholder="CPF">
+                    </div>
+                    <div>
+                        <label class="field-label" for="sale-rg">RG <span id="sale-rg-required" class="req-star" hidden>*</span></label>
+                        <input class="field-input" id="sale-rg" placeholder="RG">
+                    </div>
+                </div>
+                <label class="field-label" for="sale-email">E-mail <span id="sale-email-required" class="req-star" hidden>*</span></label>
+                <input class="field-input" id="sale-email" placeholder="E-mail" type="email" autocomplete="email">
+                <div class="sale-cart-head">
+                    <label class="field-label">Produtos <span id="sale-product-required" class="req-star" hidden>*</span></label>
+                    <button type="button" class="btn btn-ghost" id="sale-cart-add">+ Adicionar produto</button>
+                </div>
+                <div id="sale-cart-lines" class="sale-cart-lines"></div>
+                <p class="card__meta" id="sale-cart-empty">Nenhum produto ainda. Toque em “+ Adicionar produto”.</p>
+                <div class="sale-cart-total">
+                    <span class="muted">Total</span>
+                    <strong id="sale-cart-total">R$ 0,00</strong>
+                </div>
+                <label class="field-label" for="sale-notes">Observações da venda <span id="sale-notes-required" class="req-star" hidden>*</span></label>
+                <textarea class="field-textarea" id="sale-notes" placeholder="Observações comerciais desta venda"></textarea>
             </div>
 
             <div id="visit-error" class="banner" hidden data-kind="error"></div>
-            <div class="sheet-actions">
+            <div class="sheet-actions sheet-actions--sticky">
                 <button class="btn btn-primary btn-block" id="visit-submit" type="button">Salvar visita</button>
                 <button class="btn btn-ghost btn-block" id="visit-sheet-close" type="button">Cancelar</button>
             </div>
         </div>
 
-        <div class="sheet" id="create-sheet" hidden>
+        <div class="sheet sheet--scroll" id="create-sheet" hidden>
             <div class="sheet__handle"></div>
             <h3 class="sheet__title">Novo imóvel</h3>
             <p class="card__meta">Local selecionado</p>
@@ -360,20 +389,9 @@ const html = `<!DOCTYPE html>
                     <label class="field-label">Nome do contato</label>
                     <input class="field-input" id="point-contact" placeholder="Nome do contato">
                     <label class="field-label">Telefone</label>
-                    <input class="field-input" id="point-phone" placeholder="Telefone">
+                    <input class="field-input" id="point-phone" placeholder="Telefone" inputmode="tel">
                 </div>
-                <div class="sheet__section">
-                    <p class="sheet__section-title">SITUAÇÃO</p>
-                    <label class="field-label">Status</label>
-                    <select class="field-select" id="point-status">
-                        <option value="new">Novo</option>
-                    </select>
-                </div>
-                <div class="sheet__section">
-                    <p class="sheet__section-title">OBSERVAÇÕES</p>
-                    <textarea class="field-textarea" id="point-notes" placeholder="Observações"></textarea>
-                </div>
-                <div class="sheet-actions">
+                <div class="sheet-actions sheet-actions--sticky">
                     <button class="btn btn-primary" type="submit">Salvar imóvel</button>
                     <button class="btn btn-ghost" id="create-point-cancel" type="button">Cancelar</button>
                 </div>

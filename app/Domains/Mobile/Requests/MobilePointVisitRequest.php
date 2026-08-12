@@ -27,7 +27,7 @@ class MobilePointVisitRequest extends StoreVisitRequest
 
         return array_merge(parent::rules(), [
             'campaign_id' => [
-                'required',
+                'nullable',
                 'integer',
                 Rule::exists('campaigns', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
             ],

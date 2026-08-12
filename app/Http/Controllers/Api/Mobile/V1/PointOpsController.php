@@ -60,7 +60,7 @@ class PointOpsController extends Controller
                 'number' => ['nullable', 'string', 'max:30'],
                 'latitude' => ['required', 'numeric', 'between:-90,90'],
                 'longitude' => ['required', 'numeric', 'between:-180,180'],
-                'status' => ['required', Rule::enum(PropertyStatus::class)],
+                'status' => ['nullable', Rule::enum(PropertyStatus::class)],
                 'contact_name' => ['nullable', 'string', 'max:255'],
                 'contact_phone' => ['nullable', 'string', 'max:30'],
                 'notes' => ['nullable', 'string', 'max:2000'],
@@ -76,6 +76,7 @@ class PointOpsController extends Controller
 
         /** @var User $user */
         $user = $request->user();
+        $data['status'] = $data['status'] ?? PropertyStatus::NEW->value;
 
         return MobileAuthResponse::ok(
             'Ponto salvo.',
