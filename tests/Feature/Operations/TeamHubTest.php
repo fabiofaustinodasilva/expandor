@@ -49,6 +49,7 @@ class TeamHubTest extends TestCase
         $this->assertStringContainsString('minmax', $source);
         $this->assertStringContainsString('max-width: none', $source);
         $this->assertStringNotContainsString('max-width: 1080px', $source);
+        $this->assertStringNotContainsString('.op-page:has(.team-hub)', $source);
         $this->assertStringNotContainsString('max-width:48rem', $source);
         $this->assertStringNotContainsString('max-width: 48rem', $source);
         $this->assertStringNotContainsString('max-width:56rem', $source);

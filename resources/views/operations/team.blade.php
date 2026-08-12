@@ -432,13 +432,7 @@
 @endif
 
 <style>
-    /* Desktop: Equipe usa a largura útil do op-main (não herda faixa estreita). */
-    .op-page:has(.team-hub) {
-        max-width: none;
-        width: 100%;
-        margin-left: 0;
-        margin-right: 0;
-    }
+    /* Largura da Equipe isolada no componente — não altera o wrapper operacional compartilhado. */
     .team-hub {
         width: 100%;
         max-width: none;

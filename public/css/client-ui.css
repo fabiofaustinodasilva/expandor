@@ -894,11 +894,23 @@ html.client-nav-lock body {
 
 .client-mobile-ready,
 .client-ui .op-shell,
-.client-ui .shell,
+.client-ui .shell {
+    max-width: none;
+    width: 100%;
+}
+
 .client-ui .op-main,
-.client-ui .content,
+.client-ui .content {
+    max-width: none;
+    min-width: 0;
+}
+
 .client-ui .op-page {
-    max-width: 100%;
+    max-width: none;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
 }
 
 .op-shell,

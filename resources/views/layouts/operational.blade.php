@@ -60,8 +60,39 @@
         .op-rail a:hover, .op-rail a.active {
             background: color-mix(in srgb, var(--primary) 22%, transparent); color: var(--text);
         }
-        .op-main { position: relative; min-width: 0; min-height: 0; color: var(--text-on-bg); }
-        .op-page { padding: 1rem 1.25rem 2rem; max-width: 1100px; margin: 0 auto; }
+        .op-main { position: relative; min-width: 0; min-height: 0; color: var(--text-on-bg); width: auto; }
+        /* Wrapper estrutural: ocupa toda a largura útil do op-main. Limites de leitura ficam nas páginas. */
+        .op-page {
+            padding: 1rem 1.25rem 2rem;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        body.map-fullscreen .op-shell {
+            width: 100%;
+            max-width: none;
+            height: 100vh;
+            height: 100dvh;
+            min-height: 100vh;
+            min-height: 100dvh;
+            margin: 0;
+        }
+        body.map-fullscreen .op-main {
+            position: relative;
+            height: 100%;
+            min-height: 0;
+            min-width: 0;
+            overflow: hidden;
+        }
+        body.map-fullscreen .op-page {
+            position: relative;
+            z-index: 45;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 0.65rem 1rem;
+        }
         .card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 1rem; padding: 1.1rem; color: var(--text); }
         .op-toast {
             position: fixed; left: 1rem; right: 1rem; bottom: 5.5rem; z-index: 80;
