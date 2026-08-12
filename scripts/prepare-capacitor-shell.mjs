@@ -258,28 +258,65 @@ const html = `<!DOCTYPE html>
                 <a class="btn btn-ghost" id="point-call" href="#">Ligar</a>
                 <a class="btn btn-primary" id="point-wa" href="#">WhatsApp</a>
             </div>
-            <div class="sheet__section">
-                <p class="sheet__section-title">VISITA</p>
-                <label class="field-label">Campanha</label>
-                <select class="field-select" id="visit-campaign"></select>
-                <select class="field-select" id="point-campaign" hidden></select>
-                <label class="field-label">Observações</label>
-                <textarea class="field-textarea" id="visit-notes" placeholder="Observações da visita"></textarea>
-                <label class="field-label">Retorno</label>
-                <input class="field-input" id="visit-followup" type="datetime-local">
-                <label class="field-label">Nome do cliente</label>
+            <div class="sheet-actions" style="margin-top:0.75rem">
+                <button class="btn btn-accent btn-block" id="point-register-visit" type="button">Registrar visita</button>
+                <button class="btn btn-ghost btn-block" id="point-sheet-close" type="button">Fechar</button>
+            </div>
+        </div>
+
+        <div class="sheet" id="visit-sheet" hidden>
+            <div class="sheet__handle"></div>
+            <p class="sheet__section-title">RESULTADO DA ABORDAGEM</p>
+            <h3 class="sheet__title" id="visit-sheet-title">Registrar visita</h3>
+            <p class="card__meta" id="visit-sheet-subtitle">Como foi a visita?</p>
+            <input type="hidden" id="visit-property-id">
+            <input type="hidden" id="visit-status" value="">
+            <select class="field-select" id="point-campaign" hidden></select>
+
+            <label class="field-label" for="visit-campaign">Campanha</label>
+            <select class="field-select" id="visit-campaign" required></select>
+
+            <p class="field-label" style="margin-top:0.85rem">Como foi a visita?</p>
+            <div id="visit-outcome-list" class="outcome-grid" role="listbox" aria-label="Resultado da abordagem"></div>
+
+            <div class="visit-block" id="visit-notes-block">
+                <label class="field-label" for="visit-notes">Observações <span class="muted" id="visit-notes-hint">(opcional)</span></label>
+                <textarea class="field-textarea" id="visit-notes" placeholder="Ex.: voltar amanhã à tarde"></textarea>
+            </div>
+
+            <div class="visit-block" id="visit-return-block" hidden>
+                <label class="field-label">Quando voltar? <span style="color:#FCA5A5">*</span></label>
+                <div class="return-shortcuts" id="visit-return-shortcuts">
+                    <button type="button" class="return-shortcut" data-days="1">Amanhã</button>
+                    <button type="button" class="return-shortcut" data-days="2">+2 dias</button>
+                    <button type="button" class="return-shortcut" data-days="pick">Escolher data</button>
+                </div>
+                <div class="sheet-actions" style="grid-template-columns:1fr 1fr">
+                    <div>
+                        <label class="field-label" for="visit-follow-up-date">Data</label>
+                        <input class="field-input" id="visit-follow-up-date" type="date">
+                    </div>
+                    <div>
+                        <label class="field-label" for="visit-follow-up-time">Horário</label>
+                        <input class="field-input" id="visit-follow-up-time" type="time">
+                    </div>
+                </div>
+            </div>
+
+            <div class="visit-block" id="visit-sale-block" hidden>
+                <p class="sheet__section-title">VENDA</p>
+                <label class="field-label" for="sale-name">Nome do cliente</label>
                 <input class="field-input" id="sale-name" placeholder="Nome do cliente">
-                <label class="field-label">Telefone</label>
+                <label class="field-label" for="sale-phone">Telefone</label>
                 <input class="field-input" id="sale-phone" placeholder="Telefone">
-                <label class="field-label">Produto</label>
+                <label class="field-label" for="sale-product">Produto</label>
                 <select class="field-select" id="sale-product"></select>
             </div>
+
+            <div id="visit-error" class="banner" hidden data-kind="error"></div>
             <div class="sheet-actions">
-                <button class="btn btn-primary" id="visit-interested" type="button">Interessado</button>
-                <button class="btn btn-ghost" id="visit-return" type="button">Retorno</button>
-                <button class="btn btn-ghost" id="visit-no-interest" type="button">Sem interesse</button>
-                <button class="btn btn-accent" id="visit-sale" type="button">Confirmar venda</button>
-                <button class="btn btn-ghost" id="point-sheet-close" type="button">Fechar</button>
+                <button class="btn btn-primary btn-block" id="visit-submit" type="button">Salvar visita</button>
+                <button class="btn btn-ghost btn-block" id="visit-sheet-close" type="button">Cancelar</button>
             </div>
         </div>
 

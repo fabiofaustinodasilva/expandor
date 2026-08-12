@@ -152,6 +152,18 @@ class Sprint8234SellerMobileApiTest extends TestCase
         $this->assertNotEmpty($sale->json('data.commission_id'));
         $this->assertGreaterThan(0, (float) $sale->json('data.commission_amount'));
 
+        $this->mobilePostJson("/api/mobile/v1/points/{$pointId}/visits", $ctx['token'], $ctx['device'], [
+            'campaign_id' => $ctx['campaign']->id,
+            'status' => VisitStatus::NOT_HOME->value,
+            'notes' => 'Porta fechada',
+        ])->assertCreated()->assertJsonPath('data.status', VisitStatus::NOT_HOME->value);
+
+        $this->mobilePostJson("/api/mobile/v1/points/{$pointId}/visits", $ctx['token'], $ctx['device'], [
+            'campaign_id' => $ctx['campaign']->id,
+            'status' => VisitStatus::NO_INTEREST->value,
+            'notes' => 'Sem interesse no produto',
+        ])->assertCreated()->assertJsonPath('data.status', VisitStatus::NO_INTEREST->value);
+
         $this->assertDatabaseHas('sale_items', [
             'product_id' => $ctx['product']->id,
             'quantity' => 1,

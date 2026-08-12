@@ -4,6 +4,12 @@ import { LocationService } from './location-service.js';
 import { MapAdapter } from './map-adapter.js';
 import { PresentationScreen } from './presentation-screen.js';
 import {
+    VISIT_OUTCOMES,
+    propertyStatusForVisit,
+    markerColorForPropertyStatus,
+    markerMarkForPropertyStatus,
+} from './visit-outcomes.js';
+import {
     commissionStatusLabel,
     propertyStatusLabel,
     formatCurrency,
@@ -161,7 +167,11 @@ async function loadMarkers() {
     const bbox = MapAdapter.boundsQuery();
     const payload = await mobileApi.markers(bbox);
     const markers = payload.data?.markers || payload.data || [];
+    const selected = MapAdapter.selectedPropertyId;
     MapAdapter.renderMarkers(Array.isArray(markers) ? markers : [], openPoint);
+    if (selected != null) {
+        MapAdapter.selectProperty(selected);
+    }
 }
 
 async function openPoint(item) {
@@ -179,6 +189,7 @@ async function openPoint(item) {
         point.resident_phone,
     ].filter(Boolean).join(' · ');
     $('point-id').value = id;
+    MapAdapter.selectProperty(id);
     const call = $('point-call');
     const wa = $('point-wa');
     if (call) {
@@ -212,6 +223,160 @@ function openCreateSheet(lat, lng, label) {
     }
     show('create-sheet', true);
     paintIcons($('create-sheet'));
+}
+
+function renderVisitOutcomes() {
+    const el = $('visit-outcome-list');
+    if (!el) {
+        return;
+    }
+
+    el.innerHTML = VISIT_OUTCOMES.map((outcome) => `
+        <button type="button" class="outcome-chip" data-status="${escapeHtml(outcome.value)}"
+            style="--status-color:${escapeHtml(outcome.color)}" aria-pressed="false">
+            <span class="outcome-chip__swatch" aria-hidden="true">${escapeHtml(outcome.mark)}</span>
+            <span class="outcome-chip__label">${escapeHtml(outcome.label)}</span>
+        </button>
+    `).join('');
+}
+
+function selectVisitOutcome(status) {
+    const value = status || '';
+    const hidden = $('visit-status');
+    if (hidden) {
+        hidden.value = value;
+    }
+
+    document.querySelectorAll('.outcome-chip').forEach((button) => {
+        const on = button.dataset.status === value;
+        button.classList.toggle('is-selected', on);
+        button.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+
+    syncVisitOutcomeBlocks(value);
+}
+
+function syncVisitOutcomeBlocks(status) {
+    const isSale = status === 'installation_requested';
+    const isReturn = status === 'return_later';
+    const returnBlock = $('visit-return-block');
+    const saleBlock = $('visit-sale-block');
+    const notesHint = $('visit-notes-hint');
+    const submit = $('visit-submit');
+
+    if (returnBlock) {
+        returnBlock.hidden = !isReturn;
+    }
+    if (saleBlock) {
+        saleBlock.hidden = !isSale;
+    }
+    if (notesHint) {
+        if (isSale) {
+            notesHint.textContent = '(opcional — observação da visita)';
+        } else if (status === 'interested' || isReturn) {
+            notesHint.textContent = '(recomendado)';
+        } else {
+            notesHint.textContent = '(opcional)';
+        }
+    }
+    if (submit) {
+        submit.textContent = isSale ? 'Confirmar venda' : 'Salvar visita';
+    }
+
+    if (isReturn) {
+        ensureReturnDefaults();
+    } else {
+        const dateEl = $('visit-follow-up-date');
+        const timeEl = $('visit-follow-up-time');
+        if (dateEl) {
+            dateEl.value = '';
+        }
+        if (timeEl) {
+            timeEl.value = '';
+        }
+        document.querySelectorAll('.return-shortcut').forEach((btn) => {
+            btn.dataset.active = '0';
+        });
+    }
+}
+
+function ensureReturnDefaults() {
+    const dateEl = $('visit-follow-up-date');
+    const timeEl = $('visit-follow-up-time');
+    if (!dateEl || dateEl.value) {
+        return;
+    }
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    dateEl.value = tomorrow.toISOString().slice(0, 10);
+    if (timeEl && !timeEl.value) {
+        timeEl.value = '09:00';
+    }
+    document.querySelectorAll('.return-shortcut[data-days="1"]').forEach((btn) => {
+        btn.dataset.active = '1';
+    });
+}
+
+function combineFollowUpAt() {
+    const date = $('visit-follow-up-date')?.value;
+    const time = $('visit-follow-up-time')?.value || '09:00';
+    if (!date) {
+        return null;
+    }
+
+    return `${date} ${time}:00`;
+}
+
+function setVisitError(message) {
+    const el = $('visit-error');
+    if (!el) {
+        return;
+    }
+    if (!message) {
+        el.hidden = true;
+        el.textContent = '';
+
+        return;
+    }
+    el.hidden = false;
+    el.textContent = message;
+}
+
+function openVisitSheet(propertyId, options = {}) {
+    const id = String(propertyId || $('point-id')?.value || '');
+    if (!id) {
+        return;
+    }
+
+    $('visit-property-id').value = id;
+    $('point-id').value = id;
+    selectVisitOutcome('');
+    const notes = $('visit-notes');
+    if (notes) {
+        notes.value = '';
+    }
+    setVisitError('');
+    MapAdapter.selectProperty(id);
+
+    const subtitle = $('visit-sheet-subtitle');
+    if (subtitle) {
+        subtitle.textContent = options.subtitle || $('point-meta')?.textContent || 'Como foi a visita?';
+    }
+
+    const campaignDefault = bootstrap?.data?.active_campaign_id || $('point-campaign')?.value;
+    const campaignSelect = $('visit-campaign');
+    if (campaignDefault && campaignSelect) {
+        campaignSelect.value = String(campaignDefault);
+    }
+
+    show('point-sheet', false);
+    show('visit-sheet', true);
+}
+
+function closeVisitSheet() {
+    show('visit-sheet', false);
+    setVisitError('');
 }
 
 async function loadAgenda() {
@@ -374,52 +539,112 @@ async function onCreatePoint(event) {
     };
 
     try {
-        await mobileApi.createPoint(body);
+        const created = await mobileApi.createPoint(body);
         toast('Imóvel salvo.', 'status');
         show('create-sheet', false);
+        const pointId = created.data?.property_id || created.data?.id;
         await loadMarkers();
+        if (pointId) {
+            MapAdapter.selectProperty(pointId);
+            openVisitSheet(pointId, {
+                subtitle: [body.street, body.number].filter(Boolean).join(', ') || 'Como foi a visita?',
+            });
+        }
     } catch (error) {
         toast(error.message || OFFLINE_MUTATION, 'error');
     }
 }
 
-async function onVisit(status) {
+async function submitVisit() {
     if (navigator.onLine === false) {
         toast(OFFLINE_MUTATION, 'error');
 
         return;
     }
 
-    const id = $('point-id')?.value;
-    const campaignId = Number($('point-campaign')?.value || bootstrap?.data?.active_campaign_id);
-    if (!id) {
+    const id = $('visit-property-id')?.value || $('point-id')?.value;
+    const status = $('visit-status')?.value;
+    const campaignId = Number($('visit-campaign')?.value || $('point-campaign')?.value || bootstrap?.data?.active_campaign_id);
+    const submitBtn = $('visit-submit');
+
+    setVisitError('');
+
+    if (!campaignId) {
+        setVisitError('Escolha a campanha desta visita.');
+
+        return;
+    }
+    if (!status) {
+        setVisitError('Escolha como foi o atendimento.');
+
+        return;
+    }
+    if (status === 'return_later' && !combineFollowUpAt()) {
+        setVisitError('Informe a data do retorno.');
+
+        return;
+    }
+    if (status === 'installation_requested' && !$('sale-product')?.value) {
+        setVisitError('Selecione o produto da venda.');
+
         return;
     }
 
     const body = {
         status,
-        campaign_id: campaignId || Number($('visit-campaign')?.value),
-        notes: $('visit-notes')?.value,
-        follow_up_at: $('visit-followup')?.value,
-        customer_name: $('sale-name')?.value,
-        customer_phone: $('sale-phone')?.value,
-        items: $('sale-product')?.value
-            ? [{ product_id: Number($('sale-product').value), quantity: 1 }]
-            : undefined,
+        campaign_id: campaignId,
+        notes: $('visit-notes')?.value || '',
     };
+
+    if (status === 'return_later') {
+        body.follow_up_at = combineFollowUpAt();
+    }
+    if (status === 'installation_requested') {
+        body.customer_name = $('sale-name')?.value;
+        body.customer_phone = $('sale-phone')?.value;
+        body.items = $('sale-product')?.value
+            ? [{ product_id: Number($('sale-product').value), quantity: 1 }]
+            : undefined;
+    }
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+    }
 
     try {
         const payload = status === 'installation_requested'
             ? await mobileApi.sale(id, body)
             : await mobileApi.visit(id, body);
-        toast('Visita registrada.', 'status');
-        show('point-sheet', false);
+
+        toast(
+            status === 'installation_requested' ? 'Venda registrada.' : 'Visita registrada.',
+            'status',
+        );
+        closeVisitSheet();
+
+        const propertyStatus = propertyStatusForVisit(status);
+        if (propertyStatus) {
+            MapAdapter.updateMarker(id, {
+                status: propertyStatus,
+                color: markerColorForPropertyStatus(propertyStatus),
+                mark: markerMarkForPropertyStatus(propertyStatus),
+                status_label: propertyStatusLabel(propertyStatus),
+            });
+        } else {
+            MapAdapter.selectProperty(id);
+        }
+
         if (payload.data?.commission_awarded) {
             showReward(payload.data.commission_awarded);
         }
-        await loadMarkers();
+
+        loadMarkers().catch(() => {});
     } catch (error) {
-        toast(error.message || OFFLINE_MUTATION, 'error');
+        setVisitError(error.message || OFFLINE_MUTATION);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+        }
     }
 }
 
@@ -520,6 +745,7 @@ async function enterApp(data) {
             syncLayerButtons();
         }
         await hydrateCatalog();
+        renderVisitOutcomes();
         await loadMarkers();
         paintIcons();
     } catch (error) {
@@ -633,10 +859,44 @@ function bindApp() {
 
     $('create-point-cancel')?.addEventListener('click', () => show('create-sheet', false));
     $('create-point-form')?.addEventListener('submit', onCreatePoint);
-    $('visit-interested')?.addEventListener('click', () => onVisit('interested'));
-    $('visit-return')?.addEventListener('click', () => onVisit('return_later'));
-    $('visit-no-interest')?.addEventListener('click', () => onVisit('no_interest'));
-    $('visit-sale')?.addEventListener('click', () => onVisit('installation_requested'));
+
+    $('point-register-visit')?.addEventListener('click', () => openVisitSheet($('point-id')?.value));
+    $('visit-sheet-close')?.addEventListener('click', closeVisitSheet);
+    $('visit-submit')?.addEventListener('click', submitVisit);
+    $('visit-outcome-list')?.addEventListener('click', (event) => {
+        const button = event.target.closest?.('.outcome-chip');
+        if (button?.dataset.status) {
+            selectVisitOutcome(button.dataset.status);
+            setVisitError('');
+        }
+    });
+    $('visit-return-shortcuts')?.addEventListener('click', (event) => {
+        const button = event.target.closest?.('.return-shortcut');
+        if (!button) {
+            return;
+        }
+        const dateEl = $('visit-follow-up-date');
+        const timeEl = $('visit-follow-up-time');
+        const days = button.dataset.days;
+        document.querySelectorAll('.return-shortcut').forEach((row) => {
+            row.dataset.active = row === button ? '1' : '0';
+        });
+        if (days === 'pick') {
+            dateEl?.focus();
+
+            return;
+        }
+        const offset = Number(days || 1);
+        const target = new Date();
+        target.setDate(target.getDate() + offset);
+        if (dateEl) {
+            dateEl.value = target.toISOString().slice(0, 10);
+        }
+        if (timeEl && !timeEl.value) {
+            timeEl.value = '09:00';
+        }
+    });
+
     $('point-sheet-close')?.addEventListener('click', () => show('point-sheet', false));
     $('reward-close')?.addEventListener('click', hideReward);
 

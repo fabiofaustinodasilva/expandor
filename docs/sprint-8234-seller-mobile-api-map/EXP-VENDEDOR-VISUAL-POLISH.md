@@ -97,3 +97,21 @@ Validar: `android/app/src/main/assets/public/runtime-config.js` presente.
 - Placeholders SVG não são arte final — trocar antes de release store
 - Camada satélite Esri requer atribuição (mantida via Leaflet)
 - Clique no mapa abre cadastro — pode conflitar com zoom/pan em gestos rápidos
+
+## 10. Resultado da abordagem (adendo)
+
+Fluxo alinhado ao mapa web (`MapController::$outcomeStatuses` + `MapMarkerColor`):
+
+| Resultado | Valor API (`VisitStatus`) | Cor pin |
+|-----------|---------------------------|---------|
+| Interessado | `interested` | `#3b82f6` |
+| Retornar depois | `return_later` | `#f97316` |
+| Venda realizada | `installation_requested` | `#22c55e` |
+| Não encontrado | `not_home` | `#9ca3af` |
+| Sem interesse | `no_interest` | `#64748b` |
+
+- UI: sheet **Resultado da abordagem** com chips touch (`visit-outcomes.js`)
+- Campos condicionais: retorno (data/hora), venda (produto/cliente), observações
+- Após salvar imóvel → abre registrar visita
+- Ponto existente → detalhe + botão **Registrar visita**
+- Pins house SVG com cores da API; atualização local após visita sem reload completo

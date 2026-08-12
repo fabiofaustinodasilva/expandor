@@ -9,6 +9,7 @@ import '../css/exp-vendedor-shell.css';
 import './mobile/location-service.js';
 import './mobile/map-adapter.js';
 import './mobile/mobile-api.js';
+import './mobile/visit-outcomes.js';
 import './mobile/presentation-screen.js';
 import './mobile/bootstrap-shell.js';
 import L from 'leaflet';

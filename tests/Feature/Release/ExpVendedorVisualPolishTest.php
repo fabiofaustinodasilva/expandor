@@ -29,14 +29,25 @@ class ExpVendedorVisualPolishTest extends TestCase
     public function test_seller_labels_and_design_system_present(): void
     {
         $labels = (string) file_get_contents(base_path('resources/js/mobile/seller-labels.js'));
+        $outcomes = (string) file_get_contents(base_path('resources/js/mobile/visit-outcomes.js'));
         $css = (string) file_get_contents(base_path('resources/css/exp-vendedor-shell.css'));
         $bootstrap = (string) file_get_contents(base_path('resources/js/mobile/bootstrap-shell.js'));
 
         $this->assertStringContainsString('commissionStatusLabel', $labels);
         $this->assertStringContainsString("'Pago'", $labels);
+        $this->assertStringContainsString('visitStatusLabel', $labels);
+        $this->assertStringContainsString("'interested'", $outcomes);
+        $this->assertStringContainsString('#3b82f6', $outcomes);
+        $this->assertStringContainsString('#f97316', $outcomes);
+        $this->assertStringContainsString('#22c55e', $outcomes);
+        $this->assertStringContainsString('#9ca3af', $outcomes);
+        $this->assertStringContainsString("'not_home'", $outcomes);
         $this->assertStringContainsString('--exp-blue-dark', $css);
-        $this->assertStringContainsString('presentation-screen.js', (string) file_get_contents(base_path('resources/js/seller-app.js')));
-        $this->assertStringContainsString('commissionStatusLabel', $bootstrap);
+        $this->assertStringContainsString('outcome-chip', $css);
+        $this->assertStringContainsString('map-house-pin', $css);
+        $this->assertStringContainsString('visit-outcomes.js', (string) file_get_contents(base_path('resources/js/seller-app.js')));
+        $this->assertStringContainsString('submitVisit', $bootstrap);
+        $this->assertStringContainsString('RESULTADO DA ABORDAGEM', (string) file_get_contents(base_path('scripts/prepare-capacitor-shell.mjs')));
         $this->assertStringContainsString('setBasemap', (string) file_get_contents(base_path('resources/js/mobile/map-adapter.js')));
     }
 

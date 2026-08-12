@@ -17,6 +17,19 @@ const PROPERTY_STATUS = {
     customer: 'Cliente',
 };
 
+export function visitStatusLabel(value) {
+    const row = {
+        interested: 'Interessado',
+        installation_requested: 'Venda realizada',
+        return_later: 'Retornar depois',
+        no_interest: 'Sem interesse',
+        not_home: 'Não encontrado',
+        wrong_address: 'Endereço incorreto',
+    }[String(value || '').toLowerCase()];
+
+    return row || String(value || '—');
+}
+
 export function commissionStatusLabel(value) {
     if (! value) {
         return '—';
@@ -58,6 +71,7 @@ if (typeof window !== 'undefined') {
     window.ExpandorSellerLabels = {
         commissionStatusLabel,
         propertyStatusLabel,
+        visitStatusLabel,
         formatCurrency,
         appVersionLabel,
         escapeHtml,
