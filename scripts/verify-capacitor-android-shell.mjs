@@ -9,6 +9,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const shellDir = join(root, 'public/capacitor-shell');
 const androidIndex = join(root, 'android/app/src/main/assets/public/index.html');
 const androidJs = join(root, 'android/app/src/main/assets/public/vendor/seller-app.js');
+const bootstrapSrc = join(root, 'resources/js/mobile/bootstrap-shell.js');
 
 const requiredHtml = [
     'Novo ponto',
@@ -40,6 +41,14 @@ const requiredJs = [
     'visitOutcomeSelected',
 ];
 
+/** Markers only asserted on freshly built capacitor-shell (android assets update after cap sync). */
+const requiredFreshJs = [
+    'campaign_context',
+    'has_campaign',
+    'requires_selection',
+    'no_campaign_message',
+];
+
 const forbidden = [
     'point-status',
     'SITUAÇÃO',
@@ -47,7 +56,38 @@ const forbidden = [
     'id="point-sector"',
 ];
 
-function assertBundle(label, indexPath, jsPath) {
+const bootstrapTopLevelFns = [
+    'debugFlow',
+    'paintCampaignInto',
+    'paintCampaignContext',
+    'renderOutcomeButtons',
+    'selectCreateOutcome',
+    'hydrateCatalog',
+    'tryInitialMapGps',
+    'enterApp',
+    'startup',
+];
+
+function assertBootstrapSourceScope() {
+    if (!existsSync(bootstrapSrc)) {
+        throw new Error(`[verify-shell] Missing bootstrap source: ${bootstrapSrc}`);
+    }
+
+    const src = readFileSync(bootstrapSrc, 'utf8');
+    const closedDebugFlow = /function debugFlow\([^)]*\)\s*\{\s*try\s*\{[\s\S]*?\}\s*catch\s*\{[\s\S]*?\}\s*\}\s*function renderOutcomeButtons/;
+    if (!closedDebugFlow.test(src)) {
+        throw new Error('[verify-shell] debugFlow is not closed before renderOutcomeButtons (nests campaign helpers)');
+    }
+
+    for (const fn of bootstrapTopLevelFns) {
+        const re = new RegExp(`^(async )?function ${fn}\\(`, 'm');
+        if (!re.test(src)) {
+            throw new Error(`[verify-shell] bootstrap-shell.js missing top-level function: ${fn}`);
+        }
+    }
+}
+
+function assertBundle(label, indexPath, jsPath, { fresh = false } = {}) {
     if (!existsSync(indexPath)) {
         throw new Error(`[verify-shell] Missing ${label} index: ${indexPath}`);
     }
@@ -74,12 +114,21 @@ function assertBundle(label, indexPath, jsPath) {
             throw new Error(`[verify-shell] ${label} JS missing: ${token}`);
         }
     }
+    if (fresh) {
+        for (const token of requiredFreshJs) {
+            if (!js.includes(token)) {
+                throw new Error(`[verify-shell] ${label} JS missing campaign marker: ${token}`);
+            }
+        }
+    }
 }
 
-assertBundle('capacitor-shell', join(shellDir, 'index.html'), join(shellDir, 'vendor/seller-app.js'));
+assertBootstrapSourceScope();
+assertBundle('capacitor-shell', join(shellDir, 'index.html'), join(shellDir, 'vendor/seller-app.js'), { fresh: true });
 
 if (existsSync(androidIndex)) {
     assertBundle('android/assets', androidIndex, androidJs);
 }
 
 console.log('[verify-shell] capacitor Android bundle contains new field flow markers');
+console.log('[verify-shell] bootstrap campaign helpers are top-level (no nested paintCampaignInto)');

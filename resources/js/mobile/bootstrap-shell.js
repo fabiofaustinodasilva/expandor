@@ -42,7 +42,7 @@ function debugFlow(step, detail = {}) {
     } catch {
         /* optional */
     }
-
+}
 
 function renderOutcomeButtons(targetId, selected = '') {
     const el = $(targetId);
@@ -184,8 +184,6 @@ function combineFollowUpAt(dateId = 'visit-follow-up-date', timeId = 'visit-foll
     const time = $(timeId)?.value || '09:00';
     if (!date) return null;
     return `${date} ${time}:00`;
-}
-
 }
 
 function $(id) {
