@@ -60,14 +60,60 @@
         .op-rail a:hover, .op-rail a.active {
             background: color-mix(in srgb, var(--primary) 22%, transparent); color: var(--text);
         }
-        .op-main { position: relative; min-width: 0; min-height: 0; color: var(--text-on-bg); width: auto; }
-        /* Wrapper estrutural: ocupa toda a largura útil do op-main. Limites de leitura ficam nas páginas. */
-        .op-page {
-            padding: 1rem 1.25rem 2rem;
+        .op-main { position: relative; min-width: 0; min-height: 0; color: var(--text-on-bg); width: 100%; }
+        /* Wrapper estrutural wide: preenche a área à direita do rail. Limites de leitura = .op-form-readable. */
+        .op-page,
+        .op-content-wide {
+            padding: 1rem 1.5rem 2rem;
             width: 100%;
             max-width: none;
             margin: 0;
             box-sizing: border-box;
+        }
+        @media (min-width: 1280px) {
+            .op-page,
+            .op-content-wide {
+                padding-left: 1.75rem;
+                padding-right: 1.75rem;
+            }
+        }
+        @media (min-width: 1536px) {
+            .op-page,
+            .op-content-wide {
+                padding-left: 2rem;
+                padding-right: 2rem;
+            }
+        }
+        .op-form-readable {
+            width: 100%;
+            max-width: 40rem;
+            margin-left: 0;
+            margin-right: 0;
+            box-sizing: border-box;
+        }
+        .op-wide-grid {
+            display: grid;
+            gap: 1rem;
+            width: 100%;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+        }
+        @media (min-width: 1280px) {
+            .op-wide-grid {
+                grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+            }
+        }
+        .op-page > .card,
+        .op-page > .grid,
+        .op-page .agenda-list,
+        .op-page .agenda-card,
+        .op-page .customer-list {
+            width: 100%;
+            max-width: none;
+            box-sizing: border-box;
+        }
+        .op-page .agenda-card .actions {
+            flex-shrink: 0;
+            justify-content: flex-end;
         }
         body.map-fullscreen .op-shell {
             width: 100%;
@@ -153,7 +199,11 @@
             .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
         }
     </style>
-    <link rel="stylesheet" href="{{ asset('css/client-ui.css') }}">
+    @php
+        $clientUiCss = public_path('css/client-ui.css');
+        $clientUiV = is_file($clientUiCss) ? filemtime($clientUiCss) : 1;
+    @endphp
+    <link rel="stylesheet" href="{{ asset('css/client-ui.css') }}?v={{ $clientUiV }}">
     @stack('styles')
 </head>
 <body class="client-ui {{ $isFieldSeller ? 'field-seller' : '' }}{{ $isMap ? ' map-fullscreen' : '' }}">
@@ -193,13 +243,13 @@
         @include('onboarding.partials.trial-banner')
         @include('onboarding.partials.saas-onboarding-banner')
         @if(session('success'))
-            <div class="op-page" style="padding-bottom:0;"><div class="alert alert-success">{{ session('success') }}</div></div>
+            <div class="op-page op-content-wide" style="padding-bottom:0;"><div class="alert alert-success">{{ session('success') }}</div></div>
         @endif
         @if(session('error'))
-            <div class="op-page" style="padding-bottom:0;"><div class="alert alert-error">{{ session('error') }}</div></div>
+            <div class="op-page op-content-wide" style="padding-bottom:0;"><div class="alert alert-error">{{ session('error') }}</div></div>
         @endif
         @if($errors->any())
-            <div class="op-page" style="padding-bottom:0;">
+            <div class="op-page op-content-wide" style="padding-bottom:0;">
                 <div class="alert alert-error">
                     <ul style="margin:0; padding-left:1.1rem;">
                         @foreach($errors->all() as $error)
@@ -210,7 +260,7 @@
             </div>
         @endif
         @hasSection('page')
-            <div class="op-page">@yield('page')</div>
+            <div class="op-page op-content-wide">@yield('page')</div>
         @else
             @yield('content')
         @endif

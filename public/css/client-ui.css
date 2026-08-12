@@ -903,13 +903,72 @@ html.client-nav-lock body {
 .client-ui .content {
     max-width: none;
     min-width: 0;
+    width: 100%;
 }
 
-.client-ui .op-page {
+/* Shared operational wide content (Agenda, Clientes, Resultado, Comissões, Mais, …) */
+.client-ui .op-page,
+.client-ui .op-content-wide {
     max-width: none;
     width: 100%;
     margin-left: 0;
     margin-right: 0;
+    box-sizing: border-box;
+}
+
+@media (min-width: 901px) {
+    .client-ui .op-main > .op-page.op-content-wide {
+        width: 100%;
+        max-width: none;
+        margin-left: 0;
+        margin-right: 0;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+}
+
+@media (min-width: 1280px) {
+    .client-ui .op-main > .op-page.op-content-wide {
+        padding-left: 1.75rem;
+        padding-right: 1.75rem;
+    }
+}
+
+@media (min-width: 1536px) {
+    .client-ui .op-main > .op-page.op-content-wide {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+.client-ui .op-form-readable {
+    width: 100%;
+    max-width: 40rem;
+    margin-left: 0;
+    margin-right: 0;
+    box-sizing: border-box;
+}
+
+.client-ui .op-wide-grid {
+    display: grid;
+    gap: 1rem;
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+@media (min-width: 1280px) {
+    .client-ui .op-wide-grid {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    }
+}
+
+.client-ui .op-page .agenda-list,
+.client-ui .op-page .agenda-card,
+.client-ui .op-page .customer-list,
+.client-ui .op-page > .card,
+.client-ui .op-page > .grid {
+    width: 100%;
+    max-width: none;
     box-sizing: border-box;
 }
 

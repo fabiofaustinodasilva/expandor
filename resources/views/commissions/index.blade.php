@@ -16,7 +16,7 @@
         @endif
     </x-client.page-header>
 
-    <div class="grid grid-4" style="margin-bottom:1.25rem;">
+    <div class="grid grid-4" data-op-commissions-kpis="1" style="margin-bottom:1.25rem; width:100%;">
         <div class="card">
             <div class="header-meta">Comissão acumulada</div>
             <div class="stat-value" style="font-size:1.5rem;">R$ {{ number_format($summary['total_amount'], 2, ',', '.') }}</div>
@@ -109,7 +109,7 @@
         </x-slot:filters>
     </x-client.crud-toolbar>
 
-    <div class="card client-data-table" style="overflow-x:auto;">
+    <div class="card client-data-table" data-op-commissions-table="1" style="overflow-x:auto; width:100%;">
         <table class="table client-data-table--responsive" style="width:100%;">
             <thead>
             <tr>

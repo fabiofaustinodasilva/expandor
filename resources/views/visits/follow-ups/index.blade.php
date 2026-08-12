@@ -39,7 +39,7 @@
             @endif
         </div>
     @else
-        <div class="agenda-list" style="display:grid; gap:0.85rem;">
+        <div class="agenda-list" data-op-agenda-list="1" style="display:grid; gap:0.85rem; width:100%;">
             @foreach($followUps as $followUp)
                 @php
                     $property = $followUp->visit?->property;

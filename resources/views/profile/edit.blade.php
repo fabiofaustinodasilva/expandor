@@ -18,7 +18,7 @@
         </x-ux.alert>
     @endif
 
-    <div class="card" style="max-width:640px;">
+    <div class="card op-form-readable">
         <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data">
             @csrf
             @method('PUT')

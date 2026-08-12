@@ -117,7 +117,7 @@
     </div>
 </details>
 
-<div class="grid grid-4" style="margin-bottom:1rem;">
+<div class="grid grid-4" data-op-dashboard-kpis="1" style="margin-bottom:1rem; width:100%;">
     <x-client.metric-card icon="footprints" label="Visitas" :value="$metrics->visits_total" hint="Visitas no período" />
     <x-client.metric-card icon="badge-check" label="{{ $commercial::salesWon() }}" :value="$metrics->installations_total" hint="{{ $commercial::salesRequestedMeta() }}" />
     <x-client.metric-card icon="percent" label="Conversão" value="{{ number_format($metrics->conversion_rate, 1, ',', '.') }}%" hint="{{ $commercial::salesPerVisits() }}" />

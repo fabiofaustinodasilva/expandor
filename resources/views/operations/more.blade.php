@@ -17,7 +17,7 @@
 </x-client.page-header>
 
 @if(count($moreSections) > 0)
-    <div class="grid grid-2">
+    <div class="grid op-wide-grid" data-op-more-grid="1">
         @foreach($moreSections as $section)
             <x-client.section-card :title="$section['label']">
                 <x-client.quick-actions>

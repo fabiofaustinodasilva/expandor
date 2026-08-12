@@ -39,7 +39,7 @@
             />
         </div>
     @else
-        <div class="card client-data-table customer-list">
+        <div class="card client-data-table customer-list" data-op-customers-table="1" style="width:100%;">
             <table class="table client-data-table--responsive" data-customer-list="1">
                 <thead>
                 <tr>
