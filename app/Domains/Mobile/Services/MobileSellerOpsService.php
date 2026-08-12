@@ -216,6 +216,80 @@ class MobileSellerOpsService
         return $this->pointMarker($property);
     }
 
+    /**
+     * Primeira abordagem — mesmo domínio do web (RegisterFirstApproachAction).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function registerFirstApproach(User $user, array $data): array
+    {
+        $resolved = $this->resolveSectorFromText(
+            isset($data['city_id']) ? (int) $data['city_id'] : null,
+            isset($data['sector_name']) ? trim((string) $data['sector_name']) : null,
+        );
+
+        if ($resolved['sector_id'] !== null) {
+            $data['sector_id'] = $resolved['sector_id'];
+        }
+        if ($resolved['neighborhood'] !== null) {
+            $data['neighborhood'] = $resolved['neighborhood'];
+        }
+        unset($data['sector_name']);
+
+        if (! filled($data['street'] ?? null)) {
+            $data['street'] = 'Posição no mapa';
+        }
+
+        $result = $this->firstApproach->execute($data, $user);
+        $property = $result['property']->load(['address', 'residents']);
+        $visit = $result['visit']->load(['sale.items', 'followUps', 'campaign']);
+
+        $payload = array_merge($this->pointMarker($property), [
+            'visit_id' => $visit->id,
+            'visit_status' => $visit->status->value,
+            'campaign_id' => $visit->campaign_id,
+            'first_approach' => true,
+        ]);
+
+        if ($visit->status === VisitStatus::INSTALLATION_REQUESTED) {
+            $awarded = CommissionAwardedPayload::fromVisit($visit);
+            if ($awarded !== null) {
+                $payload['commission_awarded'] = $awarded;
+                $payload['sale_id'] = $awarded['sale_id'];
+                $payload['commission_id'] = $awarded['commission_id'];
+                $payload['commission_amount'] = $awarded['amount'];
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * UX mobile: setor/bairro digitado. Se casar com Sector do território → sector_id;
+     * senão persiste como neighborhood (Address), sem inventar sector_id.
+     *
+     * @return array{sector_id: ?int, neighborhood: ?string}
+     */
+    public function resolveSectorFromText(?int $cityId, ?string $sectorName): array
+    {
+        $name = trim((string) $sectorName);
+        if ($name === '' || $cityId === null) {
+            return ['sector_id' => null, 'neighborhood' => $name !== '' ? $name : null];
+        }
+
+        $sectors = $this->territory->activeSectors($cityId);
+        $match = $sectors->first(function ($sector) use ($name) {
+            return mb_strtolower(trim((string) $sector->name)) === mb_strtolower($name);
+        });
+
+        if ($match) {
+            return ['sector_id' => (int) $match->id, 'neighborhood' => null];
+        }
+
+        return ['sector_id' => null, 'neighborhood' => $name];
+    }
+
     public function findPoint(User $user, int $id): ?Property
     {
         return $this->customers->findForActor($user, $id);

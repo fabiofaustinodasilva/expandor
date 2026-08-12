@@ -11,35 +11,40 @@ const androidIndex = join(root, 'android/app/src/main/assets/public/index.html')
 const androidJs = join(root, 'android/app/src/main/assets/public/vendor/seller-app.js');
 
 const requiredHtml = [
+    'Novo ponto',
+    'Local encontrado',
+    'Situação / interesse',
     'Como foi a abordagem?',
-    'Salvar imóvel',
+    'Salvar ponto',
+    'CONFIRMAR VENDA',
+    'Adicionar produto',
+    'create-outcome-list',
     'visit-outcome-list',
-    'visit-campaign-label',
-    'sale-cart-lines',
+    'sheet-body',
+    'sheet-footer',
+    'point-sector-name',
     'create-point-open',
     'create-point-form',
-    'Novo ponto',
-    'Localização definida ✓',
 ];
 
 const requiredJs = [
     'Interessado',
+    'Não interessado',
     'Retornar depois',
     'Venda realizada',
     'Não encontrado',
-    'Sem interesse',
-    '[EXP Vendedor]',
+    'firstApproach',
+    'Confirmar venda',
     'openVisitFlow',
     'pointCreated',
     'visitOutcomeSelected',
-    'visitSubmitted',
-    'after-create-point',
 ];
 
 const forbidden = [
     'point-status',
     'SITUAÇÃO',
-    'id="point-notes"',
+    'Novo imóvel',
+    'id="point-sector"',
 ];
 
 function assertBundle(label, indexPath, jsPath) {

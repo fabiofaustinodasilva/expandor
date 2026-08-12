@@ -1,20 +1,26 @@
 /**
  * Carrinho de venda mobile — espelha sale-finalize-fields.blade.php + SaleFieldsPolicyResolver.
+ * prefix: '' → sale-* | 'create-' → create-sale-*
  */
 
-const FIELD_IDS = {
-    name: 'sale-name',
-    phone: 'sale-phone',
-    whatsapp: 'sale-whatsapp',
-    document: 'sale-document',
-    rg: 'sale-rg',
-    email: 'sale-email',
-    notes: 'sale-notes',
+const FIELD_KEYS = {
+    name: 'name',
+    phone: 'phone',
+    whatsapp: 'whatsapp',
+    document: 'document',
+    rg: 'rg',
+    email: 'email',
+    notes: 'notes',
 };
 
 let sellableProducts = [];
 let requiredFields = {};
 let fieldLabels = {};
+let activePrefix = '';
+
+function fieldId(key) {
+    return `${activePrefix}sale-${key}`;
+}
 
 function $(id) {
     return document.getElementById(id);
@@ -34,20 +40,25 @@ function productById(id) {
 }
 
 function renderRequiredMarkers() {
-    Object.entries(FIELD_IDS).forEach(([key, id]) => {
-        const marker = $(`${id}-required`);
+    Object.keys(FIELD_KEYS).forEach((key) => {
+        const marker = $(`${fieldId(key)}-required`);
         if (marker) {
             marker.hidden = !requiredFields[key];
         }
     });
 
-    const productRequired = $('sale-product-required');
+    const productRequired = $(`${activePrefix}sale-product-required`);
     if (productRequired) {
         productRequired.hidden = !requiredFields.product;
     }
 }
 
-export function initSaleForm(products = [], saleFields = {}) {
+export function setSalePrefix(prefix = '') {
+    activePrefix = prefix || '';
+}
+
+export function initSaleForm(products = [], saleFields = {}, prefix = '') {
+    setSalePrefix(prefix);
     sellableProducts = Array.isArray(products) ? products : [];
     requiredFields = saleFields.required || {};
     fieldLabels = saleFields.labels || {};
@@ -56,15 +67,14 @@ export function initSaleForm(products = [], saleFields = {}) {
 }
 
 export function renderCartLines() {
-    const root = $('sale-cart-lines');
-    const empty = $('sale-cart-empty');
-    const totalEl = $('sale-cart-total');
+    const root = $(`${activePrefix}sale-cart-lines`);
+    const empty = $(`${activePrefix}sale-cart-empty`);
+    const totalEl = $(`${activePrefix}sale-cart-total`);
     if (!root) {
         return;
     }
 
-    const lines = root.querySelectorAll('.sale-cart-line');
-    if (lines.length === 0) {
+    if (root.querySelectorAll('.sale-cart-line').length === 0) {
         addCartLine(false);
     }
 
@@ -88,7 +98,7 @@ export function renderCartLines() {
 }
 
 export function addCartLine(focus = true) {
-    const root = $('sale-cart-lines');
+    const root = $(`${activePrefix}sale-cart-lines`);
     if (!root || sellableProducts.length === 0) {
         return;
     }
@@ -134,7 +144,7 @@ export function addCartLine(focus = true) {
 }
 
 export function collectCartItems() {
-    const root = $('sale-cart-lines');
+    const root = $(`${activePrefix}sale-cart-lines`);
     if (!root) {
         return [];
     }
@@ -154,13 +164,13 @@ export function collectCartItems() {
 export function validateSaleForm() {
     const labels = fieldLabels;
     const checks = [
-        ['name', FIELD_IDS.name, labels.name || 'Nome'],
-        ['phone', FIELD_IDS.phone, labels.phone || 'Telefone'],
-        ['whatsapp', FIELD_IDS.whatsapp, labels.whatsapp || 'WhatsApp'],
-        ['document', FIELD_IDS.document, labels.document || 'CPF'],
-        ['rg', FIELD_IDS.rg, labels.rg || 'RG'],
-        ['email', FIELD_IDS.email, labels.email || 'E-mail'],
-        ['notes', FIELD_IDS.notes, labels.notes || 'Observações'],
+        ['name', fieldId('name'), labels.name || 'Nome'],
+        ['phone', fieldId('phone'), labels.phone || 'Telefone'],
+        ['whatsapp', fieldId('whatsapp'), labels.whatsapp || 'WhatsApp'],
+        ['document', fieldId('document'), labels.document || 'CPF'],
+        ['rg', fieldId('rg'), labels.rg || 'RG'],
+        ['email', fieldId('email'), labels.email || 'E-mail'],
+        ['notes', fieldId('notes'), labels.notes || 'Observações'],
     ];
 
     for (const [key, id, label] of checks) {
@@ -183,25 +193,28 @@ export function validateSaleForm() {
 
 export function collectSalePayload() {
     return {
-        customer_name: $(FIELD_IDS.name)?.value?.trim() || undefined,
-        customer_phone: $(FIELD_IDS.phone)?.value?.trim() || undefined,
-        customer_whatsapp: $(FIELD_IDS.whatsapp)?.value?.trim() || undefined,
-        customer_document: $(FIELD_IDS.document)?.value?.trim() || undefined,
-        customer_rg: $(FIELD_IDS.rg)?.value?.trim() || undefined,
-        customer_email: $(FIELD_IDS.email)?.value?.trim() || undefined,
-        sale_notes: $(FIELD_IDS.notes)?.value?.trim() || undefined,
+        customer_name: $(fieldId('name'))?.value?.trim() || undefined,
+        customer_phone: $(fieldId('phone'))?.value?.trim() || undefined,
+        customer_whatsapp: $(fieldId('whatsapp'))?.value?.trim() || undefined,
+        customer_document: $(fieldId('document'))?.value?.trim() || undefined,
+        customer_rg: $(fieldId('rg'))?.value?.trim() || undefined,
+        customer_email: $(fieldId('email'))?.value?.trim() || undefined,
+        sale_notes: $(fieldId('notes'))?.value?.trim() || undefined,
         items: collectCartItems(),
     };
 }
 
-export function resetSaleForm() {
-    Object.values(FIELD_IDS).forEach((id) => {
-        const el = $(id);
+export function resetSaleForm(prefix) {
+    if (prefix !== undefined) {
+        setSalePrefix(prefix);
+    }
+    Object.keys(FIELD_KEYS).forEach((key) => {
+        const el = $(fieldId(key));
         if (el) {
             el.value = '';
         }
     });
-    const root = $('sale-cart-lines');
+    const root = $(`${activePrefix}sale-cart-lines`);
     if (root) {
         root.innerHTML = '';
     }
@@ -211,6 +224,7 @@ export function resetSaleForm() {
 if (typeof window !== 'undefined') {
     window.ExpandorSaleCart = {
         initSaleForm,
+        setSalePrefix,
         renderCartLines,
         addCartLine,
         collectCartItems,

@@ -61,6 +61,11 @@ export const mobileApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
     }),
+    firstApproach: (body) => json('/api/mobile/v1/first-approach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }),
     visit: (id, body) => json(`/api/mobile/v1/points/${id}/visits`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

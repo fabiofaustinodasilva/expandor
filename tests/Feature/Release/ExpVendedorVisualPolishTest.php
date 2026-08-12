@@ -19,7 +19,7 @@ class ExpVendedorVisualPolishTest extends TestCase
         $this->assertStringContainsString('assets/exp-vendedor', $prepare);
         $this->assertStringContainsString('bottom-nav', $prepare);
         $this->assertStringContainsString('Meu Local', $prepare);
-        $this->assertStringContainsString('Salvar imóvel', $prepare);
+        $this->assertStringContainsString('Salvar ponto', $prepare);
         $this->assertStringContainsString('type="hidden" id="point-lat"', $prepare);
         $this->assertStringContainsString('Apresentar produtos', $prepare);
         $this->assertStringNotContainsString('Apresentação de produtos continua no fluxo web', $prepare);

@@ -31,12 +31,13 @@ class ExpVendedorWebMobileFlowParityTest extends TestCase
         $prepare = (string) file_get_contents(base_path('scripts/prepare-capacitor-shell.mjs'));
         $shell = (string) file_get_contents(resource_path('js/mobile/bootstrap-shell.js'));
 
-        $this->assertStringContainsString('Novo imóvel', $prepare);
-        $this->assertStringContainsString('ENDEREÇO', $prepare);
-        $this->assertStringContainsString('CONTATO', $prepare);
+        $this->assertStringContainsString('Novo ponto', $prepare);
+        $this->assertStringContainsString('Situação / interesse', $prepare);
+        $this->assertStringContainsString('create-outcome-list', $prepare);
         $this->assertStringNotContainsString('point-status', $prepare);
         $this->assertStringNotContainsString('SITUAÇÃO', $prepare);
-        $this->assertStringNotContainsString('point-notes', $prepare);
+        $this->assertStringNotContainsString('Novo imóvel', $prepare);
+        $this->assertStringContainsString('mobileApi.firstApproach', $shell);
         $this->assertStringNotContainsString('point-status', $shell);
     }
 

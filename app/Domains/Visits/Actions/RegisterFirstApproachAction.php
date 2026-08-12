@@ -99,6 +99,7 @@ class RegisterFirstApproachAction
                 'sector_id' => $data['sector_id'] ?? null,
                 'street' => $data['street'],
                 'number' => $data['number'] ?? null,
+                'neighborhood' => $data['neighborhood'] ?? null,
                 'latitude' => $data['latitude'],
                 'longitude' => $data['longitude'],
             ]);

@@ -13,7 +13,7 @@ export const MAP_MARKER_COLORS = {
     SLATE: '#64748b',
 };
 
-/** Ordem operacional de campo (mesma matriz do mapa web). */
+/** Ordem operacional de campo (mesma matriz do mapa web MapController::$outcomeStatuses). */
 export const VISIT_OUTCOMES = [
     {
         value: 'interested',
@@ -21,6 +21,13 @@ export const VISIT_OUTCOMES = [
         color: MAP_MARKER_COLORS.BLUE,
         mark: '',
         icon: 'user-check',
+    },
+    {
+        value: 'no_interest',
+        label: 'Não interessado',
+        color: MAP_MARKER_COLORS.SLATE,
+        mark: '×',
+        icon: 'ban',
     },
     {
         value: 'return_later',
@@ -42,13 +49,6 @@ export const VISIT_OUTCOMES = [
         color: MAP_MARKER_COLORS.GRAY,
         mark: '',
         icon: 'home',
-    },
-    {
-        value: 'no_interest',
-        label: 'Sem interesse',
-        color: MAP_MARKER_COLORS.SLATE,
-        mark: '×',
-        icon: 'ban',
     },
 ];
 

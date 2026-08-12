@@ -22,6 +22,7 @@ import {
     collectSalePayload,
     resetSaleForm,
     addCartLine,
+    setSalePrefix,
 } from './sale-cart.js';
 
 const GPS_FAIL = 'Não foi possível acessar sua localização.';
@@ -41,6 +42,150 @@ function debugFlow(step, detail = {}) {
     } catch {
         /* optional */
     }
+
+
+function renderOutcomeButtons(targetId, selected = '') {
+    const el = $(targetId);
+    if (!el) {
+        return;
+    }
+
+    el.innerHTML = VISIT_OUTCOMES.map((outcome) => `
+        <button type="button" class="outcome-chip" data-status="${escapeHtml(outcome.value)}"
+            style="--status-color:${escapeHtml(outcome.color)}" aria-pressed="${outcome.value === selected ? 'true' : 'false'}">
+            <span class="outcome-chip__swatch" aria-hidden="true">${escapeHtml(outcome.mark)}</span>
+            <span class="outcome-chip__label">${escapeHtml(outcome.label)}</span>
+        </button>
+    `).join('');
+}
+
+function paintCampaignInto(prefix) {
+    const ctx = bootstrap?.data?.campaign_context;
+    const label = $(`${prefix}-campaign-label`);
+    const select = $(`${prefix}-campaign`);
+    const warning = $(`${prefix}-campaign-warning`);
+    const block = $(`${prefix}-campaign-block`);
+
+    if (!ctx) {
+        return;
+    }
+
+    if (!ctx.has_campaign) {
+        if (warning) {
+            warning.hidden = false;
+            warning.textContent = ctx.no_campaign_message
+                || 'Você não possui campanha ativa. Solicite ao gestor.';
+        }
+        if (label) label.hidden = true;
+        if (select) {
+            select.hidden = true;
+            select.required = false;
+        }
+        if (block) block.hidden = false;
+        return;
+    }
+
+    if (warning) {
+        warning.hidden = true;
+        warning.textContent = '';
+    }
+
+    if (!ctx.requires_selection && ctx.active_campaign_id) {
+        const campaign = (ctx.campaigns || []).find((row) => Number(row.id) === Number(ctx.active_campaign_id));
+        if (label) {
+            label.textContent = campaign?.name || 'Campanha ativa';
+            label.hidden = false;
+        }
+        if (select) {
+            select.hidden = true;
+            select.required = false;
+            select.innerHTML = `<option value="${ctx.active_campaign_id}">${escapeHtml(campaign?.name || 'Campanha')}</option>`;
+            select.value = String(ctx.active_campaign_id);
+        }
+        if (block) block.hidden = false;
+        return;
+    }
+
+    if (label) label.hidden = true;
+    if (select) {
+        select.hidden = false;
+        select.required = true;
+        fillSelect(`${prefix}-campaign`, ctx.campaigns || [], 'name');
+    }
+    if (block) block.hidden = false;
+}
+
+function resolveCampaignId(prefix) {
+    const ctx = bootstrap?.data?.campaign_context;
+    if (ctx?.active_campaign_id && !ctx?.requires_selection) {
+        return Number(ctx.active_campaign_id);
+    }
+    return Number($(`${prefix}-campaign`)?.value || $('visit-campaign')?.value || 0);
+}
+
+function syncCreateOutcomeBlocks(status) {
+    const isSale = status === 'installation_requested';
+    const isReturn = status === 'return_later';
+    const returnBlock = $('create-return-block');
+    const saleBlock = $('create-sale-block');
+    const notesHint = $('create-notes-hint');
+    const submit = $('create-point-submit');
+
+    if (returnBlock) returnBlock.hidden = !isReturn;
+    if (saleBlock) saleBlock.hidden = !isSale;
+    if (notesHint) {
+        if (isSale) notesHint.textContent = '(opcional — observação da visita)';
+        else if (status === 'interested' || isReturn) notesHint.textContent = '(recomendado)';
+        else notesHint.textContent = '(opcional)';
+    }
+    if (submit) {
+        submit.textContent = isSale ? 'Confirmar venda' : 'Salvar ponto';
+    }
+
+    if (isSale) {
+        resetSaleForm('create-');
+        initSaleForm(catalogProducts, bootstrap?.data?.sale_fields || {}, 'create-');
+    }
+    if (isReturn) {
+        ensureReturnDefaults('create-follow-up-date', 'create-follow-up-time', 'create-return-shortcuts');
+    }
+}
+
+function selectCreateOutcome(status) {
+    const value = status || '';
+    debugFlow('visitOutcomeSelected', { status: value || null, sheet: 'create' });
+    const hidden = $('create-visit-status');
+    if (hidden) hidden.value = value;
+    document.querySelectorAll('#create-outcome-list .outcome-chip').forEach((button) => {
+        const on = button.dataset.status === value;
+        button.classList.toggle('is-selected', on);
+        button.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    syncCreateOutcomeBlocks(value);
+}
+
+function ensureReturnDefaults(dateId = 'visit-follow-up-date', timeId = 'visit-follow-up-time', shortcutsRoot = 'visit-return-shortcuts') {
+    const dateEl = $(dateId);
+    const timeEl = $(timeId);
+    if (!dateEl || dateEl.value) {
+        return;
+    }
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    dateEl.value = tomorrow.toISOString().slice(0, 10);
+    if (timeEl && !timeEl.value) timeEl.value = '09:00';
+    document.querySelectorAll(`#${shortcutsRoot} .return-shortcut[data-days="1"]`).forEach((btn) => {
+        btn.dataset.active = '1';
+    });
+}
+
+function combineFollowUpAt(dateId = 'visit-follow-up-date', timeId = 'visit-follow-up-time') {
+    const date = $(dateId)?.value;
+    const time = $(timeId)?.value || '09:00';
+    if (!date) return null;
+    return `${date} ${time}:00`;
+}
+
 }
 
 function $(id) {
@@ -243,14 +388,19 @@ function openCreateSheet(lat, lng, label, source = 'unknown') {
     const statusEl = $('create-location-status');
     if (statusEl) {
         statusEl.textContent = lat != null && lng != null
-            ? 'Localização definida ✓'
+            ? 'Posição pronta para registro'
             : 'Selecione um local no mapa ou use Meu Local';
     }
-    const chip = $('create-location-chip');
-    if (chip) {
-        chip.hidden = true;
-        chip.textContent = '';
-    }
+    selectCreateOutcome('');
+    resetSaleForm('create-');
+    paintCampaignInto('create');
+    renderOutcomeButtons('create-outcome-list');
+    const notes = $('point-notes');
+    if (notes) notes.value = '';
+    const err = $('create-error');
+    if (err) { err.hidden = true; err.textContent = ''; }
+    const submit = $('create-point-submit');
+    if (submit) submit.textContent = 'Salvar ponto';
     show('visit-sheet', false);
     show('point-sheet', false);
     show('create-sheet', true);
@@ -258,61 +408,8 @@ function openCreateSheet(lat, lng, label, source = 'unknown') {
 }
 
 function paintCampaignContext() {
-    const ctx = bootstrap?.data?.campaign_context;
-    const label = $('visit-campaign-label');
-    const select = $('visit-campaign');
-    const warning = $('visit-campaign-warning');
-
-    if (!ctx) {
-        return;
-    }
-
-    if (!ctx.has_campaign) {
-        if (warning) {
-            warning.hidden = false;
-            warning.textContent = ctx.no_campaign_message
-                || 'Você não possui campanha ativa. Solicite ao gestor.';
-        }
-        if (label) {
-            label.hidden = true;
-        }
-        if (select) {
-            select.hidden = true;
-            select.required = false;
-        }
-
-        return;
-    }
-
-    if (warning) {
-        warning.hidden = true;
-        warning.textContent = '';
-    }
-
-    if (!ctx.requires_selection && ctx.active_campaign_id) {
-        const campaign = (ctx.campaigns || []).find((row) => Number(row.id) === Number(ctx.active_campaign_id));
-        if (label) {
-            label.textContent = campaign?.name || 'Campanha ativa';
-            label.hidden = false;
-        }
-        if (select) {
-            select.hidden = true;
-            select.required = false;
-            select.innerHTML = `<option value="${ctx.active_campaign_id}">${escapeHtml(campaign?.name || 'Campanha')}</option>`;
-            select.value = String(ctx.active_campaign_id);
-        }
-
-        return;
-    }
-
-    if (label) {
-        label.hidden = true;
-    }
-    if (select) {
-        select.hidden = false;
-        select.required = true;
-        fillSelect('visit-campaign', ctx.campaigns || [], 'name');
-    }
+    paintCampaignInto('visit');
+    paintCampaignInto('create');
 }
 
 function resolveCampaignIdForSubmit() {
@@ -346,18 +443,8 @@ async function resolveVisitCoordinates(propertyId) {
 }
 
 function renderVisitOutcomes() {
-    const el = $('visit-outcome-list');
-    if (!el) {
-        return;
-    }
-
-    el.innerHTML = VISIT_OUTCOMES.map((outcome) => `
-        <button type="button" class="outcome-chip" data-status="${escapeHtml(outcome.value)}"
-            style="--status-color:${escapeHtml(outcome.color)}" aria-pressed="false">
-            <span class="outcome-chip__swatch" aria-hidden="true">${escapeHtml(outcome.mark)}</span>
-            <span class="outcome-chip__label">${escapeHtml(outcome.label)}</span>
-        </button>
-    `).join('');
+    renderOutcomeButtons('visit-outcome-list', $('visit-status')?.value || '');
+    renderOutcomeButtons('create-outcome-list', $('create-visit-status')?.value || '');
 }
 
 function selectVisitOutcome(status) {
@@ -381,7 +468,7 @@ function syncVisitOutcomeBlocks(status) {
     const isSale = status === 'installation_requested';
     const isReturn = status === 'return_later';
     const returnBlock = $('visit-return-block');
-    const saleBlock = $('visit-sale-block');
+    const saleBlock = $('sale-block');
     const notesHint = $('visit-notes-hint');
     const submit = $('visit-submit');
 
@@ -405,12 +492,12 @@ function syncVisitOutcomeBlocks(status) {
     }
 
     if (isSale) {
-        resetSaleForm();
-        initSaleForm(catalogProducts, bootstrap?.data?.sale_fields || {});
+        resetSaleForm('');
+        initSaleForm(catalogProducts, bootstrap?.data?.sale_fields || {}, '');
     }
 
     if (isReturn) {
-        ensureReturnDefaults();
+        ensureReturnDefaults('visit-follow-up-date', 'visit-follow-up-time', 'visit-return-shortcuts');
     } else if (!isSale) {
         const dateEl = $('visit-follow-up-date');
         const timeEl = $('visit-follow-up-time');
@@ -420,38 +507,10 @@ function syncVisitOutcomeBlocks(status) {
         if (timeEl) {
             timeEl.value = '';
         }
-        document.querySelectorAll('.return-shortcut').forEach((btn) => {
+        document.querySelectorAll('#visit-return-shortcuts .return-shortcut').forEach((btn) => {
             btn.dataset.active = '0';
         });
     }
-}
-
-function ensureReturnDefaults() {
-    const dateEl = $('visit-follow-up-date');
-    const timeEl = $('visit-follow-up-time');
-    if (!dateEl || dateEl.value) {
-        return;
-    }
-
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    dateEl.value = tomorrow.toISOString().slice(0, 10);
-    if (timeEl && !timeEl.value) {
-        timeEl.value = '09:00';
-    }
-    document.querySelectorAll('.return-shortcut[data-days="1"]').forEach((btn) => {
-        btn.dataset.active = '1';
-    });
-}
-
-function combineFollowUpAt() {
-    const date = $('visit-follow-up-date')?.value;
-    const time = $('visit-follow-up-time')?.value || '09:00';
-    if (!date) {
-        return null;
-    }
-
-    return `${date} ${time}:00`;
 }
 
 function setVisitError(message) {
@@ -684,48 +743,130 @@ async function onCreatePoint(event) {
     event.preventDefault();
     if (navigator.onLine === false) {
         toast(OFFLINE_MUTATION, 'error');
-
         return;
     }
 
     const lat = Number($('point-lat')?.value);
     const lng = Number($('point-lng')?.value);
     if (Number.isNaN(lat) || Number.isNaN(lng)) {
-        toast('Selecione um local no mapa ou use Meu Local.', 'error');
+        setCreateError('Selecione um local no mapa ou use Meu Local.');
+        return;
+    }
 
+    const status = $('create-visit-status')?.value;
+    if (!bootstrap?.data?.campaign_context?.has_campaign) {
+        setCreateError(bootstrap?.data?.campaign_context?.no_campaign_message || 'Você não possui campanha ativa.');
+        return;
+    }
+    const campaignId = resolveCampaignId('create');
+    if (!campaignId) {
+        setCreateError('Escolha a campanha deste atendimento.');
+        return;
+    }
+    if (!status) {
+        setCreateError('Escolha a situação / interesse.');
+        return;
+    }
+    if (status === 'return_later' && !combineFollowUpAt('create-follow-up-date', 'create-follow-up-time')) {
+        setCreateError('Informe a data do retorno.');
+        return;
+    }
+    if (status === 'installation_requested') {
+        setSalePrefix('create-');
+        const saleError = validateSaleForm();
+        if (saleError) {
+            setCreateError(saleError);
+            return;
+        }
+    }
+
+    const citySelect = $('point-city');
+    let cityId = Number(citySelect?.value || 0);
+    if (!cityId && citySelect?.options?.length) {
+        cityId = Number(citySelect.options[0].value);
+        citySelect.value = String(cityId);
+    }
+    if (!cityId) {
+        setCreateError('Território sem cidade ativa.');
         return;
     }
 
     const body = {
-        city_id: Number($('point-city')?.value),
-        sector_id: $('point-sector')?.value ? Number($('point-sector').value) : null,
-        street: $('point-street')?.value,
-        number: $('point-number')?.value,
+        city_id: cityId,
+        sector_name: $('point-sector-name')?.value?.trim() || undefined,
+        street: $('point-street')?.value?.trim() || 'Posição no mapa',
+        number: $('point-number')?.value || undefined,
         latitude: lat,
         longitude: lng,
-        contact_name: $('point-contact')?.value,
-        contact_phone: $('point-phone')?.value,
+        status,
+        campaign_id: campaignId,
+        contact_name: $('point-contact')?.value || undefined,
+        contact_phone: $('point-phone')?.value || undefined,
+        notes: $('point-notes')?.value || undefined,
     };
 
-    try {
-        const created = await mobileApi.createPoint(body);
-        const pointId = created.data?.property_id || created.data?.id;
-        debugFlow('pointCreated', { propertyId: pointId || null });
-        toast('Imóvel salvo.', 'status');
-        show('create-sheet', false);
-        await loadMarkers();
-        if (pointId) {
-            MapAdapter.selectProperty(pointId);
-            openVisitSheet(pointId, {
-                subtitle: [body.street, body.number].filter(Boolean).join(', ') || 'Como foi a abordagem?',
-                source: 'after-create-point',
-            });
-        } else {
-            toast('Imóvel salvo, mas não foi possível abrir a visita.', 'error');
-        }
-    } catch (error) {
-        toast(error.message || OFFLINE_MUTATION, 'error');
+    if (status === 'return_later') {
+        body.follow_up_at = combineFollowUpAt('create-follow-up-date', 'create-follow-up-time');
     }
+    if (status === 'installation_requested') {
+        setSalePrefix('create-');
+        Object.assign(body, collectSalePayload());
+        if (body.customer_name && !body.contact_name) body.contact_name = body.customer_name;
+        if (body.customer_phone && !body.contact_phone) body.contact_phone = body.customer_phone;
+    }
+
+    const submitBtn = $('create-point-submit');
+    if (submitBtn) submitBtn.disabled = true;
+    setCreateError('');
+
+    try {
+        const created = await mobileApi.firstApproach(body);
+        const pointId = created.data?.property_id || created.data?.id;
+        debugFlow('pointCreated', { propertyId: pointId || null, firstApproach: true, status });
+        toast(status === 'installation_requested' ? 'Venda registrada.' : 'Ponto salvo.', 'status');
+        show('create-sheet', false);
+
+        const propertyStatus = propertyStatusForVisit(status) || created.data?.status;
+        if (pointId && propertyStatus) {
+            MapAdapter.updateMarker(pointId, {
+                status: propertyStatus,
+                color: markerColorForPropertyStatus(propertyStatus),
+                mark: markerMarkForPropertyStatus(propertyStatus),
+                status_label: propertyStatusLabel(propertyStatus),
+                latitude: lat,
+                longitude: lng,
+            });
+            MapAdapter.selectProperty(pointId);
+            MapAdapter.setCenter(lat, lng, 17);
+        }
+
+        if (created.data?.commission_awarded) {
+            showReward(created.data.commission_awarded);
+        }
+        if (status === 'return_later') {
+            loadAgenda().catch(() => {});
+        }
+        loadMarkers().catch(() => {});
+    } catch (error) {
+        setCreateError(error.message || OFFLINE_MUTATION);
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+function setCreateError(message) {
+    const el = $('create-error');
+    if (!el) {
+        if (message) toast(message, 'error');
+        return;
+    }
+    if (!message) {
+        el.hidden = true;
+        el.textContent = '';
+        return;
+    }
+    el.hidden = false;
+    el.textContent = message;
 }
 
 async function submitVisit() {
@@ -738,7 +879,7 @@ async function submitVisit() {
     const id = $('visit-property-id')?.value || $('point-id')?.value;
     const status = $('visit-status')?.value;
     const followUpId = $('visit-follow-up-id')?.value;
-    const campaignId = resolveCampaignIdForSubmit();
+    const campaignId = resolveCampaignId('visit');
     const submitBtn = $('visit-submit');
 
     setVisitError('');
@@ -759,12 +900,13 @@ async function submitVisit() {
 
         return;
     }
-    if (status === 'return_later' && !combineFollowUpAt()) {
+    if (status === 'return_later' && !combineFollowUpAt('visit-follow-up-date', 'visit-follow-up-time')) {
         setVisitError('Informe a data do retorno.');
 
         return;
     }
     if (status === 'installation_requested') {
+        setSalePrefix('');
         const saleError = validateSaleForm();
         if (saleError) {
             setVisitError(saleError);
@@ -782,9 +924,10 @@ async function submitVisit() {
     };
 
     if (status === 'return_later') {
-        body.follow_up_at = combineFollowUpAt();
+        body.follow_up_at = combineFollowUpAt('visit-follow-up-date', 'visit-follow-up-time');
     }
     if (status === 'installation_requested') {
+        setSalePrefix('');
         Object.assign(body, collectSalePayload());
     }
 
@@ -879,11 +1022,20 @@ async function hydrateCatalog() {
         }
         catalogProducts = products.data || [];
         fillSelect('point-city', territory.data?.cities || [], 'name');
-        fillSelect('point-sector', territory.data?.sectors || [], 'name');
+        const cities = territory.data?.cities || [];
+        const cityBlock = $('create-city-block');
+        if (cityBlock) {
+            cityBlock.hidden = cities.length <= 1;
+        }
+        if (cities.length === 1 && $('point-city')) {
+            $('point-city').value = String(cities[0].id);
+        }
         fillSelect('visit-campaign', campaigns, 'name');
         fillSelect('point-campaign', campaigns, 'name');
-        initSaleForm(catalogProducts, bootstrap?.data?.sale_fields || {});
+        fillSelect('create-campaign', campaigns, 'name');
+        initSaleForm(catalogProducts, bootstrap?.data?.sale_fields || {}, '');
         paintCampaignContext();
+        renderVisitOutcomes();
     } catch {
         /* catalog optional until online */
     }
@@ -1120,7 +1272,50 @@ function bindApp() {
         }, 400);
     });
 
-    $('sale-cart-add')?.addEventListener('click', () => addCartLine(true));
+    $('sale-cart-add')?.addEventListener('click', () => {
+        setSalePrefix('');
+        addCartLine(true);
+    });
+    $('create-sale-cart-add')?.addEventListener('click', () => {
+        setSalePrefix('create-');
+        addCartLine(true);
+    });
+    $('create-adjust-map')?.addEventListener('click', () => {
+        show('create-sheet', false);
+        toast('Toque no mapa para ajustar a posição.', 'status');
+    });
+    $('create-outcome-list')?.addEventListener('click', (event) => {
+        const button = event.target.closest?.('.outcome-chip');
+        if (button?.dataset.status) {
+            selectCreateOutcome(button.dataset.status);
+            setCreateError('');
+        }
+    });
+    $('create-return-shortcuts')?.addEventListener('click', (event) => {
+        const button = event.target.closest?.('.return-shortcut');
+        if (!button) {
+            return;
+        }
+        const dateEl = $('create-follow-up-date');
+        const timeEl = $('create-follow-up-time');
+        const days = button.dataset.days;
+        document.querySelectorAll('#create-return-shortcuts .return-shortcut').forEach((row) => {
+            row.dataset.active = row === button ? '1' : '0';
+        });
+        if (days === 'pick') {
+            dateEl?.focus();
+            return;
+        }
+        const offset = Number(days || 1);
+        const target = new Date();
+        target.setDate(target.getDate() + offset);
+        if (dateEl) {
+            dateEl.value = target.toISOString().slice(0, 10);
+        }
+        if (timeEl && !timeEl.value) {
+            timeEl.value = '09:00';
+        }
+    });
 
     document.addEventListener('click', (event) => {
         const followBtn = event.target.closest?.('[data-complete-follow-up]');

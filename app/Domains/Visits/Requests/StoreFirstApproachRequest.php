@@ -64,6 +64,7 @@ class StoreFirstApproachRequest extends FormRequest
             'contact_name' => ['nullable', 'string', 'max:255'],
             'contact_phone' => ['nullable', 'string', 'max:30'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'neighborhood' => ['nullable', 'string', 'max:255'],
             'plan' => ['nullable', 'string', 'max:120'],
             'gps_accuracy' => ['nullable', 'numeric', 'min:0'],
             // Sprint 8.2.16 — Retorno sem data não pode “esquecer” a Agenda.

@@ -286,30 +286,35 @@ const html = `<!DOCTYPE html>
             </div>
         </div>
 
-        <div class="sheet sheet--scroll" id="visit-sheet" hidden>
-            <div class="sheet__handle"></div>
-            <p class="sheet__section-title">RESULTADO DA ABORDAGEM</p>
-            <h3 class="sheet__title" id="visit-sheet-title">Registrar visita</h3>
-            <p class="card__meta" id="visit-sheet-subtitle">Como foi a abordagem?</p>
-            <input type="hidden" id="visit-property-id">
-            <input type="hidden" id="visit-status" value="">
-            <input type="hidden" id="visit-follow-up-id" value="">
-            <select class="field-select" id="point-campaign" hidden></select>
 
-            <div id="visit-campaign-block">
-                <label class="field-label">Campanha</label>
-                <p class="campaign-context__value" id="visit-campaign-label" hidden></p>
-                <select class="field-select" id="visit-campaign"></select>
-                <p class="banner" id="visit-campaign-warning" hidden data-kind="error"></p>
+        <div class="sheet" id="visit-sheet" hidden>
+            <div class="sheet-header">
+                <div class="sheet__handle"></div>
+                <p class="sheet__section-title">RESULTADO DA ABORDAGEM</p>
+                <h3 class="sheet__title" id="visit-sheet-title">Registrar visita</h3>
+                <p class="card__meta" id="visit-sheet-subtitle">Como foi a abordagem?</p>
             </div>
+            <div class="sheet-body">
+                <input type="hidden" id="visit-property-id">
+                <input type="hidden" id="visit-status" value="">
+                <input type="hidden" id="visit-follow-up-id" value="">
+                <select class="field-select" id="point-campaign" hidden></select>
 
-            <div id="visit-outcome-list" class="outcome-grid" role="listbox" aria-label="Como foi a abordagem?"></div>
+                <div id="visit-campaign-block">
+                    <label class="field-label">Campanha</label>
+                    <p class="campaign-context__value" id="visit-campaign-label" hidden></p>
+                    <select class="field-select" id="visit-campaign"></select>
+                    <p class="banner" id="visit-campaign-warning" hidden data-kind="error"></p>
+                </div>
 
-            <div class="visit-block" id="visit-notes-block">
-                <label class="field-label" for="visit-notes">Observações <span class="muted" id="visit-notes-hint">(opcional)</span></label>
-                <textarea class="field-textarea" id="visit-notes" placeholder="Ex.: voltar amanhã à tarde"></textarea>
-            </div>
+                <div id="visit-outcome-list" class="outcome-grid" role="listbox" aria-label="Como foi a abordagem?"></div>
 
+                <div class="visit-block" id="visit-notes-block">
+                    <label class="field-label" for="visit-notes">Observações <span class="muted" id="visit-notes-hint">(opcional)</span></label>
+                    <textarea class="field-textarea" id="visit-notes" placeholder="Ex.: voltar amanhã à tarde"></textarea>
+                </div>
+
+                
             <div class="visit-block" id="visit-return-block" hidden>
                 <label class="field-label">Quando voltar? <span style="color:#FCA5A5">*</span></label>
                 <div class="return-shortcuts" id="visit-return-shortcuts">
@@ -317,7 +322,7 @@ const html = `<!DOCTYPE html>
                     <button type="button" class="return-shortcut" data-days="2">+2 dias</button>
                     <button type="button" class="return-shortcut" data-days="pick">Escolher data</button>
                 </div>
-                <div class="sheet-actions" style="grid-template-columns:1fr 1fr">
+                <div class="sheet-actions" style="grid-template-columns:1fr 1fr;margin-top:0.55rem">
                     <div>
                         <label class="field-label" for="visit-follow-up-date">Data</label>
                         <input class="field-input" id="visit-follow-up-date" type="date">
@@ -328,8 +333,8 @@ const html = `<!DOCTYPE html>
                     </div>
                 </div>
             </div>
-
-            <div class="visit-block" id="visit-sale-block" hidden>
+                
+            <div class="visit-block" id="sale-block" hidden>
                 <p class="sheet__section-title">CONFIRMAR VENDA</p>
                 <p class="card__meta">Revise os produtos antes de finalizar.</p>
                 <label class="field-label" for="sale-name">Nome completo <span id="sale-name-required" class="req-star" hidden>*</span></label>
@@ -338,7 +343,7 @@ const html = `<!DOCTYPE html>
                 <input class="field-input" id="sale-phone" placeholder="Telefone" inputmode="tel" autocomplete="tel">
                 <label class="field-label" for="sale-whatsapp">WhatsApp <span id="sale-whatsapp-required" class="req-star" hidden>*</span></label>
                 <input class="field-input" id="sale-whatsapp" placeholder="WhatsApp" inputmode="tel">
-                <div class="sheet-actions" style="grid-template-columns:1fr 1fr">
+                <div class="sheet-actions" style="grid-template-columns:1fr 1fr;margin-top:0.55rem">
                     <div>
                         <label class="field-label" for="sale-document">CPF <span id="sale-document-required" class="req-star" hidden>*</span></label>
                         <input class="field-input" id="sale-document" placeholder="CPF">
@@ -364,44 +369,130 @@ const html = `<!DOCTYPE html>
                 <textarea class="field-textarea" id="sale-notes" placeholder="Observações comerciais desta venda"></textarea>
             </div>
 
-            <div id="visit-error" class="banner" hidden data-kind="error"></div>
-            <div class="sheet-actions sheet-actions--sticky">
-                <button class="btn btn-primary btn-block" id="visit-submit" type="button">Salvar visita</button>
-                <button class="btn btn-ghost btn-block" id="visit-sheet-close" type="button">Cancelar</button>
+                <div id="visit-error" class="banner" hidden data-kind="error"></div>
+            </div>
+            <div class="sheet-footer">
+                <div class="sheet-actions">
+                    <button class="btn btn-ghost" id="visit-sheet-close" type="button">Cancelar</button>
+                    <button class="btn btn-primary" id="visit-submit" type="button">Salvar visita</button>
+                </div>
             </div>
         </div>
 
-        <div class="sheet sheet--scroll" id="create-sheet" hidden>
-            <div class="sheet__handle"></div>
-            <h3 class="sheet__title">Novo imóvel</h3>
-            <p class="card__meta" id="create-location-status">Localização definida ✓</p>
-            <span class="location-chip" id="create-location-chip" hidden></span>
-            <form id="create-point-form">
-                <input type="hidden" id="point-lat">
-                <input type="hidden" id="point-lng">
-                <div class="sheet__section">
-                    <p class="sheet__section-title">ENDEREÇO</p>
-                    <label class="field-label">Cidade</label>
-                    <select class="field-select" id="point-city" required></select>
-                    <label class="field-label">Setor/Bairro</label>
-                    <select class="field-select" id="point-sector"></select>
-                    <label class="field-label">Rua</label>
-                    <input class="field-input" id="point-street" placeholder="Rua" required>
-                    <label class="field-label">Número</label>
-                    <input class="field-input" id="point-number" placeholder="Número">
+
+        <div class="sheet" id="create-sheet" hidden>
+            <div class="sheet-header">
+                <div class="sheet__handle"></div>
+                <p class="sheet__section-title">ADICIONAR LOCAL</p>
+                <h3 class="sheet__title">Novo ponto</h3>
+                <p class="card__meta">Cadastre este local para iniciar uma abordagem.</p>
+            </div>
+            <div class="sheet-body">
+                <form id="create-point-form">
+                    <input type="hidden" id="point-lat">
+                    <input type="hidden" id="point-lng">
+                    <input type="hidden" id="create-visit-status" value="">
+                    <div class="gps-block">
+                        <p class="gps-block__title">Local encontrado</p>
+                        <p class="gps-block__label" id="create-location-status">Posição pronta para registro</p>
+                        <button type="button" class="btn btn-ghost btn-block" id="create-adjust-map" style="margin-top:0.65rem">Ajustar posição no mapa</button>
+                    </div>
+
+                    <label class="field-label" for="point-contact">Nome / responsável</label>
+                    <input class="field-input" id="point-contact" placeholder="Quem atendeu" autocomplete="name">
+                    <label class="field-label" for="point-phone">Telefone / WhatsApp</label>
+                    <input class="field-input" id="point-phone" placeholder="WhatsApp" inputmode="tel" autocomplete="tel">
+                    <label class="field-label" for="point-notes">Observação curta <span class="muted" id="create-notes-hint">(opcional)</span></label>
+                    <textarea class="field-textarea" id="point-notes" placeholder="Referência rápida…"></textarea>
+
+                    <div id="create-campaign-block">
+                        <label class="field-label">Campanha</label>
+                        <p class="campaign-context__value" id="create-campaign-label" hidden></p>
+                        <select class="field-select" id="create-campaign"></select>
+                        <p class="banner" id="create-campaign-warning" hidden data-kind="error"></p>
+                    </div>
+
+                    <p class="field-label" style="margin-top:0.85rem">Situação / interesse</p>
+                    <div id="create-outcome-list" class="outcome-grid" role="listbox" aria-label="Situação / interesse"></div>
+
+                    
+            <div class="visit-block" id="create-return-block" hidden>
+                <label class="field-label">Quando voltar? <span style="color:#FCA5A5">*</span></label>
+                <div class="return-shortcuts" id="create-return-shortcuts">
+                    <button type="button" class="return-shortcut" data-days="1">Amanhã</button>
+                    <button type="button" class="return-shortcut" data-days="2">+2 dias</button>
+                    <button type="button" class="return-shortcut" data-days="pick">Escolher data</button>
                 </div>
-                <div class="sheet__section">
-                    <p class="sheet__section-title">CONTATO</p>
-                    <label class="field-label">Nome do contato</label>
-                    <input class="field-input" id="point-contact" placeholder="Nome do contato">
-                    <label class="field-label">Telefone</label>
-                    <input class="field-input" id="point-phone" placeholder="Telefone" inputmode="tel">
+                <div class="sheet-actions" style="grid-template-columns:1fr 1fr;margin-top:0.55rem">
+                    <div>
+                        <label class="field-label" for="create-follow-up-date">Data</label>
+                        <input class="field-input" id="create-follow-up-date" type="date">
+                    </div>
+                    <div>
+                        <label class="field-label" for="create-follow-up-time">Horário</label>
+                        <input class="field-input" id="create-follow-up-time" type="time">
+                    </div>
                 </div>
-                <div class="sheet-actions sheet-actions--sticky">
-                    <button class="btn btn-primary" type="submit">Salvar imóvel</button>
+            </div>
+                    
+            <div class="visit-block" id="create-sale-block" hidden>
+                <p class="sheet__section-title">CONFIRMAR VENDA</p>
+                <p class="card__meta">Revise os produtos antes de finalizar.</p>
+                <label class="field-label" for="create-sale-name">Nome completo <span id="create-sale-name-required" class="req-star" hidden>*</span></label>
+                <input class="field-input" id="create-sale-name" placeholder="Nome completo" autocomplete="name">
+                <label class="field-label" for="create-sale-phone">Telefone <span id="create-sale-phone-required" class="req-star" hidden>*</span></label>
+                <input class="field-input" id="create-sale-phone" placeholder="Telefone" inputmode="tel" autocomplete="tel">
+                <label class="field-label" for="create-sale-whatsapp">WhatsApp <span id="create-sale-whatsapp-required" class="req-star" hidden>*</span></label>
+                <input class="field-input" id="create-sale-whatsapp" placeholder="WhatsApp" inputmode="tel">
+                <div class="sheet-actions" style="grid-template-columns:1fr 1fr;margin-top:0.55rem">
+                    <div>
+                        <label class="field-label" for="create-sale-document">CPF <span id="create-sale-document-required" class="req-star" hidden>*</span></label>
+                        <input class="field-input" id="create-sale-document" placeholder="CPF">
+                    </div>
+                    <div>
+                        <label class="field-label" for="create-sale-rg">RG <span id="create-sale-rg-required" class="req-star" hidden>*</span></label>
+                        <input class="field-input" id="create-sale-rg" placeholder="RG">
+                    </div>
+                </div>
+                <label class="field-label" for="create-sale-email">E-mail <span id="create-sale-email-required" class="req-star" hidden>*</span></label>
+                <input class="field-input" id="create-sale-email" placeholder="E-mail" type="email" autocomplete="email">
+                <div class="sale-cart-head">
+                    <label class="field-label">Produtos <span id="create-sale-product-required" class="req-star" hidden>*</span></label>
+                    <button type="button" class="btn btn-ghost" id="create-sale-cart-add">+ Adicionar produto</button>
+                </div>
+                <div id="create-sale-cart-lines" class="sale-cart-lines"></div>
+                <p class="card__meta" id="create-sale-cart-empty">Nenhum produto ainda. Toque em “+ Adicionar produto”.</p>
+                <div class="sale-cart-total">
+                    <span class="muted">Total</span>
+                    <strong id="create-sale-cart-total">R$ 0,00</strong>
+                </div>
+                <label class="field-label" for="create-sale-notes">Observações da venda <span id="create-sale-notes-required" class="req-star" hidden>*</span></label>
+                <textarea class="field-textarea" id="create-sale-notes" placeholder="Observações comerciais desta venda"></textarea>
+            </div>
+
+                    <details class="address-advanced" id="create-address-advanced" style="margin-top:1rem">
+                        <summary class="field-label" style="cursor:pointer">Endereço (opcional no campo)</summary>
+                        <div id="create-city-block">
+                            <label class="field-label" for="point-city">Cidade</label>
+                            <select class="field-select" id="point-city"></select>
+                        </div>
+                        <label class="field-label" for="point-sector-name">Setor/Bairro</label>
+                        <input class="field-input" id="point-sector-name" placeholder="Digite o setor ou bairro" autocomplete="address-level2">
+                        <label class="field-label" for="point-street">Rua</label>
+                        <input class="field-input" id="point-street" placeholder="Nome da rua">
+                        <label class="field-label" for="point-number">Número</label>
+                        <input class="field-input" id="point-number" placeholder="S/N">
+                    </details>
+
+                    <div id="create-error" class="banner" hidden data-kind="error"></div>
+                </form>
+            </div>
+            <div class="sheet-footer">
+                <div class="sheet-actions">
                     <button class="btn btn-ghost" id="create-point-cancel" type="button">Cancelar</button>
+                    <button class="btn btn-primary" id="create-point-submit" type="submit" form="create-point-form">Salvar ponto</button>
                 </div>
-            </form>
+            </div>
         </div>
 
         <div class="sheet" id="account-sheet" hidden>
