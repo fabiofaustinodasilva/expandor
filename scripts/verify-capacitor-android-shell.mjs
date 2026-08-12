@@ -28,9 +28,12 @@ const requiredJs = [
     'Venda realizada',
     'Não encontrado',
     'Sem interesse',
-    'openVisitSheet',
-    'renderVisitOutcomes',
-    'completeFollowUp',
+    '[EXP Vendedor]',
+    'openVisitFlow',
+    'pointCreated',
+    'visitOutcomeSelected',
+    'visitSubmitted',
+    'after-create-point',
 ];
 
 const forbidden = [

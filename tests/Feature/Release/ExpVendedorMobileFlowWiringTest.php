@@ -70,7 +70,7 @@ class ExpVendedorMobileFlowWiringTest extends TestCase
         $js = public_path('capacitor-shell/vendor/seller-app.js');
         if (is_file($js)) {
             $bundle = (string) file_get_contents($js);
-            $this->assertStringContainsString('openVisitSheet', $bundle);
+            $this->assertStringContainsString('openVisitFlow', $bundle);
             $this->assertStringContainsString('Interessado', $bundle);
             $this->assertStringContainsString('Retornar depois', $bundle);
         }
