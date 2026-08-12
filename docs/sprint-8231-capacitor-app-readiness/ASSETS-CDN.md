@@ -22,3 +22,7 @@
 4. Google JS permanece remoto (licença/key) — documentar “mapa Google exige rede”.
 
 **Não feito nesta sprint:** troca de CDN altera o mapa visual validado (8.2.29). Slice próprio + regressão Maps.
+
+## Resolvido em 8.2.32
+
+Live blades do seller/app deixaram de carregar Tailwind Play, Lucide, Leaflet, MarkerCluster e GoogleMutant via CDN. Inventário histórico acima permanece como registro da auditoria 8.2.31. Ver `docs/sprint-8232-capacitor-bootstrap-assets/`.

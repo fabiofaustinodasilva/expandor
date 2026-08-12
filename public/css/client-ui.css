@@ -33,6 +33,10 @@
     --font-label: 0.88rem;
     --font-helper: 0.85rem;
     --font-caption: 0.75rem;
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
 }
 
 /* Map local team/field-ops buttons onto the shared button language */
@@ -881,8 +885,8 @@ html.client-nav-lock body {
     position: sticky;
     top: 0;
     z-index: 55;
-    height: var(--client-mobile-bar-h);
-    padding: 0 .75rem;
+    height: calc(var(--client-mobile-bar-h) + var(--safe-area-top, 0px));
+    padding: var(--safe-area-top, 0px) .75rem 0;
     align-items: center;
     justify-content: space-between;
     gap: .75rem;
@@ -1097,7 +1101,7 @@ html.client-nav-lock body {
         max-width: 100% !important;
     }
     .op-toast {
-        bottom: 1rem !important;
+        bottom: calc(1rem + var(--safe-area-bottom, 0px)) !important;
     }
     body.field-seller .op-rail a span { font-size: .9rem !important; }
 }
@@ -1311,6 +1315,10 @@ html.client-nav-lock body {
         border-bottom: 0;
         pointer-events: none;
         z-index: 55;
+        padding-top: var(--safe-area-top, 0px);
+    }
+    #map-page header.map-toolbar {
+        padding-top: calc(4.25rem + var(--safe-area-top, 0px));
     }
     body.map-fullscreen .op-mobile-bar__brand {
         display: none;

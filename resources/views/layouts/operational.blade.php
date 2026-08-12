@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @php
         /** @var \App\Domains\Branding\DTOs\BrandPayload $brand */
@@ -18,8 +18,8 @@
     @if($brand->favicon())
         <link rel="icon" href="{{ $brand->favicon() }}">
     @endif
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@0.469.0"></script>
+    <link rel="stylesheet" href="{{ asset('vendor/expandor/seller-app.css') }}">
+    <script src="{{ asset('vendor/expandor/seller-app.js') }}"></script>
     <style>
         :root { {{ $themeService->cssVariables($brand) }} }
         html, body { height: 100%; margin: 0; }

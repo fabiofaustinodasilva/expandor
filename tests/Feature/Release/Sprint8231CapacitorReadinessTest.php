@@ -95,11 +95,13 @@ class Sprint8231CapacitorReadinessTest extends TestCase
     {
         $operational = (string) file_get_contents(resource_path('views/layouts/operational.blade.php'));
         $map = (string) file_get_contents(resource_path('views/maps/index.blade.php'));
-        $this->assertStringContainsString('cdn.tailwindcss.com', $operational);
-        $this->assertStringContainsString('unpkg.com/lucide@0.469.0', $operational);
-        $this->assertStringContainsString('unpkg.com/leaflet@1.9.4', $map);
-        $this->assertStringContainsString('leaflet.markercluster@1.5.3', $map);
-        $this->assertStringContainsString('leaflet.gridlayer.googlemutant', $map);
+        $this->assertStringNotContainsString('cdn.tailwindcss.com', $operational);
+        $this->assertStringNotContainsString('unpkg.com/lucide@0.469.0', $operational);
+        $this->assertStringNotContainsString('unpkg.com/leaflet@1.9.4', $map);
+        $this->assertStringContainsString('vendor/expandor/seller-app', $operational);
+        $this->assertStringContainsString('data-leaflet-version="1.9.4"', $map);
+        $this->assertStringContainsString('data-markercluster-version="1.5.3"', $map);
+        $this->assertStringContainsString('data-googlemutant-version="0.14.1"', $map);
 
         $cdnDoc = (string) file_get_contents(base_path('docs/sprint-8231-capacitor-app-readiness/ASSETS-CDN.md'));
         $this->assertStringContainsString('cdn.tailwindcss.com', $cdnDoc);
@@ -171,7 +173,7 @@ class Sprint8231CapacitorReadinessTest extends TestCase
         $this->assertStringContainsString('Híbrido progressivo', $adr);
         $this->assertStringContainsString('Play/App Store', $adr);
         $pkg = (string) file_get_contents(base_path('package.json'));
-        $this->assertStringNotContainsString('@capacitor', $pkg);
+        $this->assertStringContainsString('@capacitor/core', $pkg);
     }
 
     public function test_safe_area_keyboard_and_pwa_stub(): void
@@ -180,7 +182,7 @@ class Sprint8231CapacitorReadinessTest extends TestCase
         $this->assertStringContainsString('safe-area-inset', $css);
 
         $operational = (string) file_get_contents(resource_path('views/layouts/operational.blade.php'));
-        $this->assertStringNotContainsString('viewport-fit=cover', $operational);
+        $this->assertStringContainsString('viewport-fit=cover', $operational);
 
         $manifest = (string) file_get_contents(public_path('manifest.webmanifest'));
         $this->assertStringContainsString('"icons": []', $manifest);

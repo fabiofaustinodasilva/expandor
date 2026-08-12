@@ -272,7 +272,8 @@ class Sprint8222GoogleMapsProviderTest extends TestCase
         $this->assertStringContainsString('basemap-street', $html);
         $this->assertStringContainsString('basemap-satellite', $html);
         $this->assertStringContainsString('maps.googleapis.com/maps/api/js', $html);
-        $this->assertStringContainsString('Leaflet.GoogleMutant.js', $html);
+        $this->assertStringContainsString('vendor/expandor/seller-app.js', $html);
+        $this->assertStringContainsString('data-googlemutant-version="0.14.1"', $html);
         $this->assertStringContainsString('map-provider.js', $html);
         $this->assertStringContainsString('operational-map.js', $html);
     }

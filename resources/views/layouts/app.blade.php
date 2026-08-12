@@ -13,7 +13,7 @@
     @if($brand->faviconUrl)
         <link rel="icon" href="{{ $brand->faviconUrl }}">
     @endif
-    <script src="https://unpkg.com/lucide@0.469.0"></script>
+    <script src="{{ asset('vendor/expandor/seller-app.js') }}"></script>
     <style>
         :root {
             {{ $themeService->cssVariables($brand) }}

@@ -37,6 +37,26 @@
 /public/build
 /public/hot
 /public/storage
+/public/vendor/expandor
+/public/capacitor-shell
+
+# --- Capacitor / native ---
+android/.gradle/
+android/app/build/
+android/build/
+android/captures/
+android/local.properties
+android/*.apk
+android/*.aab
+android/*.ap_
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+.capacitor/
 
 # --- Auth / Composer locais ---
 /auth.json

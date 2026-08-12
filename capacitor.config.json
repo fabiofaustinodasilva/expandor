@@ -1,0 +1,5 @@
+{
+    "appId": "br.com.expandor.app",
+    "appName": "Expandor",
+    "webDir": "public/capacitor-shell"
+}

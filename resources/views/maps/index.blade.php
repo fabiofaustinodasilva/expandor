@@ -42,6 +42,9 @@
     data-legend='@json($legend)'
     data-commercial-legend='@json($commercialLegend)'
     data-sellers='@json($sellers->map(fn ($s) => ["id" => $s->id, "name" => $s->name])->values())'
+    data-leaflet-version="1.9.4"
+    data-markercluster-version="1.5.3"
+    data-googlemutant-version="0.14.1"
     data-map-provider="{{ $mapFrontendConfig->provider }}"
     data-map-fallback="{{ $mapFrontendConfig->fallback }}"
     data-map-provider-reason="{{ $mapFrontendConfig->reason }}"
@@ -881,9 +884,6 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="">
 <style>
     .op-main { height: 100vh; }
     @media (max-width: 900px) { .op-main { height: calc(100dvh - 74px); } }
@@ -1498,11 +1498,8 @@
 @endpush
 
 @push('scripts')
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 @if($mapFrontendConfig->usesGoogleVisual())
 <script src="https://maps.googleapis.com/maps/api/js?key={{ urlencode($mapFrontendConfig->browserKey()) }}&v=weekly" async defer></script>
-<script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.14.1/Leaflet.GoogleMutant.js" crossorigin=""></script>
 @endif
 <script src="{{ asset('js/map-provider.js') }}?v=6"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
