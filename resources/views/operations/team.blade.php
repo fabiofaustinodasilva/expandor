@@ -432,16 +432,38 @@
 @endif
 
 <style>
-    .team-hub { max-width: 1080px; }
+    /* Desktop: Equipe usa a largura útil do op-main (não herda faixa estreita). */
+    .op-page:has(.team-hub) {
+        max-width: none;
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    .team-hub {
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+    }
     .team-hub-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; margin-bottom:1.25rem; }
     .team-eyebrow { margin:0; text-transform:uppercase; letter-spacing:.08em; font-size:.72rem; color:#64748b; font-weight:700; }
-    .team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1rem; }
+    .team-grid {
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+        gap:1rem;
+        width: 100%;
+    }
+    @media (min-width: 1024px) {
+        .team-grid {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+    }
     .team-card {
         background: linear-gradient(180deg, rgba(30,41,59,.95), rgba(15,23,42,.98));
         border: 1px solid rgba(51,65,85,.9);
         border-radius: 1.15rem;
         padding: 1rem 1.05rem 1.05rem;
         display:flex; flex-direction:column; gap:.85rem;
+        min-width: 0;
     }
     .team-card.is-inactive { opacity: .72; }
     .team-card-top { display:flex; gap:.75rem; align-items:center; }

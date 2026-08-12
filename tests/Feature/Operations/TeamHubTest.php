@@ -39,6 +39,31 @@ class TeamHubTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_team_page_desktop_layout_is_not_narrow_capped(): void
+    {
+        $source = (string) file_get_contents(resource_path('views/operations/team.blade.php'));
+
+        $this->assertStringContainsString('class="team-hub"', $source);
+        $this->assertStringContainsString('class="team-grid"', $source);
+        $this->assertStringContainsString('repeat(auto-fit', $source);
+        $this->assertStringContainsString('minmax', $source);
+        $this->assertStringContainsString('max-width: none', $source);
+        $this->assertStringNotContainsString('max-width: 1080px', $source);
+        $this->assertStringNotContainsString('max-width:48rem', $source);
+        $this->assertStringNotContainsString('max-width: 48rem', $source);
+        $this->assertStringNotContainsString('max-width:56rem', $source);
+        $this->assertStringNotContainsString('max-width: 56rem', $source);
+
+        $company = $this->makeCompanyWithPlan('Empresa Equipe Layout');
+        $manager = $this->makeUser($company, Role::MANAGER, ['email' => 'mgr-layout@team.test']);
+
+        $html = $this->actingAs($manager)->get(route('operations.team'))->assertOk()->getContent();
+        $this->assertStringContainsString('team-hub', $html);
+        $this->assertStringContainsString('team-grid', $html);
+        $this->assertStringContainsString('max-width: none', $html);
+        $this->assertStringNotContainsString('max-width: 1080px', $html);
+    }
+
     public function test_manager_can_create_seller_with_audit(): void
     {
         $company = $this->makeCompanyWithPlan('Empresa Equipe Create');
