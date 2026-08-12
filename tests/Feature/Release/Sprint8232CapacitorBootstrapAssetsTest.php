@@ -40,7 +40,9 @@ class Sprint8232CapacitorBootstrapAssetsTest extends TestCase
     {
         $operational = (string) file_get_contents(resource_path('views/layouts/operational.blade.php'));
         $this->assertStringNotContainsString('cdn.tailwindcss.com', $operational);
-        $this->assertStringContainsString('vendor/expandor/seller-app.css', $operational);
+        $this->assertStringContainsString('layouts.partials.seller-vendor', $operational);
+        $partial = (string) file_get_contents(resource_path('views/layouts/partials/seller-vendor.blade.php'));
+        $this->assertStringContainsString('vendor/expandor/seller-app.css', $partial);
         $this->assertFileExists(resource_path('css/seller-app.css'));
         $css = (string) file_get_contents(resource_path('css/seller-app.css'));
         $this->assertStringContainsString("@import 'tailwindcss'", $css);
@@ -67,7 +69,8 @@ class Sprint8232CapacitorBootstrapAssetsTest extends TestCase
         $this->assertStringContainsString("import 'leaflet.gridlayer.googlemutant'", $js);
         $this->assertStringContainsString("from 'lucide'", $js);
         $this->assertStringContainsString('window.L = L', $js);
-        $this->assertStringContainsString('window.lucide = lucide', $js);
+        $this->assertStringContainsString('window.lucide', $js);
+        $this->assertStringContainsString('createIconsCompat', $js);
         $this->assertStringContainsString('createIcons', $js);
         $this->assertStringContainsString('maps.googleapis.com/maps/api/js', $map);
     }

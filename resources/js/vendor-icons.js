@@ -1,17 +1,26 @@
 /**
- * Lucide only — layouts that do not need the map stack (layouts.app).
+ * Lucide only — same createIcons({ icons }) contract as the UMD CDN.
  */
+import { createIcons, icons } from 'lucide';
 import * as lucide from 'lucide';
 
-window.lucide = lucide;
+function createIconsCompat(options = {}) {
+    return createIcons({
+        icons,
+        ...options,
+        attrs: { 'stroke-width': 2, ...(options.attrs || {}) },
+    });
+}
+
+window.lucide = Object.assign({}, lucide, { icons, createIcons: createIconsCompat });
 window.ExpandorVendor = {
     ...(window.ExpandorVendor || {}),
-    lucide: typeof lucide?.createIcons === 'function',
+    lucide: typeof createIcons === 'function',
 };
 
 function paintIcons() {
     try {
-        lucide.createIcons();
+        createIconsCompat();
     } catch (e) {
         /* ignore */
     }

@@ -13,7 +13,7 @@
     @if($brand->faviconUrl)
         <link rel="icon" href="{{ $brand->faviconUrl }}">
     @endif
-    <script src="{{ asset('vendor/expandor/seller-app.js') }}"></script>
+    @include('layouts.partials.seller-vendor', ['includeCss' => false])
     <style>
         :root {
             {{ $themeService->cssVariables($brand) }}

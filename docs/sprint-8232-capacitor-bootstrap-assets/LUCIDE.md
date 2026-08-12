@@ -11,9 +11,13 @@ window.lucide = lucide;
 lucide.createIcons(); // data-lucide
 ```
 
-`seller-app.js` pinta ícones no load e em `DOMContentLoaded`. Fallback try/catch — shell não fica em branco se Lucide falhar.
+`seller-app.js` pinta ícones no load e em `DOMContentLoaded` via `createIcons({ icons })`.
 
-Chamadas existentes em `operational-map.js`, `client-mobile.js` e blades (`if (window.lucide) createIcons()`) continuam válidas.
+O UMD da CDN registrava o set automaticamente; o ESM **exige** `{ icons }`. Sem isso, `createIcons()` lança e o try/catch da 8.2.32 deixava o rail sem SVG (hotfix 8.2.32.1).
+
+`window.lucide.createIcons()` permanece compatível (wrapper injeta `icons` + `stroke-width: 2`).
+
+Chamadas existentes em `operational-map.js`, `client-mobile.js` e blades continuam válidas.
 
 ## Onde
 

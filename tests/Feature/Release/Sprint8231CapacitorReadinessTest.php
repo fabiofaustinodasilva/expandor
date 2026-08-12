@@ -98,7 +98,7 @@ class Sprint8231CapacitorReadinessTest extends TestCase
         $this->assertStringNotContainsString('cdn.tailwindcss.com', $operational);
         $this->assertStringNotContainsString('unpkg.com/lucide@0.469.0', $operational);
         $this->assertStringNotContainsString('unpkg.com/leaflet@1.9.4', $map);
-        $this->assertStringContainsString('vendor/expandor/seller-app', $operational);
+        $this->assertStringContainsString('layouts.partials.seller-vendor', $operational);
         $this->assertStringContainsString('data-leaflet-version="1.9.4"', $map);
         $this->assertStringContainsString('data-markercluster-version="1.5.3"', $map);
         $this->assertStringContainsString('data-googlemutant-version="0.14.1"', $map);

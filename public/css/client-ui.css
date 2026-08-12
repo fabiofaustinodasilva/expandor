@@ -39,6 +39,33 @@
     --safe-area-left: env(safe-area-inset-left, 0px);
 }
 
+/* Sprint 8.2.32.1 — Lucide rail/map chrome after local Tailwind 4 (same 20px / stroke 2 as 8.2.30) */
+.op-rail svg.lucide,
+.op-rail [data-lucide],
+.op-mobile-bar svg.lucide,
+.op-mobile-bar [data-lucide] {
+    width: 1.25rem;
+    height: 1.25rem;
+    stroke-width: 2;
+    flex-shrink: 0;
+    display: block;
+}
+.map-btn-present svg.lucide,
+.map-btn-recenter svg.lucide,
+.map-btn-present [data-lucide],
+.map-btn-recenter [data-lucide] {
+    width: 1.25rem;
+    height: 1.25rem;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+.op-rail a:hover,
+.op-rail a.active,
+.op-rail button:hover {
+    background: color-mix(in srgb, var(--primary) 22%, transparent);
+    color: var(--text);
+}
+
 /* Map local team/field-ops buttons onto the shared button language */
 .team-btn-primary {
     background: var(--primary) !important;

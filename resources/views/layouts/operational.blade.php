@@ -18,8 +18,7 @@
     @if($brand->favicon())
         <link rel="icon" href="{{ $brand->favicon() }}">
     @endif
-    <link rel="stylesheet" href="{{ asset('vendor/expandor/seller-app.css') }}">
-    <script src="{{ asset('vendor/expandor/seller-app.js') }}"></script>
+    @include('layouts.partials.seller-vendor')
     <style>
         :root { {{ $themeService->cssVariables($brand) }} }
         html, body { height: 100%; margin: 0; }

@@ -18,6 +18,12 @@
 - `.gitignore` Capacitor/caches/keystores.
 - Testes 8.2.31 e 8.2.10 alinhados ao vendor local.
 
+## 8.2.32.1 — visual hotfix
+
+- Lucide ESM: `createIcons({ icons })` (contrato CDN).
+- Pin 20px / stroke 2 no rail e botões do mapa (`client-ui.css`).
+- Cache bust `?v=filemtime` no vendor local.
+
 ## Not changed
 
 - Auth mobile, device binding, offline, SQLite, sync, Idempotency-Key.
