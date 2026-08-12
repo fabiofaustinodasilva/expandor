@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="EXP">
+  <rect width="120" height="120" rx="24" fill="#0B1F3A"/>
+  <text x="60" y="68" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="42" font-weight="800" fill="#FFFFFF">EXP</text>
+  <path d="M34 82 L60 52 L86 82" fill="none" stroke="#F97316" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -2,6 +2,10 @@ export const MapAdapter = {
     map: null,
     markersLayer: null,
     gpsCircle: null,
+    streetLayer: null,
+    satelliteLayer: null,
+    activeBasemap: 'street',
+    onMapClick: null,
 
     init(elementId, config = {}) {
         const L = window.L;
@@ -19,14 +23,45 @@ export const MapAdapter = {
             config.zoom || 13,
         );
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        this.streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap',
-        }).addTo(this.map);
+            maxZoom: 19,
+        });
 
+        this.satelliteLayer = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 19,
+            },
+        );
+
+        this.streetLayer.addTo(this.map);
         this.markersLayer = L.markerClusterGroup ? L.markerClusterGroup() : L.layerGroup();
         this.map.addLayer(this.markersLayer);
 
+        this.map.on('click', (event) => {
+            this.onMapClick?.(event.latlng.lat, event.latlng.lng);
+        });
+
         return this.map;
+    },
+
+    setBasemap(mode) {
+        if (! this.map || ! this.streetLayer || ! this.satelliteLayer) {
+            return;
+        }
+
+        const L = window.L;
+        if (mode === 'satellite') {
+            this.map.removeLayer(this.streetLayer);
+            this.satelliteLayer.addTo(this.map);
+            this.activeBasemap = 'satellite';
+        } else {
+            this.map.removeLayer(this.satelliteLayer);
+            this.streetLayer.addTo(this.map);
+            this.activeBasemap = 'street';
+        }
     },
 
     setCenter(lat, lng, zoom) {
@@ -62,7 +97,7 @@ export const MapAdapter = {
         }
         this.gpsCircle = L.circle([position.latitude, position.longitude], {
             radius: Math.max(12, position.accuracy || 25),
-            color: '#3B82F6',
+            color: '#F97316',
             fillOpacity: 0.15,
         }).addTo(this.map);
     },

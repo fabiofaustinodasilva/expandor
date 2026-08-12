@@ -2,11 +2,20 @@ import { MobileAuthService } from './mobile-auth-service.js';
 import { mobileApi } from './mobile-api.js';
 import { LocationService } from './location-service.js';
 import { MapAdapter } from './map-adapter.js';
+import { PresentationScreen } from './presentation-screen.js';
+import {
+    commissionStatusLabel,
+    propertyStatusLabel,
+    formatCurrency,
+    appVersionLabel,
+    escapeHtml,
+} from './seller-labels.js';
 
 const GPS_FAIL = 'Não foi possível acessar sua localização.';
 const OFFLINE_MUTATION = 'Sem conexão. Esta ação ainda não pode ser concluída offline.';
 let bootstrap = null;
 let searchTimer = null;
+let layersOpen = false;
 
 function $(id) {
     return document.getElementById(id);
@@ -19,6 +28,14 @@ function show(id, on) {
     }
 
     el.hidden = !on;
+}
+
+function paintIcons(root = document) {
+    try {
+        window.lucide?.createIcons?.({ attrs: { 'stroke-width': 2 } });
+    } catch {
+        /* optional */
+    }
 }
 
 function setBanner(text, kind = 'error') {
@@ -46,7 +63,7 @@ function setNet(online) {
     }
 
     el.hidden = online;
-    el.textContent = online ? '' : 'Offline';
+    el.textContent = online ? '' : 'Sem conexão';
 }
 
 function setPane(name) {
@@ -69,11 +86,31 @@ function paintUser(data) {
     const company = data?.company?.name || data?.user?.company?.name || '';
     const hello = $('signed-hello');
     if (hello) {
-        hello.textContent = name ? `Olá, ${name}` : 'Sessão ativa';
+        hello.textContent = name ? `Olá, ${name.split(' ')[0]}` : 'Olá';
     }
-    const meta = $('signed-meta');
-    if (meta) {
-        meta.textContent = [company, email].filter(Boolean).join(' · ');
+    const companyEl = $('signed-company');
+    if (companyEl) {
+        companyEl.textContent = company || '';
+    }
+    const accountName = $('account-name');
+    const accountEmail = $('account-email');
+    const accountCompany = $('account-company');
+    if (accountName) {
+        accountName.textContent = name || '—';
+    }
+    if (accountEmail) {
+        accountEmail.textContent = email || '—';
+    }
+    if (accountCompany) {
+        accountCompany.textContent = company || '—';
+    }
+    const version = $('app-version');
+    if (version) {
+        version.textContent = `EXP Vendedor · v${appVersionLabel()}`;
+    }
+    const aboutVersion = $('about-version');
+    if (aboutVersion) {
+        aboutVersion.textContent = `Versão ${appVersionLabel()}`;
     }
 }
 
@@ -87,42 +124,33 @@ function toast(message, kind = 'error') {
     el.textContent = message || '';
 }
 
-function playCommissionAudio() {
-    const audio = $('commission-audio') || new Audio('./sounds/commission-coins.wav');
-    audio.currentTime = 0;
-    audio.play?.().catch(() => {});
+function commissionBadgeClass(status) {
+    const value = String(status || '').toLowerCase();
+    if (value === 'paid') {
+        return 'badge--paid';
+    }
+    if (value === 'approved') {
+        return 'badge--approved';
+    }
+
+    return 'badge--pending';
 }
 
-function showReward(payload) {
-    if (!payload?.play_reward && !payload?.awarded) {
-        return;
-    }
-
-    const overlay = $('reward-overlay');
-    const amount = $('reward-amount');
-    if (amount) {
-        amount.textContent = `R$ ${Number(payload.amount || 0).toFixed(2)}`;
-    }
-    if (overlay) {
-        overlay.hidden = false;
-    }
-    playCommissionAudio();
+function emptyState(title, text) {
+    return `
+        <div class="empty-state">
+            <p class="empty-state__title">${escapeHtml(title)}</p>
+            <p class="empty-state__text">${escapeHtml(text)}</p>
+        </div>`;
 }
 
-function hideReward() {
-    const overlay = $('reward-overlay');
-    if (overlay) {
-        overlay.hidden = true;
-    }
-}
-
-function renderList(targetId, items, emptyText, row) {
+function renderList(targetId, items, emptyTitle, emptyText, row) {
     const el = $(targetId);
     if (!el) {
         return;
     }
     if (!items?.length) {
-        el.innerHTML = `<p class="muted">${emptyText}</p>`;
+        el.innerHTML = emptyState(emptyTitle, emptyText);
 
         return;
     }
@@ -144,9 +172,9 @@ async function openPoint(item) {
 
     const payload = await mobileApi.point(id);
     const point = payload.data || {};
-    $('point-title').textContent = point.resident_name || point.name || `Ponto #${id}`;
+    $('point-title').textContent = point.resident_name || point.name || `Imóvel #${id}`;
     $('point-meta').textContent = [
-        point.status_label || point.status,
+        point.status_label || propertyStatusLabel(point.status),
         point.address,
         point.resident_phone,
     ].filter(Boolean).join(' · ');
@@ -162,50 +190,147 @@ async function openPoint(item) {
         wa.hidden = !point.wa && !point.actions?.whatsapp;
     }
     show('point-sheet', true);
+    paintIcons($('point-sheet'));
+}
+
+function openCreateSheet(lat, lng, label) {
+    if (lat != null && lng != null) {
+        $('point-lat').value = String(lat);
+        $('point-lng').value = String(lng);
+    }
+    const chip = $('create-location-chip');
+    if (chip) {
+        if (label) {
+            chip.textContent = label;
+            chip.hidden = false;
+        } else if (lat != null && lng != null) {
+            chip.textContent = `Local: ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+            chip.hidden = false;
+        } else {
+            chip.hidden = true;
+        }
+    }
+    show('create-sheet', true);
+    paintIcons($('create-sheet'));
 }
 
 async function loadAgenda() {
     const payload = await mobileApi.agenda({ scope: 'today' });
-    renderList('agenda-list', payload.data || [], 'Nenhum retorno para hoje.', (item) => `
-        <button type="button" class="row" data-open-point="${item.property_id || ''}">
-            <strong>${item.address || 'Retorno'}</strong>
-            <span>${item.scheduled_label || item.scheduled_at || ''}</span>
-        </button>
-    `);
+    renderList(
+        'agenda-list',
+        payload.data || [],
+        'Agenda livre hoje',
+        'Nenhum retorno agendado para hoje. Use o mapa para visitar novos imóveis.',
+        (item) => `
+            <article class="card">
+                <div class="card__row">
+                    <p class="card__title">${escapeHtml(item.scheduled_label || 'Retorno')}</p>
+                    <span class="badge badge--pending">Agendado</span>
+                </div>
+                <p class="card__meta">${escapeHtml(item.address || 'Endereço não informado')}</p>
+                ${item.campaign ? `<p class="card__meta">${escapeHtml(item.campaign)}</p>` : ''}
+                ${item.notes ? `<p class="card__meta">${escapeHtml(item.notes)}</p>` : ''}
+                <button type="button" class="btn btn-ghost btn-block" data-open-point="${item.property_id || ''}">Ver imóvel</button>
+            </article>
+        `,
+    );
 }
 
 async function loadClients(q = '') {
     const payload = await mobileApi.points({ q, per_page: 24 });
-    renderList('clients-list', payload.data || [], 'Nenhum cliente encontrado.', (item) => `
-        <button type="button" class="row" data-open-point="${item.property_id || item.id}">
-            <strong>${item.resident_name || item.name || `Ponto #${item.id}`}</strong>
-            <span>${item.status_label || item.status || ''} · ${item.address || ''}</span>
-        </button>
-    `);
+    renderList(
+        'clients-list',
+        payload.data || [],
+        'Nenhum cliente encontrado',
+        'Cadastre imóveis pelo mapa ou ajuste a busca.',
+        (item) => {
+            const status = item.status_label || propertyStatusLabel(item.status);
+            const hasMap = item.latitude != null && item.longitude != null;
+
+            return `
+                <article class="card">
+                    <p class="card__title">${escapeHtml(item.resident_name || item.name || `Imóvel #${item.id}`)}</p>
+                    <p class="card__meta">${escapeHtml(status)}</p>
+                    <p class="card__meta">${escapeHtml(item.address || 'Endereço não informado')}</p>
+                    <div class="sheet-actions" style="margin-top:0.65rem">
+                        ${hasMap ? `<button type="button" class="btn btn-ghost" data-map-point="${item.property_id || item.id}" data-lat="${item.latitude}" data-lng="${item.longitude}">Ver no mapa</button>` : ''}
+                        <button type="button" class="btn btn-primary" data-open-point="${item.property_id || item.id}">Ver detalhes</button>
+                    </div>
+                </article>`;
+        },
+    );
 }
 
 async function loadResults() {
     const payload = await mobileApi.results();
     const data = payload.data || {};
+    const commissions = data.commissions || {};
     const el = $('results-list');
-    if (el) {
-        el.innerHTML = `
-            <p>Visitas hoje: <strong>${data.visits_today ?? '—'}</strong></p>
-            <p>Retornos pendentes: <strong>${data.pending_follow_ups ?? '—'}</strong></p>
-            <p>Campanhas ativas: <strong>${data.active_campaigns ?? '—'}</strong></p>
-        `;
+    if (!el) {
+        return;
     }
+
+    el.innerHTML = `
+        <div class="stat-grid">
+            <article class="stat-card">
+                <p class="stat-card__label">Visitas hoje</p>
+                <p class="stat-card__value">${data.visits_today ?? '—'}</p>
+            </article>
+            <article class="stat-card">
+                <p class="stat-card__label">Retornos</p>
+                <p class="stat-card__value">${data.pending_follow_ups ?? '—'}</p>
+            </article>
+            <article class="stat-card">
+                <p class="stat-card__label">Vendas (30 dias)</p>
+                <p class="stat-card__value">${commissions.sales_count ?? '—'}</p>
+            </article>
+            <article class="stat-card">
+                <p class="stat-card__label">Conversão</p>
+                <p class="stat-card__value">—</p>
+                <p class="card__meta">Indisponível na API mobile</p>
+            </article>
+            <article class="stat-card" style="grid-column:1/-1">
+                <p class="stat-card__label">Comissão (30 dias)</p>
+                <p class="stat-card__value">${formatCurrency(commissions.total_amount)}</p>
+                <p class="card__meta">Pago: ${formatCurrency(commissions.paid_amount)} · Pendente: ${formatCurrency(commissions.pending_amount)}</p>
+            </article>
+        </div>
+        <p class="card__meta">Campanhas ativas: ${data.active_campaigns ?? '—'}</p>
+    `;
 }
 
 async function loadCommissions() {
     const payload = await mobileApi.commissions();
     const items = payload.data?.items || [];
-    renderList('commissions-list', items, 'Nenhuma comissão no período.', (item) => `
-        <div class="row">
-            <strong>${item.product || 'Comissão'}</strong>
-            <span>R$ ${Number(item.commission_amount || 0).toFixed(2)} · ${item.status || ''}</span>
-        </div>
-    `);
+    renderList(
+        'commissions-list',
+        items,
+        'Nenhuma comissão',
+        'Suas comissões dos últimos 30 dias aparecerão aqui.',
+        (item) => `
+            <article class="card">
+                <div class="card__row">
+                    <p class="card__title">${escapeHtml(item.product || 'Comissão')}</p>
+                    <span class="badge ${commissionBadgeClass(item.status)}">${escapeHtml(commissionStatusLabel(item.status))}</span>
+                </div>
+                <p class="card__meta">Valor: ${formatCurrency(item.commission_amount)}</p>
+                ${item.earned_at ? `<p class="card__meta">Data da venda: ${escapeHtml(item.earned_at)}</p>` : ''}
+            </article>
+        `,
+    );
+}
+
+function toggleLayersMenu(force) {
+    layersOpen = force ?? !layersOpen;
+    const menu = $('map-layers-menu');
+    if (menu) {
+        menu.hidden = !layersOpen;
+    }
+}
+
+function syncLayerButtons() {
+    $('layer-street')?.setAttribute('data-active', MapAdapter.activeBasemap === 'street' ? '1' : '0');
+    $('layer-satellite')?.setAttribute('data-active', MapAdapter.activeBasemap === 'satellite' ? '1' : '0');
 }
 
 async function onGps() {
@@ -227,13 +352,21 @@ async function onCreatePoint(event) {
         return;
     }
 
+    const lat = Number($('point-lat')?.value);
+    const lng = Number($('point-lng')?.value);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+        toast('Selecione um local no mapa ou use Meu Local.', 'error');
+
+        return;
+    }
+
     const body = {
         city_id: Number($('point-city')?.value),
         sector_id: $('point-sector')?.value ? Number($('point-sector').value) : null,
         street: $('point-street')?.value,
         number: $('point-number')?.value,
-        latitude: Number($('point-lat')?.value),
-        longitude: Number($('point-lng')?.value),
+        latitude: lat,
+        longitude: lng,
         status: $('point-status')?.value || 'new',
         contact_name: $('point-contact')?.value,
         contact_phone: $('point-phone')?.value,
@@ -241,10 +374,9 @@ async function onCreatePoint(event) {
     };
 
     try {
-        const created = await mobileApi.createPoint(body);
-        toast('Ponto salvo.', 'status');
+        await mobileApi.createPoint(body);
+        toast('Imóvel salvo.', 'status');
         show('create-sheet', false);
-        MapAdapter.renderMarkers([created.data].filter(Boolean), openPoint);
         await loadMarkers();
     } catch (error) {
         toast(error.message || OFFLINE_MUTATION, 'error');
@@ -291,6 +423,35 @@ async function onVisit(status) {
     }
 }
 
+function playCommissionAudio() {
+    const audio = $('commission-audio') || new Audio('./sounds/commission-coins.wav');
+    audio.currentTime = 0;
+    audio.play?.().catch(() => {});
+}
+
+function showReward(payload) {
+    if (!payload?.play_reward && !payload?.awarded) {
+        return;
+    }
+
+    const overlay = $('reward-overlay');
+    const amount = $('reward-amount');
+    if (amount) {
+        amount.textContent = formatCurrency(payload.amount || 0);
+    }
+    if (overlay) {
+        overlay.hidden = false;
+    }
+    playCommissionAudio();
+}
+
+function hideReward() {
+    const overlay = $('reward-overlay');
+    if (overlay) {
+        overlay.hidden = true;
+    }
+}
+
 async function hydrateCatalog() {
     try {
         const [territory, products, campaigns] = await Promise.all([
@@ -326,10 +487,17 @@ function fillSelect(id, items, labelKey) {
     }
     const current = el.value;
     el.innerHTML = '<option value="">Selecionar</option>' + items.map((item) =>
-        `<option value="${item.id}">${item[labelKey] || item.id}</option>`
+        `<option value="${item.id}">${escapeHtml(item[labelKey] || item.id)}</option>`
     ).join('');
     if (current) {
         el.value = current;
+    }
+}
+
+function focusMapPoint(lat, lng) {
+    setPane('map');
+    if (lat != null && lng != null) {
+        MapAdapter.setCenter(Number(lat), Number(lng), 17);
     }
 }
 
@@ -346,9 +514,14 @@ async function enterApp(data) {
         paintUser(bootstrap.data || data);
         if (!MapAdapter.map) {
             MapAdapter.init('seller-map', { zoom: 13 });
+            MapAdapter.onMapClick = (lat, lng) => {
+                openCreateSheet(lat, lng);
+            };
+            syncLayerButtons();
         }
         await hydrateCatalog();
         await loadMarkers();
+        paintIcons();
     } catch (error) {
         toast(error.message || 'Não foi possível carregar o app.', 'error');
     }
@@ -402,6 +575,7 @@ async function onSubmit(event) {
 
 async function onLogout() {
     await MobileAuthService.logout();
+    PresentationScreen.close();
     showLogin();
     const password = $('login-password');
     if (password) {
@@ -428,8 +602,35 @@ function bindApp() {
         loadCommissions().catch((error) => toast(error.message, 'error'));
     });
     $('nav-more')?.addEventListener('click', () => setPane('more'));
+
     $('gps-btn')?.addEventListener('click', onGps);
-    $('create-point-open')?.addEventListener('click', () => show('create-sheet', true));
+    $('create-point-open')?.addEventListener('click', async () => {
+        try {
+            const position = await LocationService.getCurrentPosition();
+            openCreateSheet(position.latitude, position.longitude);
+        } catch {
+            openCreateSheet(null, null);
+        }
+    });
+    $('map-layers-btn')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleLayersMenu();
+    });
+    $('layer-street')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        MapAdapter.setBasemap('street');
+        syncLayerButtons();
+        toggleLayersMenu(false);
+    });
+    $('layer-satellite')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        MapAdapter.setBasemap('satellite');
+        syncLayerButtons();
+        toggleLayersMenu(false);
+    });
+    document.querySelector('.map-toolbar')?.addEventListener('click', (event) => event.stopPropagation());
+    document.addEventListener('click', () => toggleLayersMenu(false));
+
     $('create-point-cancel')?.addEventListener('click', () => show('create-sheet', false));
     $('create-point-form')?.addEventListener('submit', onCreatePoint);
     $('visit-interested')?.addEventListener('click', () => onVisit('interested'));
@@ -438,18 +639,38 @@ function bindApp() {
     $('visit-sale')?.addEventListener('click', () => onVisit('installation_requested'));
     $('point-sheet-close')?.addEventListener('click', () => show('point-sheet', false));
     $('reward-close')?.addEventListener('click', hideReward);
+
+    $('profile-btn')?.addEventListener('click', () => show('account-sheet', true));
+    $('account-close')?.addEventListener('click', () => show('account-sheet', false));
+    $('menu-products')?.addEventListener('click', () => {
+        PresentationScreen.open().catch((error) => toast(error.message, 'error'));
+    });
+    $('menu-account')?.addEventListener('click', () => show('account-sheet', true));
+    $('menu-about')?.addEventListener('click', () => show('about-sheet', true));
+    $('about-close')?.addEventListener('click', () => show('about-sheet', false));
+    $('presentation-close')?.addEventListener('click', () => PresentationScreen.close());
+
     $('clients-q')?.addEventListener('input', (event) => {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
             loadClients(event.target.value).catch((error) => toast(error.message, 'error'));
         }, 400);
     });
+
     document.addEventListener('click', (event) => {
-        const btn = event.target.closest?.('[data-open-point]');
-        if (btn?.dataset.openPoint) {
-            openPoint({ id: btn.dataset.openPoint }).catch((error) => toast(error.message, 'error'));
+        const openBtn = event.target.closest?.('[data-open-point]');
+        if (openBtn?.dataset.openPoint) {
+            openPoint({ id: openBtn.dataset.openPoint }).catch((error) => toast(error.message, 'error'));
+
+            return;
+        }
+
+        const mapBtn = event.target.closest?.('[data-map-point]');
+        if (mapBtn?.dataset.lat && mapBtn?.dataset.lng) {
+            focusMapPoint(mapBtn.dataset.lat, mapBtn.dataset.lng);
         }
     });
+
     window.addEventListener('online', () => setNet(true));
     window.addEventListener('offline', () => setNet(false));
     setNet(navigator.onLine !== false);
@@ -467,10 +688,12 @@ async function startup() {
         MobileAuthService.openForgotPassword();
     });
     $('logout-button')?.addEventListener('click', onLogout);
+    $('account-logout')?.addEventListener('click', onLogout);
     window.addEventListener('expandor:auth-cleared', (event) => {
         showLogin(event.detail?.message || '');
     });
     bindApp();
+    paintIcons();
 
     try {
         const user = await MobileAuthService.getCurrentUser();
