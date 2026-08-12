@@ -5,6 +5,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { MAP_TILE_CSP_HOSTS } from './capacitor-map-csp-hosts.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const vendor = join(root, 'public/vendor/expandor');
@@ -62,9 +63,24 @@ if (existsSync(sound)) {
 }
 
 const brandAssets = join(root, 'public/images/exp-vendedor');
-if (existsSync(brandAssets)) {
-    mkdirSync(join(outDir, 'assets/exp-vendedor'), { recursive: true });
-    cpSync(brandAssets, join(outDir, 'assets/exp-vendedor'), { recursive: true });
+const logoSrc = join(brandAssets, 'logo-exp.svg');
+if (!existsSync(logoSrc)) {
+    throw new Error('Missing public/images/exp-vendedor/logo-exp.svg — required for EXP Vendedor shell.');
+}
+
+mkdirSync(join(outDir, 'assets/exp-vendedor'), { recursive: true });
+cpSync(logoSrc, join(outDir, 'assets/exp-vendedor/logo-exp.svg'));
+cpSync(logoSrc, join(outDir, 'vendor/exp-vendedor-logo.svg'));
+
+const splashSrc = join(brandAssets, 'splash-mark.svg');
+if (existsSync(splashSrc)) {
+    cpSync(splashSrc, join(outDir, 'assets/exp-vendedor/splash-mark.svg'));
+    cpSync(splashSrc, join(outDir, 'vendor/exp-vendedor-splash.svg'));
+}
+
+const brandReadme = join(brandAssets, 'README.md');
+if (existsSync(brandReadme)) {
+    cpSync(brandReadme, join(outDir, 'assets/exp-vendedor/README.md'));
 }
 
 const apiBase = String(process.env.CAP_API_URL || process.env.APP_URL || '').replace(/\/$/, '');
@@ -76,10 +92,10 @@ if (!apiBase) {
 }
 
 let connectSrc = "'self'";
-let imgSrc = "'self' data: blob: https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://server.arcgisonline.com https://*.arcgisonline.com";
+let imgSrc = ["'self'", 'data:', 'blob:', ...MAP_TILE_CSP_HOSTS].join(' ');
 try {
     const origin = new URL(apiBase).origin;
-    connectSrc = `'self' ${origin}`;
+    connectSrc = `'self' ${origin} ${MAP_TILE_CSP_HOSTS.join(' ')}`;
     imgSrc += ` ${origin}`;
 } catch {
     throw new Error(`Invalid CAP_API_URL/APP_URL for Capacitor shell: ${apiBase}`);
@@ -91,7 +107,7 @@ const csp = [
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src ${imgSrc}",
+    `img-src ${imgSrc}`,
     `connect-src ${connectSrc}`,
     "font-src 'self' data:",
     "media-src 'self'",
@@ -123,7 +139,7 @@ const html = `<!DOCTYPE html>
 <body>
     <div class="login-card" id="screen-login">
         <header class="login-brand">
-            <img class="login-brand__logo" src="./assets/exp-vendedor/logo-exp.svg" alt="Expandor">
+            <img class="login-brand__logo" src="./vendor/exp-vendedor-logo.svg" alt="Expandor">
             <p class="login-brand__title">EXP VENDEDOR</p>
             <p class="login-brand__subtitle">Sistema de vendas porta a porta</p>
             <p class="login-brand__welcome">Bem-vindo</p>
@@ -143,7 +159,7 @@ const html = `<!DOCTYPE html>
     <div id="screen-app" hidden>
         <header class="app-header">
             <div class="app-header__left">
-                <img class="app-header__logo" src="./assets/exp-vendedor/logo-exp.svg" alt="">
+                <img class="app-header__logo" src="./vendor/exp-vendedor-logo.svg" alt="EXP Vendedor">
                 <div class="app-header__text">
                     <p class="app-header__hello" id="signed-hello">Olá</p>
                     <p class="app-header__company" id="signed-company"></p>
@@ -159,6 +175,12 @@ const html = `<!DOCTYPE html>
         <main class="app-main">
             <section class="pane" id="pane-map">
                 <div id="seller-map"></div>
+                <div class="map-toolbar map-toolbar--left">
+                    <button class="map-fab map-fab--present" id="map-present-products" type="button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                        Apresentar produtos
+                    </button>
+                </div>
                 <div class="map-toolbar">
                     <div class="map-layers-menu" id="map-layers-menu" hidden>
                         <button type="button" id="layer-street" data-active="1">Mapa</button>

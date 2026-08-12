@@ -3,11 +3,22 @@ import {
     markerMarkForPropertyStatus,
     markerStyleFromItem,
 } from './visit-outcomes.js';
+import {
+    OSM_STREET_TILE_URL,
+    ESRI_SATELLITE_TILE_URL,
+    OSM_TILE_SUBDOMAINS,
+} from './map-tile-config.js';
 
 const PIN_SVG = '<svg class="map-house-pin-svg" viewBox="0 0 28 36" width="28" height="36" aria-hidden="true" focusable="false">'
     + '<path class="map-house-pin-body" d="M14 1.6C8.15 1.6 3.4 6.5 3.4 12.6c0 7.35 10.6 21.9 10.6 21.9s10.6-14.55 10.6-21.9C24.6 6.5 19.85 1.6 14 1.6z"/>'
     + '<path class="map-house-pin-house" d="M9.15 16.35 14 12.1l4.85 4.25V21.2h-2.75v-3.25h-4.2V21.2H9.15z"/>'
     + '</svg>';
+
+function attachTileDiagnostics(layer, label) {
+    layer.on('tileerror', (event) => {
+        console.warn(`[EXP Vendedor] tile error (${label}):`, event?.tile?.src || event);
+    });
+}
 
 export const MapAdapter = {
     map: null,
@@ -31,23 +42,30 @@ export const MapAdapter = {
             return null;
         }
 
+        if (this.map) {
+            this.refreshLayout();
+
+            return this.map;
+        }
+
         this.map = L.map(el, { zoomControl: true }).setView(
             config.center || [-15.78, -47.93],
             config.zoom || 13,
         );
 
-        this.streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        this.streetLayer = L.tileLayer(OSM_STREET_TILE_URL, {
             attribution: '&copy; OpenStreetMap',
+            maxZoom: 19,
+            subdomains: OSM_TILE_SUBDOMAINS,
+        });
+
+        this.satelliteLayer = L.tileLayer(ESRI_SATELLITE_TILE_URL, {
+            attribution: 'Tiles &copy; Esri',
             maxZoom: 19,
         });
 
-        this.satelliteLayer = L.tileLayer(
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            {
-                attribution: 'Tiles &copy; Esri',
-                maxZoom: 19,
-            },
-        );
+        attachTileDiagnostics(this.streetLayer, 'street');
+        attachTileDiagnostics(this.satelliteLayer, 'satellite');
 
         this.streetLayer.addTo(this.map);
         this.markersLayer = L.markerClusterGroup ? L.markerClusterGroup() : L.layerGroup();
@@ -57,7 +75,22 @@ export const MapAdapter = {
             this.onMapClick?.(event.latlng.lat, event.latlng.lng);
         });
 
+        requestAnimationFrame(() => this.refreshLayout());
+
         return this.map;
+    },
+
+    refreshLayout() {
+        if (!this.map) {
+            return;
+        }
+
+        this.map.invalidateSize({ animate: false });
+        if (this.activeBasemap === 'satellite' && this.satelliteLayer) {
+            this.satelliteLayer.redraw?.();
+        } else {
+            this.streetLayer?.redraw?.();
+        }
     },
 
     pinHtml(color, mark, selected = false) {
@@ -108,15 +141,21 @@ export const MapAdapter = {
             return;
         }
 
-        if (mode === 'satellite') {
+        const next = mode === 'satellite' ? 'satellite' : 'street';
+        if (next === this.activeBasemap) {
+            return;
+        }
+
+        if (next === 'satellite') {
             this.map.removeLayer(this.streetLayer);
             this.satelliteLayer.addTo(this.map);
-            this.activeBasemap = 'satellite';
         } else {
             this.map.removeLayer(this.satelliteLayer);
             this.streetLayer.addTo(this.map);
-            this.activeBasemap = 'street';
         }
+
+        this.activeBasemap = next;
+        this.refreshLayout();
     },
 
     setCenter(lat, lng, zoom) {
@@ -171,6 +210,7 @@ export const MapAdapter = {
             return;
         }
 
+        const selected = this.selectedPropertyId;
         this.markersLayer.clearLayers();
         this.markerRegistry.clear();
 
@@ -185,8 +225,9 @@ export const MapAdapter = {
             this.markersLayer.addLayer(marker);
         });
 
-        if (this.selectedPropertyId != null) {
-            this.refreshMarkerIcon(this.selectedPropertyId);
+        if (selected != null) {
+            this.selectedPropertyId = selected;
+            this.refreshMarkerIcon(selected);
         }
     },
 

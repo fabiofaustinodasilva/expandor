@@ -82,7 +82,9 @@ function setPane(name) {
     });
 
     if (name === 'map') {
-        requestAnimationFrame(() => window.L && MapAdapter.map?.invalidateSize?.());
+        requestAnimationFrame(() => {
+            window.L && MapAdapter.refreshLayout?.();
+        });
     }
 }
 
@@ -855,6 +857,7 @@ function bindApp() {
         toggleLayersMenu(false);
     });
     document.querySelector('.map-toolbar')?.addEventListener('click', (event) => event.stopPropagation());
+    document.querySelector('.map-toolbar--left')?.addEventListener('click', (event) => event.stopPropagation());
     document.addEventListener('click', () => toggleLayersMenu(false));
 
     $('create-point-cancel')?.addEventListener('click', () => show('create-sheet', false));
@@ -903,6 +906,9 @@ function bindApp() {
     $('profile-btn')?.addEventListener('click', () => show('account-sheet', true));
     $('account-close')?.addEventListener('click', () => show('account-sheet', false));
     $('menu-products')?.addEventListener('click', () => {
+        PresentationScreen.open().catch((error) => toast(error.message, 'error'));
+    });
+    $('map-present-products')?.addEventListener('click', () => {
         PresentationScreen.open().catch((error) => toast(error.message, 'error'));
     });
     $('menu-account')?.addEventListener('click', () => show('account-sheet', true));

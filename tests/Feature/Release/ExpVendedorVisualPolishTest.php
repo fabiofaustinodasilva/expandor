@@ -64,7 +64,8 @@ class ExpVendedorVisualPolishTest extends TestCase
 
         $this->assertStringContainsString('EXP VENDEDOR', $html);
         $this->assertStringContainsString('runtime-config.js', $html);
-        $this->assertStringContainsString('assets/exp-vendedor/logo-exp.svg', $html);
+        $this->assertStringContainsString('./vendor/exp-vendedor-logo.svg', $html);
+        $this->assertStringNotContainsString('${imgSrc}', $html);
         $this->assertStringNotContainsString('window.EXPANDOR_API_BASE', $html);
     }
 }

@@ -347,7 +347,8 @@ class Sprint8234SellerMobileApiTest extends TestCase
         $this->assertStringContainsString('nav-map', $prepare);
         $this->assertStringContainsString('commission-coins.wav', $prepare);
         $this->assertStringContainsString('8.2.34', $prepare);
-        $this->assertStringContainsString('tile.openstreetmap.org', $prepare);
+        $this->assertStringContainsString('capacitor-map-csp-hosts.mjs', $prepare);
+        $this->assertStringContainsString('tile.openstreetmap.org', (string) file_get_contents(base_path('resources/js/mobile/map-tile-config.js')));
 
         $storage = (string) file_get_contents(resource_path('js/mobile/secure-auth-storage.js'));
         $this->assertDoesNotMatchRegularExpression('/localStorage\.(get|set|remove)/', $storage);

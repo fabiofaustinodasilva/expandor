@@ -78,8 +78,9 @@ class Sprint8232CapacitorBootstrapAssetsTest extends TestCase
     public function test_shell_has_viewport_fit_cover_and_safe_area(): void
     {
         $prepare = (string) file_get_contents(base_path('scripts/prepare-capacitor-shell.mjs'));
+        $shellCss = (string) file_get_contents(resource_path('css/exp-vendedor-shell.css'));
         $this->assertStringContainsString('viewport-fit=cover', $prepare);
-        $this->assertStringContainsString('safe-area-inset-top', $prepare);
+        $this->assertStringContainsString('safe-area-inset-top', $shellCss);
         $this->assertStringContainsString('expandor-login-form', $prepare);
         $this->assertStringContainsString('Esqueceu sua senha?', $prepare);
 

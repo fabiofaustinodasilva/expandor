@@ -293,6 +293,27 @@ body.seller-app-mode {
     gap: 0.55rem;
 }
 
+.map-toolbar--left {
+    left: 0.75rem;
+    right: auto;
+    align-items: flex-start;
+    max-width: min(11rem, 42vw);
+}
+
+.map-fab--present {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
+}
+
 .map-fab {
     display: inline-flex;
     align-items: center;
