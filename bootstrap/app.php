@@ -37,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'marketplace.attribution' => \App\Domains\Marketplace\Growth\Middleware\CaptureMarketplaceAttribution::class,
             'presence.touch' => \App\Http\Middleware\TouchUserPresence::class,
             'seller.single-session' => \App\Http\Middleware\EnforceSellerSingleSession::class,
+            'mobile.seller' => \App\Http\Middleware\EnsureMobileSeller::class,
         ]);
 
         // Auth -> Tenancy -> Route Model Binding

@@ -1,0 +1,511 @@
+<?php
+
+namespace App\Domains\Mobile\Services;
+
+use App\Domains\Auth\Services\MobileAuthService;
+use App\Domains\Campaigns\Models\Campaign;
+use App\Domains\Commissions\Repositories\SalesCommissionRepository;
+use App\Domains\Commissions\Support\CommissionAwardedPayload;
+use App\Domains\Company\Models\User;
+use App\Domains\Customers\Services\CustomerQueryService;
+use App\Domains\Integrations\Services\MapFrontendConfigBuilder;
+use App\Domains\Maps\DTOs\MapFiltersDTO;
+use App\Domains\Maps\Services\MapQueryService;
+use App\Domains\Mobile\Support\MobileApiTransformer;
+use App\Domains\Platform\Services\FeatureFlagService;
+use App\Domains\Sales\Products\Services\ProductCatalogService;
+use App\Domains\Sales\Properties\Enums\PropertyStatus;
+use App\Domains\Sales\Properties\Enums\PropertyType;
+use App\Domains\Sales\Properties\Models\Property;
+use App\Domains\Sales\Residents\Models\Resident;
+use App\Domains\Sales\Residents\Services\ResidentService;
+use App\Domains\Sales\Properties\Services\PropertyService;
+use App\Domains\Sales\Territory\Repositories\TerritoryRepository;
+use App\Domains\SalesApp\Services\SalesAppService;
+use App\Domains\Security\Services\SecurityService;
+use App\Domains\Visits\Actions\CompleteFollowUpAction;
+use App\Domains\Visits\Actions\RegisterVisitAction;
+use App\Domains\Visits\Enums\FollowUpStatus;
+use App\Domains\Visits\Enums\VisitStatus;
+use App\Domains\Visits\Models\FollowUp;
+use App\Domains\Visits\Services\VisitService;
+use App\Domains\Visits\Support\FollowUpSchedule;
+use App\Support\AppTime;
+use App\Support\CommercialTerminology;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+class MobileSellerOpsService
+{
+    public function __construct(
+        protected MobileAuthService $mobileAuth,
+        protected MapFrontendConfigBuilder $mapConfig,
+        protected MapQueryService $mapQuery,
+        protected PropertyService $properties,
+        protected ResidentService $residents,
+        protected SecurityService $security,
+        protected CustomerQueryService $customers,
+        protected SalesAppService $salesApp,
+        protected RegisterVisitAction $registerVisit,
+        protected CompleteFollowUpAction $completeFollowUp,
+        protected VisitService $visits,
+        protected ProductCatalogService $catalog,
+        protected SalesCommissionRepository $commissions,
+        protected TerritoryRepository $territory,
+        protected FeatureFlagService $flags,
+    ) {}
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function bootstrap(User $user): array
+    {
+        $profile = MobileApiTransformer::user($user);
+        $company = $user->company;
+
+        $flags = [];
+        if ($company) {
+            $flags = $this->flags->statesForCompany($company)->map(fn ($state) => [
+                'key' => $state->key,
+                'enabled' => $state->enabled,
+            ])->values()->all();
+        }
+
+        $map = $company ? $this->mapConfig->forCompany($company)->toArray() : [
+            'provider' => 'leaflet_osm',
+            'fallback' => 'leaflet_osm',
+            'reason' => 'no_company',
+            'entitled' => false,
+            'configured' => false,
+        ];
+        $googleVisual = ($map['provider'] ?? '') === 'google_maps';
+        $map['google_visual'] = $googleVisual;
+        $map['attribution'] = $googleVisual
+            ? 'Map data © Google'
+            : '© OpenStreetMap contributors';
+
+        return [
+            'user' => $profile,
+            'company' => $profile['company'],
+            'role' => $profile['role'],
+            'permissions' => $profile['permissions'],
+            'feature_flags' => $flags,
+            'map' => $map,
+            'timezone' => [
+                'display' => AppTime::zone(),
+                'today' => AppTime::today(),
+            ],
+            'capabilities' => [
+                'gps' => true,
+                'offline' => false,
+                'sync' => false,
+                'push' => false,
+                'presentation' => false,
+            ],
+            'session' => $this->mobileAuth->sessionPayload($user),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array{markers: list<array<string, mixed>>, summary: array<string, mixed>}
+     */
+    public function markers(User $user, array $filters): array
+    {
+        $dto = MapFiltersDTO::fromArray($filters);
+        $dto = $this->mapQuery->constrainForUser(
+            $dto,
+            $user,
+            isset($filters['campaign_id']) ? (int) $filters['campaign_id'] : null,
+        );
+
+        return [
+            'markers' => array_map(
+                static fn ($marker) => $marker->toArray(),
+                $this->mapQuery->markers($dto),
+            ),
+            'summary' => $this->mapQuery->summary($dto),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function createPoint(User $user, array $data): array
+    {
+        $property = DB::transaction(function () use ($data, $user) {
+            $address = $this->properties->createAddress([
+                'city_id' => $data['city_id'],
+                'sector_id' => $data['sector_id'] ?? null,
+                'street' => $data['street'],
+                'number' => $data['number'] ?? null,
+                'latitude' => $data['latitude'],
+                'longitude' => $data['longitude'],
+            ]);
+
+            $property = $this->properties->createProperty([
+                'address_id' => $address->id,
+                'type' => PropertyType::HOUSE->value,
+                'status' => $data['status'],
+                'latitude' => $data['latitude'],
+                'longitude' => $data['longitude'],
+                'notes' => $data['notes'] ?? null,
+                'history_description' => 'Ponto adicionado no app.',
+            ], $user);
+
+            $property->forceFill(['created_by' => $user->id])->save();
+
+            if ((! empty($data['contact_name']) || ! empty($data['contact_phone'])) && $user->can('create', Resident::class)) {
+                $this->residents->create($property, [
+                    'name' => filled($data['contact_name'] ?? null) ? $data['contact_name'] : 'Contato',
+                    'phone' => $data['contact_phone'] ?? null,
+                    'is_primary_contact' => true,
+                ]);
+            }
+
+            return $property->load(['address', 'residents']);
+        });
+
+        $this->security->recordAudit(
+            action: 'point.created',
+            user: $user,
+            auditable: $property,
+            newValues: [
+                'property_id' => $property->id,
+                'status' => $property->status->value,
+                'latitude' => (float) $property->latitude,
+                'longitude' => (float) $property->longitude,
+                'source' => 'mobile',
+            ],
+        );
+
+        return $this->pointMarker($property);
+    }
+
+    public function findPoint(User $user, int $id): ?Property
+    {
+        return $this->customers->findForActor($user, $id);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function presentPointCard(Property $property): array
+    {
+        return array_merge($this->customers->presentCard($property), $this->pointMarker($property));
+    }
+
+    public function presentPoint(Property $property): array
+    {
+        $dossier = $this->customers->presentDossier($property);
+        $resident = $property->residents->sortByDesc('is_primary_contact')->first()
+            ?? $property->residents->first();
+        $lastVisit = $property->visits->first();
+
+        return array_merge($dossier, [
+            'id' => $property->id,
+            'property_id' => $property->id,
+            'latitude' => (float) $property->latitude,
+            'longitude' => (float) $property->longitude,
+            'status' => $this->propertyStatus($property)->value,
+            'status_label' => CommercialTerminology::propertyStatusLabel($this->propertyStatus($property)),
+            'resident_name' => $resident?->name,
+            'resident_phone' => $resident?->phone,
+            'resident_whatsapp' => $resident?->whatsapp ?: $resident?->phone,
+            'last_visit_at' => $lastVisit?->visited_at
+                ? AppTime::formatInstant($lastVisit->visited_at)
+                : null,
+            'tel' => $resident?->phone ? 'tel:'.$resident->phone : null,
+            'wa' => ($resident?->whatsapp ?: $resident?->phone)
+                ? 'https://wa.me/'.preg_replace('/\D+/', '', (string) ($resident->whatsapp ?: $resident->phone))
+                : null,
+        ]);
+    }
+
+    public function paginatePoints(User $user, ?string $q, ?string $status, int $perPage = 24): LengthAwarePaginator
+    {
+        $page = $this->customers->paginate($user, $q, $perPage);
+        if (! filled($status)) {
+            return $page;
+        }
+
+        $page->setCollection(
+            $page->getCollection()->filter(function (Property $property) use ($status) {
+                $value = $property->status instanceof PropertyStatus
+                    ? $property->status->value
+                    : (string) $property->status;
+
+                return $value === $status;
+            })->values()
+        );
+
+        return $page;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function registerPointVisit(User $user, Property $property, array $data): array
+    {
+        $campaignId = (int) ($data['campaign_id'] ?? 0);
+        if ($campaignId < 1) {
+            throw ValidationException::withMessages([
+                'campaign_id' => ['Informe a campanha.'],
+            ]);
+        }
+
+        $campaign = Campaign::query()->whereKey($campaignId)->firstOrFail();
+        $data['property_id'] = $property->id;
+        $data['user_id'] = $user->id;
+
+        $visit = $this->registerVisit->execute($campaign, $data, $user);
+
+        if (($data['status'] ?? null) === VisitStatus::RETURN_LATER->value && ! empty($data['follow_up_at'])) {
+            $this->visits->scheduleFollowUp($visit, [
+                'scheduled_at' => $data['follow_up_at'],
+                'notes' => $data['notes'] ?? null,
+            ], $user);
+        }
+
+        $visit->load(['sale.items', 'followUps', 'property']);
+        $payload = [
+            'visit' => MobileApiTransformer::visit($visit),
+            'status' => $visit->status->value,
+            'property_id' => $property->id,
+        ];
+
+        if ($visit->status === VisitStatus::INSTALLATION_REQUESTED) {
+            $awarded = CommissionAwardedPayload::fromVisit($visit);
+            if ($awarded !== null) {
+                $payload['commission_awarded'] = $awarded;
+                $payload['sale_id'] = $awarded['sale_id'];
+                $payload['commission_id'] = $awarded['commission_id'];
+                $payload['commission_amount'] = $awarded['amount'];
+                $sale = $visit->sale;
+                $payload['total'] = $sale?->negotiated_amount;
+                $payload['items'] = $sale?->items->map(fn ($item) => [
+                    'id' => $item->id,
+                    'product_name' => $item->product_name,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unit_price,
+                ])->values()->all();
+            }
+        }
+
+        return $payload;
+    }
+
+    public function paginateAgenda(User $user, string $scope = 'today', int $perPage = 20): LengthAwarePaginator
+    {
+        $query = FollowUp::query()
+            ->where('user_id', $user->id)
+            ->where('status', FollowUpStatus::PENDING)
+            ->with([
+                'visit.property.address:id,street,number,neighborhood',
+                'visit.campaign:id,name',
+            ])
+            ->orderBy('scheduled_at');
+
+        $today = AppTime::today();
+        if ($scope === 'today') {
+            $query->whereDate('scheduled_at', $today);
+        } elseif ($scope === 'overdue') {
+            $query->whereDate('scheduled_at', '<', $today);
+        } elseif ($scope === 'upcoming') {
+            $query->whereDate('scheduled_at', '>', $today);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function presentFollowUp(FollowUp $followUp): array
+    {
+        $property = $followUp->visit?->property;
+
+        return [
+            'id' => $followUp->id,
+            'visit_id' => $followUp->visit_id,
+            'scheduled_at' => $followUp->scheduled_at?->toIso8601String(),
+            'scheduled_label' => FollowUpSchedule::label($followUp->scheduled_at),
+            'status' => $followUp->status?->value ?? $followUp->status,
+            'notes' => $followUp->notes,
+            'property_id' => $property?->id,
+            'address' => trim(($property?->address?->street ?? '').' '.($property?->address?->number ?? '')),
+            'campaign' => $followUp->visit?->campaign?->name,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function completeSellerFollowUp(User $user, FollowUp $followUp, array $data): array
+    {
+        if ((int) $followUp->user_id !== (int) $user->id) {
+            throw new AuthorizationException('Somente o responsável pode concluir este retorno.');
+        }
+
+        $result = $this->completeFollowUp->execute($followUp, $data, $user);
+        $visit = $result['visit'];
+        $payload = [
+            'follow_up' => $this->presentFollowUp($result['follow_up']->fresh()),
+            'visit' => MobileApiTransformer::visit($visit),
+            'next_follow_up' => $result['next_follow_up']
+                ? $this->presentFollowUp($result['next_follow_up'])
+                : null,
+        ];
+
+        if ($visit->status === VisitStatus::INSTALLATION_REQUESTED) {
+            $awarded = CommissionAwardedPayload::fromVisit($visit->fresh(['sale.items']));
+            if ($awarded !== null) {
+                $payload['commission_awarded'] = $awarded;
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function products(?string $q = null): array
+    {
+        return $this->catalog->activeCatalogForSeller($q)
+            ->filter(fn ($product) => $product->isSellable())
+            ->map(fn ($product) => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'description' => $product->description,
+                'price' => $product->price,
+                'stock_control' => $product->stock_control,
+                'stock_quantity' => $product->stock_quantity,
+                'commission_type' => $product->commissionType()->value,
+                'commission_amount' => $product->commission_amount,
+                'commission_percentage' => $product->commission_percentage,
+                'image' => $product->image_thumb ?: $product->image,
+                'available' => true,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array{items: list<array<string, mixed>>, summary: array<string, mixed>, meta: array<string, int>}
+     */
+    public function commissions(User $user, array $filters, int $perPage = 30): array
+    {
+        $filters['user_id'] = $user->id;
+        if (empty($filters['date_from']) && empty($filters['date_to'])) {
+            $filters['date_from'] = AppTime::now()->subDays(30)->toDateString();
+            $filters['date_to'] = AppTime::today();
+        }
+
+        $page = $this->commissions->paginate($filters, $user, $perPage);
+        $items = $page->getCollection()->map(fn ($row) => [
+            'id' => $row->id,
+            'product' => $row->product?->name,
+            'sale_value' => $row->saleItem?->total_amount ?? $row->visit?->sale?->negotiated_amount,
+            'commission_amount' => $row->commission_amount,
+            'status' => $row->status?->value ?? $row->status,
+            'earned_at' => AppTime::formatInstant($row->earned_at),
+            'earned_at_iso' => $row->earned_at?->toIso8601String(),
+        ])->values()->all();
+
+        return [
+            'items' => $items,
+            'summary' => $this->commissions->summary($filters, $user),
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function results(User $user): array
+    {
+        $dashboard = $this->salesApp->dashboard($user);
+        $commissions = $this->commissions->summary([
+            'user_id' => $user->id,
+            'date_from' => AppTime::now()->subDays(30)->toDateString(),
+            'date_to' => AppTime::today(),
+        ], $user);
+
+        return array_merge($dashboard, [
+            'commissions' => $commissions,
+        ]);
+    }
+
+    /**
+     * @return array{cities: list<array<string, mixed>>, sectors: list<array<string, mixed>>}
+     */
+    public function territory(?int $cityId = null): array
+    {
+        $cities = $this->territory->activeCities()->map(fn ($city) => [
+            'id' => $city->id,
+            'name' => $city->name,
+            'state' => $city->state ?? null,
+        ])->values()->all();
+
+        $sectors = $this->territory->activeSectors($cityId)->map(fn ($sector) => [
+            'id' => $sector->id,
+            'name' => $sector->name,
+            'city_id' => $sector->city_id,
+        ])->values()->all();
+
+        return ['cities' => $cities, 'sectors' => $sectors];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function pointMarker(Property $property): array
+    {
+        $resident = $property->residents->first();
+
+        return [
+            'id' => $property->id,
+            'property_id' => $property->id,
+            'latitude' => (float) $property->latitude,
+            'longitude' => (float) $property->longitude,
+            'status' => $this->propertyStatus($property)->value,
+            'status_label' => CommercialTerminology::propertyStatusLabel($this->propertyStatus($property)),
+            'address' => trim(($property->address?->street ?? '').' '.($property->address?->number ?? '')),
+            'resident_name' => $resident?->name,
+            'resident_phone' => $resident?->phone,
+            'created_at' => AppTime::formatInstant($property->created_at),
+        ];
+    }
+
+    private function propertyStatus(Property $property): PropertyStatus
+    {
+        return $property->status instanceof PropertyStatus
+            ? $property->status
+            : PropertyStatus::from((string) $property->status);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function pageMeta(LengthAwarePaginator $page): array
+    {
+        return [
+            'current_page' => $page->currentPage(),
+            'last_page' => $page->lastPage(),
+            'per_page' => $page->perPage(),
+            'total' => $page->total(),
+        ];
+    }
+}

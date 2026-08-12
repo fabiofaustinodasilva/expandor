@@ -1,5 +1,10 @@
 {
-    "appId": "br.com.expandor.app",
-    "appName": "Expandor",
-    "webDir": "public/capacitor-shell"
+  "appId": "br.com.expandor.app",
+  "appName": "Expandor",
+  "webDir": "public/capacitor-shell",
+  "plugins": {
+    "Geolocation": {
+      "locationWhenInUsePermission": "O Expandor usa sua localização para centralizar o mapa e registrar o ponto da visita. Não rastreamos em segundo plano."
+    }
+  }
 }

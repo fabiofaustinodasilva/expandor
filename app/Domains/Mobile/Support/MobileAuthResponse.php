@@ -37,12 +37,21 @@ final class MobileAuthResponse
     /**
      * @param  array<string, mixed>  $data
      */
-    public static function ok(string $message, array $data = [], int $status = 200): JsonResponse
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    public static function ok(string $message, array $data = [], int $status = 200, array $meta = []): JsonResponse
     {
-        return response()->json([
+        $payload = [
             'success' => true,
             'message' => $message,
             'data' => $data,
-        ], $status);
+        ];
+
+        if ($meta !== []) {
+            $payload['meta'] = $meta;
+        }
+
+        return response()->json($payload, $status);
     }
 }
