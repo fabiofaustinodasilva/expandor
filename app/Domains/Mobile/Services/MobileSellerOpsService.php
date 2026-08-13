@@ -16,9 +16,11 @@ use App\Domains\Platform\Services\FeatureFlagService;
 use App\Domains\Sales\Products\Services\ProductCatalogService;
 use App\Domains\Sales\SaleFields\SaleFieldKeys;
 use App\Domains\Sales\SaleFields\SaleFieldsPolicyResolver;
+use App\Domains\Company\Support\FieldOps\FieldOpsPolicyResolver;
 use App\Domains\Sales\Properties\Enums\PropertyStatus;
 use App\Domains\Sales\Properties\Enums\PropertyType;
 use App\Domains\Sales\Properties\Models\Property;
+use App\Domains\Sales\Properties\Models\PropertyHistory;
 use App\Domains\Sales\Residents\Models\Resident;
 use App\Domains\Sales\Residents\Services\ResidentService;
 use App\Domains\Sales\Properties\Services\PropertyService;
@@ -60,6 +62,7 @@ class MobileSellerOpsService
         protected SalesCommissionRepository $commissions,
         protected TerritoryRepository $territory,
         protected FeatureFlagService $flags,
+        protected FieldOpsPolicyResolver $fieldOps,
     ) {}
 
     /**
@@ -303,12 +306,17 @@ class MobileSellerOpsService
         return array_merge($this->customers->presentCard($property), $this->pointMarker($property));
     }
 
-    public function presentPoint(Property $property): array
+    public function presentPoint(Property $property, ?User $actor = null): array
     {
         $dossier = $this->customers->presentDossier($property);
         $resident = $property->residents->sortByDesc('is_primary_contact')->first()
             ?? $property->residents->first();
         $lastVisit = $property->visits->first();
+        $canAdjust = false;
+        if ($actor) {
+            $policy = $this->fieldOps->resolveForUser($actor);
+            $canAdjust = $this->fieldOps->canAdjustProperty($actor, $property, $policy);
+        }
 
         return array_merge($dossier, [
             'id' => $property->id,
@@ -327,6 +335,69 @@ class MobileSellerOpsService
             'wa' => ($resident?->whatsapp ?: $resident?->phone)
                 ? 'https://wa.me/'.preg_replace('/\D+/', '', (string) ($resident->whatsapp ?: $resident->phone))
                 : null,
+            'can_adjust' => $canAdjust,
+        ]);
+    }
+
+    /**
+     * Reposiciona lat/lng do imóvel (mesmo domínio do web MapPointController::adjust).
+     *
+     * @return array<string, mixed>
+     */
+    public function adjustPointLocation(User $user, Property $property, float $latitude, float $longitude): array
+    {
+        $policy = $this->fieldOps->resolveForUser($user);
+        if (! $this->fieldOps->canAdjustProperty($user, $property, $policy)) {
+            throw new AuthorizationException('Access denied.');
+        }
+
+        $oldLat = (float) $property->latitude;
+        $oldLng = (float) $property->longitude;
+
+        DB::transaction(function () use ($property, $user, $oldLat, $oldLng, $latitude, $longitude): void {
+            $property->update([
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+            ]);
+
+            if ($property->address) {
+                $property->address->update([
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                ]);
+            }
+
+            PropertyHistory::query()->create([
+                'property_id' => $property->id,
+                'user_id' => $user->id,
+                'old_status' => $property->status->value,
+                'new_status' => $property->status->value,
+                'description' => sprintf(
+                    'Localização ajustada. De %.7f,%.7f para %.7f,%.7f.',
+                    $oldLat,
+                    $oldLng,
+                    $latitude,
+                    $longitude
+                ),
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'created_at' => now(),
+            ]);
+        });
+
+        $this->security->recordAudit(
+            action: 'point.location_adjusted',
+            user: $user,
+            auditable: $property,
+            oldValues: ['latitude' => $oldLat, 'longitude' => $oldLng],
+            newValues: ['latitude' => $latitude, 'longitude' => $longitude, 'source' => 'mobile'],
+        );
+
+        $property->refresh()->load(['address', 'residents']);
+
+        return array_merge($this->pointMarker($property), [
+            'location_kind' => 'adjusted',
+            'can_adjust' => true,
         ]);
     }
 

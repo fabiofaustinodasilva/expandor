@@ -281,8 +281,19 @@ const html = `<!DOCTYPE html>
                 <a class="btn btn-primary" id="point-wa" href="#">WhatsApp</a>
             </div>
             <div class="sheet-actions" style="margin-top:0.75rem">
+                <button class="btn btn-ghost btn-block" id="point-adjust-map" type="button">Ajustar posição no mapa</button>
                 <button class="btn btn-accent btn-block" id="point-register-visit" type="button">Registrar visita</button>
                 <button class="btn btn-ghost btn-block" id="point-sheet-close" type="button">Fechar</button>
+            </div>
+        </div>
+
+        <div class="sheet" id="adjust-sheet" hidden>
+            <div class="sheet__handle"></div>
+            <h3 class="sheet__title">Ajustar posição</h3>
+            <p class="card__meta" id="adjust-sheet-meta">Toque no mapa ou arraste o marcador para a nova posição.</p>
+            <div class="sheet-actions" style="margin-top:0.75rem">
+                <button class="btn btn-accent btn-block" id="adjust-confirm" type="button">Confirmar nova posição</button>
+                <button class="btn btn-ghost btn-block" id="adjust-cancel" type="button">Cancelar</button>
             </div>
         </div>
 

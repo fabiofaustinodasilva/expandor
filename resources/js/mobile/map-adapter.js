@@ -30,6 +30,8 @@ export const MapAdapter = {
     onMapClick: null,
     selectedPropertyId: null,
     markerRegistry: new Map(),
+    adjustState: null,
+    adjustPreviewMarker: null,
 
     init(elementId, config = {}) {
         const L = window.L;
@@ -68,11 +70,24 @@ export const MapAdapter = {
         attachTileDiagnostics(this.satelliteLayer, 'satellite');
 
         this.streetLayer.addTo(this.map);
-        this.markersLayer = L.markerClusterGroup ? L.markerClusterGroup() : L.layerGroup();
+        this.markersLayer = L.markerClusterGroup ? L.markerClusterGroup({
+            showCoverageOnHover: false,
+            maxClusterRadius: 55,
+            spiderfyOnMaxZoom: true,
+            disableClusteringAtZoom: 17,
+        }) : L.layerGroup();
         this.map.addLayer(this.markersLayer);
 
         this.map.on('click', (event) => {
-            this.onMapClick?.(event.latlng.lat, event.latlng.lng);
+            const lat = event.latlng.lat;
+            const lng = event.latlng.lng;
+            if (this.adjustState) {
+                this.setAdjustPreview(lat, lng);
+                this.adjustState.onPick?.(lat, lng);
+
+                return;
+            }
+            this.onMapClick?.(lat, lng);
         });
 
         requestAnimationFrame(() => this.refreshLayout());
@@ -93,20 +108,21 @@ export const MapAdapter = {
         }
     },
 
-    pinHtml(color, mark, selected = false) {
+    pinHtml(color, mark, selected = false, draft = false) {
         const fill = color || '#9ca3af';
         const selectedClass = selected ? ' is-selected' : '';
+        const draftClass = draft ? ' is-draft' : '';
         const markHtml = mark
             ? `<span class="map-marker-mark" aria-hidden="true">${mark}</span>`
             : '';
 
-        return `<div class="map-house-pin${selectedClass}" style="--pin-color:${fill}">`
+        return `<div class="map-house-pin${selectedClass}${draftClass}" style="--pin-color:${fill}">`
             + PIN_SVG
             + markHtml
             + '</div>';
     },
 
-    divIconForMarker(item) {
+    divIconForMarker(item, options = {}) {
         const L = window.L;
         const { color, mark } = markerStyleFromItem(item);
         const propertyId = item.property_id || item.id;
@@ -115,7 +131,7 @@ export const MapAdapter = {
 
         return L.divIcon({
             className: 'map-house-pin-icon',
-            html: this.pinHtml(color, mark, selected),
+            html: this.pinHtml(color, mark, selected, !!options.draft),
             iconSize: [28, 36],
             iconAnchor: [14, 36],
             popupAnchor: [0, -32],
@@ -124,13 +140,18 @@ export const MapAdapter = {
 
     createHouseMarker(item, onSelect) {
         const L = window.L;
+        const propertyId = Number(item.property_id || item.id);
         const marker = L.marker(
             [item.latitude, item.longitude],
             { icon: this.divIconForMarker(item) },
         );
-        marker.on('click', () => {
-            this.selectProperty(item.property_id || item.id);
-            onSelect?.(item);
+        marker.on('click', (event) => {
+            if (this.adjustState) {
+                return;
+            }
+            L.DomEvent.stopPropagation(event);
+            this.selectProperty(propertyId);
+            onSelect?.({ ...item, property_id: propertyId, id: propertyId });
         });
 
         return marker;
@@ -186,7 +207,7 @@ export const MapAdapter = {
         const id = Number(propertyId);
         const entry = this.markerRegistry.get(id);
         if (!entry) {
-            return;
+            return false;
         }
 
         entry.data = {
@@ -201,8 +222,88 @@ export const MapAdapter = {
             entry.data.mark = markerMarkForPropertyStatus(patch.status);
         }
 
+        const lat = patch.latitude != null ? Number(patch.latitude) : null;
+        const lng = patch.longitude != null ? Number(patch.longitude) : null;
+        if (lat != null && lng != null && !Number.isNaN(lat) && !Number.isNaN(lng)) {
+            entry.data.latitude = lat;
+            entry.data.longitude = lng;
+            entry.marker.setLatLng([lat, lng]);
+        }
+
         entry.marker.setIcon(this.divIconForMarker(entry.data));
         this.selectProperty(id);
+
+        return true;
+    },
+
+    beginAdjust(propertyId, options = {}) {
+        const id = propertyId != null ? Number(propertyId) : null;
+        this.cancelAdjust({ keepCallback: false });
+        this.adjustState = {
+            propertyId: id,
+            mode: options.mode || (id ? 'existing' : 'create'),
+            originalLat: options.latitude != null ? Number(options.latitude) : null,
+            originalLng: options.longitude != null ? Number(options.longitude) : null,
+            pendingLat: null,
+            pendingLng: null,
+            onPick: typeof options.onPick === 'function' ? options.onPick : null,
+        };
+        document.body.classList.add('seller-adjust-mode');
+        if (options.latitude != null && options.longitude != null) {
+            this.setAdjustPreview(Number(options.latitude), Number(options.longitude));
+            this.setCenter(Number(options.latitude), Number(options.longitude), Math.max(this.map?.getZoom() || 15, 17));
+        }
+    },
+
+    setAdjustPreview(lat, lng) {
+        const L = window.L;
+        if (!this.map || !L) {
+            return;
+        }
+        if (this.adjustState) {
+            this.adjustState.pendingLat = lat;
+            this.adjustState.pendingLng = lng;
+        }
+        if (this.adjustPreviewMarker) {
+            this.adjustPreviewMarker.setLatLng([lat, lng]);
+
+            return;
+        }
+        this.adjustPreviewMarker = L.marker([lat, lng], {
+            icon: this.divIconForMarker({ color: '#F97316', mark: '' }, { draft: true }),
+            zIndexOffset: 1000,
+            draggable: true,
+        }).addTo(this.map);
+        this.adjustPreviewMarker.on('dragend', () => {
+            const pos = this.adjustPreviewMarker.getLatLng();
+            if (this.adjustState) {
+                this.adjustState.pendingLat = pos.lat;
+                this.adjustState.pendingLng = pos.lng;
+                this.adjustState.onPick?.(pos.lat, pos.lng);
+            }
+        });
+    },
+
+    getAdjustPending() {
+        if (!this.adjustState) {
+            return null;
+        }
+
+        return {
+            propertyId: this.adjustState.propertyId,
+            latitude: this.adjustState.pendingLat,
+            longitude: this.adjustState.pendingLng,
+            mode: this.adjustState.mode,
+        };
+    },
+
+    cancelAdjust() {
+        if (this.adjustPreviewMarker) {
+            this.adjustPreviewMarker.remove();
+            this.adjustPreviewMarker = null;
+        }
+        this.adjustState = null;
+        document.body.classList.remove('seller-adjust-mode');
     },
 
     renderMarkers(markers = [], onSelect) {
@@ -221,7 +322,7 @@ export const MapAdapter = {
 
             const propertyId = Number(item.property_id || item.id);
             const marker = this.createHouseMarker(item, onSelect);
-            this.markerRegistry.set(propertyId, { marker, data: item });
+            this.markerRegistry.set(propertyId, { marker, data: { ...item, property_id: propertyId, id: propertyId } });
             this.markersLayer.addLayer(marker);
         });
 

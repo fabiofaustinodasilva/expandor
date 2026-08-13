@@ -1090,7 +1090,9 @@
     /* Sprint 8.2.26 — Map Operation Sheet: altura flex correta + CTA acessível */
     #visit-modal.open, #point-modal.open, #delete-point-modal.open,
     #adjust-confirm-modal.open, #post-create-adjust-modal.open, #region-campaign-modal.open,
-    #post-visit-modal.open, #seller-day-brief.open, #seller-tips-modal.open { display: flex; }
+    #post-visit-modal.open, #seller-day-brief.open, #seller-tips-modal.open {
+        display: flex !important;
+    }
 
     #visit-modal.open,
     #point-modal.open {

@@ -353,6 +353,24 @@
         toast._t = setTimeout(() => toastEl.classList.remove('show'), 2800);
     }
 
+    function mapDebug(step, detail = {}) {
+        try {
+            console.info('[Map]', step, detail);
+        } catch (_) { /* optional */ }
+    }
+
+    function openMapModal(el) {
+        if (!el) return;
+        el.classList.remove('hidden');
+        el.classList.add('open');
+    }
+
+    function closeMapModal(el) {
+        if (!el) return;
+        el.classList.remove('open');
+        el.classList.add('hidden');
+    }
+
     /** Sprint 8.2.25 — sessão única Seller / sessão invalidada */
     function handleAuthSessionLost(response) {
         if (!response || (response.status !== 401 && response.status !== 419)) {
@@ -1660,13 +1678,15 @@
                 commercialGroup: group,
                 markerData: marker,
             });
-            layer.on('click', () => {
+            layer.on('click', (event) => {
+                L.DomEvent.stopPropagation(event);
                 if (adjustState || regionSelectMode) return;
                 ignoreMapClickUntil = Date.now() + 400;
+                mapDebug('markerClick', { propertyId: marker.property_id || null });
                 openDrawer(marker);
             });
             clusterGroup.addLayer(layer);
-            layerByPropertyId.set(marker.property_id, { layer, marker });
+            layerByPropertyId.set(Number(marker.property_id), { layer, marker });
             bounds.push([marker.latitude, marker.longitude]);
         });
 
@@ -1716,11 +1736,11 @@
         document.getElementById('adjust-confirm-lat').textContent = Number(lat).toFixed(7);
         document.getElementById('adjust-confirm-lng').textContent = Number(lng).toFixed(7);
         document.getElementById('adjust-confirm-error')?.classList.add('hidden');
-        adjustConfirmModal?.classList.add('open');
+        openMapModal(adjustConfirmModal);
     }
 
     function closeAdjustConfirm() {
-        adjustConfirmModal?.classList.remove('open');
+        closeMapModal(adjustConfirmModal);
     }
 
     function cleanupAdjustLayer() {
@@ -1788,7 +1808,7 @@
                 hideAdjustBanner();
                 document.body.classList.remove('adjust-mode');
                 suppressMoveLoad = false;
-                pointModal?.classList.add('open');
+                openMapModal(pointModal);
                 toast('Posição atualizada. Confira e salve o ponto.');
                 return;
             }
@@ -1806,8 +1826,12 @@
         };
 
         map.setView([lat, lng], Math.max(map.getZoom(), 18));
-        showAdjustBanner('Arraste o ponto até a posição correta.');
-        toast('Arraste o marcador até a posição correta.');
+        showAdjustBanner(mode === 'create-draft'
+            ? 'Arraste ou toque no mapa para a posição correta.'
+            : 'Arraste o ponto ou toque no mapa para a nova posição.');
+        toast(mode === 'create-draft'
+            ? 'Arraste ou toque no mapa para ajustar.'
+            : 'Arraste o marcador ou toque no mapa para a nova posição.');
     }
 
     async function saveAdjustedPosition() {
@@ -2315,7 +2339,7 @@
             const statusRadio = document.querySelector(`#point-status-group input[value="${data.status}"]`);
             if (statusRadio) statusRadio.checked = true;
             fillPointCoords(data.latitude, data.longitude, null);
-            pointModal.classList.add('open');
+            openMapModal(pointModal);
             if (window.lucide) window.lucide.createIcons();
             return;
         }
@@ -2323,7 +2347,7 @@
         if (coords) {
             fillPointCoords(coords.latitude, coords.longitude, coords.accuracy);
             centerMapOnCoords(coords.latitude, coords.longitude, 17);
-            pointModal.classList.add('open');
+            openMapModal(pointModal);
             if (window.lucide) window.lucide.createIcons();
             applyPendingContractProduct();
             return;
@@ -2371,7 +2395,7 @@
         seedSaleCartWithProduct('point', pid);
         document.getElementById('point-meta-label').textContent = `Você: ${sellerName} · ${nowLabel()}`;
         setMapOperationOpen(true);
-        pointModal.classList.add('open');
+        openMapModal(pointModal);
         if (window.lucide) window.lucide.createIcons();
 
         try {
@@ -2391,7 +2415,7 @@
     }
 
     function closePointModal() {
-        pointModal?.classList.remove('open');
+        closeMapModal(pointModal);
         pointSubmitting = false;
         if (!visitModal?.classList.contains('open')) {
             setMapOperationOpen(false);
@@ -2400,7 +2424,15 @@
 
     function openCreateAtMapTap(latlng) {
         // Sprint 8.2.7+: toque no mapa → formulário direto (sem etapa intermediária).
-        if (!canCreatePoint || !latlng) return;
+        mapDebug('openCreatePoint', {
+            hasCoords: !!(latlng && latlng.lat != null),
+            canCreate: canCreatePoint,
+        });
+        if (!canCreatePoint) {
+            toast('Sem permissão para adicionar pontos neste mapa.', 'error');
+            return;
+        }
+        if (!latlng) return;
         openPointModal({
             latitude: latlng.lat,
             longitude: latlng.lng,
@@ -2879,8 +2911,38 @@
     }, 400));
 
     map.on('click', (event) => {
-        if (adjustState || regionSelectMode) return;
-        if (!canCreatePoint) return;
+        mapDebug('mapClick', {
+            lat: event?.latlng?.lat ?? null,
+            lng: event?.latlng?.lng ?? null,
+            adjust: !!adjustState,
+            region: !!regionSelectMode,
+            canCreate: canCreatePoint,
+        });
+        if (adjustState) {
+            if (Date.now() < ignoreMapClickUntil) return;
+            const layer = adjustState.layer;
+            if (!layer || !event?.latlng) return;
+            layer.setLatLng(event.latlng);
+            ignoreMapClickUntil = Date.now() + 400;
+            if (adjustState.mode === 'create-draft') {
+                fillPointCoords(event.latlng.lat, event.latlng.lng, lastGpsAccuracy);
+                cleanupAdjustLayer();
+                adjustState = null;
+                hideAdjustBanner();
+                document.body.classList.remove('adjust-mode');
+                suppressMoveLoad = false;
+                openMapModal(pointModal);
+                toast('Posição atualizada. Confira e salve o ponto.');
+                return;
+            }
+            openAdjustConfirm(event.latlng.lat, event.latlng.lng);
+            return;
+        }
+        if (regionSelectMode) return;
+        if (!canCreatePoint) {
+            toast('Sem permissão para adicionar pontos neste mapa.', 'error');
+            return;
+        }
         if (Date.now() < ignoreMapClickUntil) return;
         openCreateAtMapTap(event.latlng);
     });

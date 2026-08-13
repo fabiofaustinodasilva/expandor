@@ -56,6 +56,11 @@ export const mobileApi = {
     markers: (params) => json(`/api/mobile/v1/markers${query(params)}`),
     points: (params) => json(`/api/mobile/v1/points${query(params)}`),
     point: (id) => json(`/api/mobile/v1/points/${id}`),
+    adjustPointLocation: (id, body) => json(`/api/mobile/v1/points/${id}/location`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }),
     createPoint: (body) => json('/api/mobile/v1/points', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

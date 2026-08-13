@@ -35,6 +35,8 @@ let searchTimer = null;
 let layersOpen = false;
 let initialMapGpsDone = false;
 let catalogProducts = [];
+let adjustUiMode = null; // null | 'create' | 'existing'
+let adjustPropertyCanAdjust = false;
 
 function debugFlow(step, detail = {}) {
     try {
@@ -352,6 +354,9 @@ async function openPoint(item) {
     if (!id) {
         return;
     }
+    if (MapAdapter.adjustState) {
+        return;
+    }
 
     const payload = await mobileApi.point(id);
     const point = payload.data || {};
@@ -363,6 +368,12 @@ async function openPoint(item) {
     ].filter(Boolean).join(' · ');
     $('point-id').value = id;
     MapAdapter.selectProperty(id);
+    adjustPropertyCanAdjust = point.can_adjust !== false;
+    const adjustBtn = $('point-adjust-map');
+    if (adjustBtn) {
+        adjustBtn.hidden = !adjustPropertyCanAdjust;
+        adjustBtn.disabled = !adjustPropertyCanAdjust;
+    }
     const call = $('point-call');
     const wa = $('point-wa');
     if (call) {
@@ -375,6 +386,133 @@ async function openPoint(item) {
     }
     show('point-sheet', true);
     paintIcons($('point-sheet'));
+}
+
+function openAdjustSheet(metaText) {
+    const meta = $('adjust-sheet-meta');
+    if (meta) {
+        meta.textContent = metaText || 'Toque no mapa ou arraste o marcador para a nova posição.';
+    }
+    show('create-sheet', false);
+    show('point-sheet', false);
+    show('visit-sheet', false);
+    show('adjust-sheet', true);
+}
+
+function beginCreatePositionPick() {
+    adjustUiMode = 'create';
+    MapAdapter.beginAdjust(null, {
+        mode: 'create',
+        latitude: Number($('point-lat')?.value) || null,
+        longitude: Number($('point-lng')?.value) || null,
+        onPick: (lat, lng) => {
+            debugFlow('adjustCreatePick', { lat, lng });
+        },
+    });
+    openAdjustSheet('Toque no mapa para definir a posição do novo ponto.');
+    toast('Toque no mapa para ajustar a posição.', 'status');
+}
+
+function beginExistingPositionAdjust() {
+    const id = Number($('point-id')?.value || 0);
+    if (!id || !adjustPropertyCanAdjust) {
+        toast('Sem permissão para ajustar este ponto.', 'error');
+
+        return;
+    }
+    const entry = MapAdapter.markerRegistry.get(id);
+    const lat = entry?.data?.latitude != null ? Number(entry.data.latitude) : null;
+    const lng = entry?.data?.longitude != null ? Number(entry.data.longitude) : null;
+    adjustUiMode = 'existing';
+    MapAdapter.beginAdjust(id, {
+        mode: 'existing',
+        latitude: lat,
+        longitude: lng,
+        onPick: (pickLat, pickLng) => {
+            debugFlow('adjustExistingPick', { propertyId: id, lat: pickLat, lng: pickLng });
+        },
+    });
+    openAdjustSheet('Toque no mapa ou arraste o marcador. Depois confirme a nova posição.');
+    toast('Modo ajustar posição ativo.', 'status');
+}
+
+async function confirmAdjustPosition() {
+    const pending = MapAdapter.getAdjustPending();
+    if (!pending || pending.latitude == null || pending.longitude == null) {
+        toast('Toque no mapa para escolher a nova posição.', 'error');
+
+        return;
+    }
+
+    if (adjustUiMode === 'create' || pending.mode === 'create') {
+        $('point-lat').value = String(pending.latitude);
+        $('point-lng').value = String(pending.longitude);
+        const statusEl = $('create-location-status');
+        if (statusEl) {
+            statusEl.textContent = 'Posição pronta para registro';
+        }
+        MapAdapter.cancelAdjust();
+        adjustUiMode = null;
+        show('adjust-sheet', false);
+        show('create-sheet', true);
+        toast('Posição atualizada. Confira e salve o ponto.', 'status');
+
+        return;
+    }
+
+    const propertyId = pending.propertyId || Number($('point-id')?.value || 0);
+    if (!propertyId) {
+        toast('Ponto inválido para ajuste.', 'error');
+
+        return;
+    }
+
+    const btn = $('adjust-confirm');
+    if (btn) btn.disabled = true;
+    try {
+        const payload = await mobileApi.adjustPointLocation(propertyId, {
+            latitude: pending.latitude,
+            longitude: pending.longitude,
+        });
+        const data = payload.data || {};
+        MapAdapter.cancelAdjust();
+        adjustUiMode = null;
+        show('adjust-sheet', false);
+        MapAdapter.updateMarker(propertyId, {
+            latitude: data.latitude ?? pending.latitude,
+            longitude: data.longitude ?? pending.longitude,
+            status: data.status,
+            color: data.color,
+            mark: data.mark,
+            status_label: data.status_label,
+        });
+        MapAdapter.selectProperty(propertyId);
+        MapAdapter.setCenter(
+            Number(data.latitude ?? pending.latitude),
+            Number(data.longitude ?? pending.longitude),
+            17,
+        );
+        toast('Posição salva no mapa.', 'status');
+        await openPoint({ property_id: propertyId });
+        loadMarkers().catch(() => {});
+    } catch (error) {
+        toast(error.message || 'Não foi possível salvar a posição.', 'error');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function cancelAdjustPosition() {
+    const wasCreate = adjustUiMode === 'create';
+    MapAdapter.cancelAdjust();
+    adjustUiMode = null;
+    show('adjust-sheet', false);
+    if (wasCreate) {
+        show('create-sheet', true);
+    } else if ($('point-id')?.value) {
+        show('point-sheet', true);
+    }
+    toast('Ajuste cancelado.', 'status');
 }
 
 function openCreateSheet(lat, lng, label, source = 'unknown') {
@@ -1088,6 +1226,9 @@ async function enterApp(data) {
             syncLayerButtons();
         }
         MapAdapter.onMapClick = (lat, lng) => {
+            if (MapAdapter.adjustState) {
+                return;
+            }
             openCreateSheet(lat, lng, null, 'map-tap');
         };
         await hydrateCatalog();
@@ -1248,6 +1389,11 @@ function bindApp() {
     });
 
     $('point-sheet-close')?.addEventListener('click', () => show('point-sheet', false));
+    $('point-adjust-map')?.addEventListener('click', () => beginExistingPositionAdjust());
+    $('adjust-confirm')?.addEventListener('click', () => {
+        confirmAdjustPosition().catch((error) => toast(error.message || 'Erro ao confirmar.', 'error'));
+    });
+    $('adjust-cancel')?.addEventListener('click', () => cancelAdjustPosition());
     $('reward-close')?.addEventListener('click', hideReward);
 
     $('profile-btn')?.addEventListener('click', () => show('account-sheet', true));
@@ -1279,8 +1425,7 @@ function bindApp() {
         addCartLine(true);
     });
     $('create-adjust-map')?.addEventListener('click', () => {
-        show('create-sheet', false);
-        toast('Toque no mapa para ajustar a posição.', 'status');
+        beginCreatePositionPick();
     });
     $('create-outcome-list')?.addEventListener('click', (event) => {
         const button = event.target.closest?.('.outcome-chip');

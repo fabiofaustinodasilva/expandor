@@ -80,6 +80,8 @@ Route::prefix('mobile/v1')->middleware('throttle:api')->group(function (): void 
         Route::post('/first-approach', [\App\Http\Controllers\Api\Mobile\V1\FirstApproachOpsController::class, 'store'])
             ->middleware('throttle:60,1');
         Route::get('/points/{point}', [MobilePointOpsController::class, 'show']);
+        Route::put('/points/{point}/location', [MobilePointOpsController::class, 'adjustLocation'])
+            ->middleware('throttle:60,1');
         Route::post('/points/{point}/visits', [MobilePointVisitOpsController::class, 'store'])
             ->middleware('throttle:60,1');
         Route::post('/points/{point}/sales', [MobilePointVisitOpsController::class, 'sale'])

@@ -96,6 +96,43 @@ class PointOpsController extends Controller
 
         $this->authorize('view', $property);
 
-        return MobileAuthResponse::ok('Detalhe do ponto.', $this->ops->presentPoint($property));
+        return MobileAuthResponse::ok('Detalhe do ponto.', $this->ops->presentPoint($property, $user));
+    }
+
+    public function adjustLocation(Request $request, int $point): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $property = $this->ops->findPoint($user, $point);
+        if ($property === null) {
+            return MobileAuthResponse::error('Ponto não encontrado.', 'not_found', 404);
+        }
+
+        try {
+            $data = $request->validate([
+                'latitude' => ['required', 'numeric', 'between:-90,90'],
+                'longitude' => ['required', 'numeric', 'between:-180,180'],
+            ]);
+        } catch (ValidationException $exception) {
+            return MobileAuthResponse::error(
+                'Verifique as coordenadas informadas.',
+                'validation_error',
+                422,
+                $exception->errors(),
+            );
+        }
+
+        try {
+            $payload = $this->ops->adjustPointLocation(
+                $user,
+                $property,
+                (float) $data['latitude'],
+                (float) $data['longitude'],
+            );
+        } catch (\Illuminate\Auth\Access\AuthorizationException) {
+            return MobileAuthResponse::error('Sem permissão para ajustar a posição.', 'forbidden', 403);
+        }
+
+        return MobileAuthResponse::ok('Posição salva no mapa.', $payload);
     }
 }
