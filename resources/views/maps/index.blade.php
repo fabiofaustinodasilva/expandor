@@ -1553,6 +1553,7 @@
 <script src="https://maps.googleapis.com/maps/api/js?key={{ urlencode($mapFrontendConfig->browserKey()) }}&v=weekly" async defer></script>
 @endif
 <script src="{{ asset('js/map-provider.js') }}?v=6"></script>
+<script src="{{ asset('js/map-saved-property-layer.js') }}?v=1"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=59"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=60"></script>
 @endpush

@@ -235,16 +235,17 @@ class Sprint8222GoogleMapsProviderTest extends TestCase
         $this->assertStringContainsString('maxZoom: 19', $mapBlock, 'L.map options must include explicit maxZoom: 19');
 
         $this->assertMatchesRegularExpression(
-            '/BOOT ORDER \(required\):[\s\S]*?attachLeafletProvider\(\);[\s\S]*?L\.markerClusterGroup\(\{[\s\S]*?map\.addLayer\(clusterGroup\)/',
+            '/BOOT ORDER \(required\):[\s\S]*?attachLeafletProvider\(\);[\s\S]*?L\.featureGroup\(\)\.addTo\(map\)/',
             $opsJs,
-            'Boot order must be: attachLeafletProvider → markerClusterGroup → addLayer(cluster)'
+            'Boot order must be: attachLeafletProvider → property FeatureGroup on the map'
         );
 
+        $this->assertStringContainsString('L.featureGroup().addTo(map)', $opsJs);
         $this->assertStringContainsString('disableClusteringAtZoom: 18', $opsJs);
         $this->assertStringContainsString('spiderfyOnMaxZoom: true', $opsJs);
 
         $blade = file_get_contents(resource_path('views/maps/index.blade.php'));
-        $this->assertStringContainsString("js/operational-map.js') }}?v=58", $blade);
+        $this->assertStringContainsString("js/operational-map.js') }}?v=60", $blade);
         $this->assertStringContainsString("js/map-provider.js') }}?v=6", $blade);
     }
 

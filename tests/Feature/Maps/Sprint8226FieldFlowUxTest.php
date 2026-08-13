@@ -139,7 +139,7 @@ class Sprint8226FieldFlowUxTest extends TestCase
         $this->assertStringContainsString('commission-reward', $blade);
         $this->assertStringContainsString('commission-coins.wav', $js);
         $this->assertStringContainsString('play_reward', $js);
-        $this->assertStringContainsString("js/operational-map.js') }}?v=58", $blade);
+        $this->assertStringContainsString("js/operational-map.js') }}?v=60", $blade);
     }
 
     public function test_drawer_passive_while_sheet_open(): void

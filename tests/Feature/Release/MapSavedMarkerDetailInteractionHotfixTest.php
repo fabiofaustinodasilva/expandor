@@ -24,75 +24,118 @@ class MapSavedMarkerDetailInteractionHotfixTest extends TestCase
         $this->seedFoundation();
     }
 
-    public function test_renderer_uses_factory_and_map_click_hit_test_before_create(): void
+    public function test_persisted_pins_mount_on_feature_group_not_cluster_by_default(): void
     {
         $js = (string) file_get_contents(public_path('js/operational-map.js'));
-
-        // Structural: the only marker add path must go through the shared factory.
-        $this->assertSame(1, substr_count($js, 'function createSavedMarkerLayer'));
-        $this->assertSame(1, substr_count($js, 'function bindSavedMarkerClick'));
-        $this->assertSame(1, substr_count($js, 'function hitTestSavedMarkerFromMapEvent'));
-        $this->assertSame(1, substr_count($js, 'clusterGroup.addLayer(layer)'));
-        $this->assertStringContainsString('createSavedMarkerLayer(marker)', $js);
-        $this->assertStringContainsString('bindSavedMarkerClick(layer, marker)', $js);
-
-        // Map click must resolve saved pins before opening create flow.
-        $hitPos = strpos($js, 'hitTestSavedMarkerFromMapEvent(event)');
-        $createPos = strpos($js, 'openCreateAtMapTap(event.latlng)');
-        $this->assertNotFalse($hitPos);
-        $this->assertNotFalse($createPos);
-        $this->assertLessThan($createPos, $hitPos);
-
-        $this->assertStringContainsString("mapClickTrace('leaflet-marker-click'", $js);
-        $this->assertStringContainsString("mapClickTrace('bindSavedMarkerClick'", $js);
-        $this->assertStringContainsString("mapClickTrace('openPointDetails'", $js);
-        $this->assertStringContainsString("mapClickTrace('fetch-point-detail'", $js);
-        $this->assertStringContainsString("mapClickTrace('drawer-open'", $js);
-        $this->assertStringContainsString('interactive: true', $js);
-        $this->assertStringContainsString('hit-test-geometry', $js);
-        $this->assertStringContainsString('__mapInspectProperty', $js);
-    }
-
-    public function test_marker_icon_css_keeps_pointer_events_and_pane_above_overlay(): void
-    {
+        $host = (string) file_get_contents(public_path('js/map-saved-property-layer.js'));
         $blade = (string) file_get_contents(resource_path('views/maps/index.blade.php'));
 
-        $this->assertStringContainsString('.leaflet-pane.leaflet-marker-pane', $blade);
-        $this->assertStringContainsString('z-index: 660 !important', $blade);
-        $this->assertStringContainsString('.leaflet-marker-icon.map-house-pin-icon', $blade);
-        $this->assertStringContainsString('pointer-events: auto !important', $blade);
-        $this->assertStringContainsString('operational-map.js\') }}?v=59', $blade);
+        $this->assertStringContainsString('L.featureGroup().addTo(map)', $js);
+        $this->assertStringContainsString('mountSavedPropertyLayer(layer)', $js);
+        $this->assertStringContainsString('savedPropertyHost.host.addLayer(layer)', $js);
+        $this->assertStringDoesNotContain($js, 'clusterGroup.addLayer(layer)');
+        $this->assertStringDoesNotContain($js, 'hitTestSavedMarkerFromMapEvent');
+        $this->assertStringContainsString('debug_no_cluster', $host);
+        $this->assertStringContainsString('debug_cluster', $host);
+        $this->assertStringContainsString('window.__mapDebugProperty', $js);
+        $this->assertStringContainsString('window.__mapOpenProperty', $js);
+        $this->assertStringContainsString("[MapRuntime]", $js);
+        $this->assertStringContainsString('map-saved-property-layer.js', $blade);
+        $this->assertStringContainsString('operational-map.js\') }}?v=60', $blade);
     }
 
-    public function test_saved_property_detail_endpoint_returns_drawer_payload(): void
+    public function test_detail_endpoint_works_for_finalized_and_open_statuses(): void
     {
-        $company = $this->makeCompanyWithPlan('Empresa Marker Detail');
-        $seller = $this->makeUser($company, Role::SELLER, ['email' => 'seller-marker-detail@map.test']);
+        $company = $this->makeCompanyWithPlan('Empresa Marker Statuses');
+        $seller = $this->makeUser($company, Role::SELLER, ['email' => 'seller-marker-statuses@map.test']);
         app(TenantContext::class)->set($company, $seller);
+        $city = City::factory()->create(['company_id' => $company->id]);
 
+        $statuses = [
+            PropertyStatus::NEW,
+            PropertyStatus::INTERESTED,
+            PropertyStatus::RETURN_LATER,
+            PropertyStatus::INSTALLATION_REQUESTED,
+            PropertyStatus::NO_INTEREST,
+            PropertyStatus::CUSTOMER,
+        ];
+
+        foreach ($statuses as $index => $status) {
+            $address = Address::query()->create([
+                'company_id' => $company->id,
+                'city_id' => $city->id,
+                'street' => 'Rua Status '.$index,
+                'number' => (string) ($index + 1),
+                'latitude' => -23.5505200 + ($index * 0.001),
+                'longitude' => -46.6333080,
+            ]);
+            $property = Property::query()->create([
+                'company_id' => $company->id,
+                'address_id' => $address->id,
+                'type' => PropertyType::HOUSE->value,
+                'status' => $status->value,
+                'latitude' => $address->latitude,
+                'longitude' => $address->longitude,
+                'created_by' => $seller->id,
+            ]);
+
+            $this->actingAs($seller)
+                ->getJson(route('map.points.show', $property))
+                ->assertOk()
+                ->assertJsonPath('data.property_id', $property->id)
+                ->assertJsonPath('data.status', $status->value)
+                ->assertJsonPath('data.can_adjust', true);
+        }
+    }
+
+    public function test_adjust_then_show_keeps_same_property_id(): void
+    {
+        $company = $this->makeCompanyWithPlan('Empresa Marker Adjust Chain');
+        $seller = $this->makeUser($company, Role::SELLER, ['email' => 'seller-marker-adjust-chain@map.test']);
+        app(TenantContext::class)->set($company, $seller);
         $city = City::factory()->create(['company_id' => $company->id]);
         $address = Address::query()->create([
             'company_id' => $company->id,
             'city_id' => $city->id,
-            'street' => 'Rua Detalhe',
-            'number' => '10',
-            'latitude' => -23.5505200,
-            'longitude' => -46.6333080,
+            'street' => 'Rua Ajuste Cadeia',
+            'number' => '7',
+            'latitude' => -23.5500000,
+            'longitude' => -46.6300000,
         ]);
         $property = Property::query()->create([
             'company_id' => $company->id,
             'address_id' => $address->id,
             'type' => PropertyType::HOUSE->value,
             'status' => PropertyStatus::INSTALLATION_REQUESTED->value,
-            'latitude' => -23.5505200,
-            'longitude' => -46.6333080,
+            'latitude' => -23.5500000,
+            'longitude' => -46.6300000,
             'created_by' => $seller->id,
         ]);
+
+        $this->actingAs($seller)
+            ->putJson(route('map.points.adjust', $property), [
+                'latitude' => -23.5511111,
+                'longitude' => -46.6311111,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.property_id', $property->id);
 
         $this->actingAs($seller)
             ->getJson(route('map.points.show', $property))
             ->assertOk()
             ->assertJsonPath('data.property_id', $property->id)
-            ->assertJsonPath('data.status', PropertyStatus::INSTALLATION_REQUESTED->value);
+            ->assertJsonPath('data.can_adjust', true);
+
+        $property->refresh();
+        $this->assertEqualsWithDelta(-23.5511111, (float) $property->latitude, 0.0001);
+        $this->assertEqualsWithDelta(-46.6311111, (float) $property->longitude, 0.0001);
+    }
+
+    private function assertStringDoesNotContain(string $haystack, string $needle): void
+    {
+        $this->assertFalse(
+            str_contains($haystack, $needle),
+            "Did not expect to find [{$needle}]"
+        );
     }
 }

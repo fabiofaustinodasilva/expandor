@@ -72,7 +72,7 @@ class MapReturnSheetAndMarkerClickHotfixTest extends TestCase
         $this->assertStringContainsString("mapDebug('openPointDetails'", $js);
         $this->assertStringContainsString("mapDebug('detailRequest'", $js);
         $this->assertStringContainsString('openDrawer(marker)', $js);
-        $this->assertStringContainsString('disableClusteringAtZoom: 16', $js);
+        $this->assertStringContainsString('mountSavedPropertyLayer(layer)', $js);
         $this->assertStringContainsString('interactive: false', $js);
         $this->assertStringContainsString('showDraft: false', $js);
         $this->assertStringContainsString('clearDraftLocationMarker()', $js);

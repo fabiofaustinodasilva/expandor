@@ -104,7 +104,7 @@ class Sprint829FieldSalesFinalUxTest extends TestCase
         $this->assertStringContainsString('point-form-actions', $html);
         $this->assertStringContainsString('@media (max-width: 430px)', $html);
         $this->assertStringContainsString('@media (max-width: 320px)', $html);
-        $this->assertStringContainsString('operational-map.js?v=58', $html);
+        $this->assertStringContainsString('operational-map.js?v=60', $html);
     }
 
     public function test_seller_tips_describe_locate_then_tap_flow(): void

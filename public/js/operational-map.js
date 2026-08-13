@@ -153,7 +153,7 @@
         zoomControl: false,
         // Seller: Leaflet attribution control off. GoogleMutant keeps Google branding in its own pane (ToS).
         attributionControl: !isFieldSeller,
-        preferCanvas: true,
+        preferCanvas: false,
         maxZoom: 19,
     }).setView([-14.235, -51.9253], 4);
 
@@ -301,38 +301,59 @@
     // BOOT ORDER (required):
     // 1) L.map with explicit maxZoom
     // 2) Leaflet+OSM base layer addTo(map)
-    // 3) MarkerCluster addTo(map)
+    // 3) Persisted properties FeatureGroup addTo(map)
     // 4) helpers / toast
     // 5) async Google upgrade (base layer swap only)
     attachLeafletProvider();
 
-    const clusterGroup = L.markerClusterGroup({
-        showCoverageOnHover: false,
-        maxClusterRadius: 55,
-        spiderfyOnMaxZoom: true,
-        // Uncluster at typical field zoom so saved pins stay clickable (was 18).
-        disableClusteringAtZoom: 16,
-        iconCreateFunction(cluster) {
-            const children = cluster.getAllChildMarkers();
-            const counts = { customer: 0, interested: 0, visited: 0, new: 0 };
-            children.forEach((layer) => {
-                const group = layer.options?.commercialGroup
-                    || commercial?.groupOf(layer.options?.markerData)
-                    || 'new';
-                counts[group] = (counts[group] || 0) + 1;
-            });
-            if (commercial?.clusterIcon) {
-                return commercial.clusterIcon(counts, children.length);
-            }
-            return L.divIcon({
-                className: 'commercial-cluster',
-                html: `<div class="commercial-cluster-bubble" style="--cluster-color:#ef4444"><strong>${children.length}</strong></div>`,
-                iconSize: [40, 40],
-                iconAnchor: [20, 20],
-            });
-        },
-    });
-    map.addLayer(clusterGroup);
+    const savedLayerApi = window.ExpandorSavedPropertyLayer || {};
+    const savedLayerFlags = typeof savedLayerApi.parseDebugFlags === 'function'
+        ? savedLayerApi.parseDebugFlags(window.location.search)
+        : { debugNoCluster: true, debugCluster: false };
+
+    const propertyLayerGroup = L.featureGroup().addTo(map);
+
+    let clusterGroup = null;
+    if (savedLayerFlags.debugCluster && typeof L.markerClusterGroup === 'function') {
+        clusterGroup = L.markerClusterGroup({
+            showCoverageOnHover: false,
+            maxClusterRadius: 55,
+            spiderfyOnMaxZoom: true,
+            disableClusteringAtZoom: 18,
+            iconCreateFunction(cluster) {
+                const children = cluster.getAllChildMarkers();
+                const counts = { customer: 0, interested: 0, visited: 0, new: 0 };
+                children.forEach((layer) => {
+                    const group = layer.options?.commercialGroup
+                        || commercial?.groupOf(layer.options?.markerData)
+                        || 'new';
+                    counts[group] = (counts[group] || 0) + 1;
+                });
+                if (commercial?.clusterIcon) {
+                    return commercial.clusterIcon(counts, children.length);
+                }
+                return L.divIcon({
+                    className: 'commercial-cluster',
+                    html: `<div class="commercial-cluster-bubble" style="--cluster-color:#ef4444"><strong>${children.length}</strong></div>`,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20],
+                });
+            },
+        });
+        map.addLayer(clusterGroup);
+    }
+
+    const savedPropertyHost = typeof savedLayerApi.resolveSavedPropertyHost === 'function'
+        ? savedLayerApi.resolveSavedPropertyHost(savedLayerFlags, propertyLayerGroup, clusterGroup)
+        : { host: propertyLayerGroup, name: 'featureGroup' };
+
+    function mapRuntime(step, detail = {}) {
+        if (typeof savedLayerApi.runtimeTrace === 'function') {
+            savedLayerApi.runtimeTrace(step, detail);
+            return;
+        }
+        try { console.info('[MapRuntime]', step, detail); } catch (_) { /* optional */ }
+    }
 
     function csrfToken() {
         const meta = document.querySelector('meta[name="csrf-token"]');
@@ -1705,77 +1726,58 @@
     }
 
     function inspectSavedMarkerLayer(propertyId) {
-        const entry = layerByPropertyId.get(Number(propertyId));
-        if (!entry?.layer) {
-            return { found: false, propertyId: Number(propertyId) };
-        }
-        const layer = entry.layer;
-        const el = layer.getElement?.() || layer._icon || null;
+        const id = Number(propertyId);
+        const entry = layerByPropertyId.get(id);
+        const layer = entry?.layer || null;
+        const marker = entry?.marker || markersCache.find((m) => Number(m.property_id) === id) || null;
+        const stamp = layer && typeof L.stamp === 'function' ? L.stamp(layer) : null;
+        const el = layer?.getElement?.() || layer?._icon || null;
         const cs = el ? window.getComputedStyle(el) : null;
+        const parentCs = el?.parentElement ? window.getComputedStyle(el.parentElement) : null;
+        const paneEl = map.getPane?.('markerPane') || document.querySelector('.leaflet-marker-pane');
+        const paneCs = paneEl ? window.getComputedStyle(paneEl) : null;
+        const latlng = layer?.getLatLng?.() || null;
+        const rect = el ? el.getBoundingClientRect() : null;
+        const cx = rect ? rect.left + rect.width / 2 : null;
+        const cy = rect ? rect.top + rect.height / 2 : null;
+        const stack = (cx != null && typeof document.elementsFromPoint === 'function')
+            ? Array.from(document.elementsFromPoint(cx, cy)).slice(0, 8).map((node) => ({
+                tag: node.tagName,
+                className: String(node.className || '').slice(0, 120),
+                pointerEvents: window.getComputedStyle(node).pointerEvents,
+                zIndex: window.getComputedStyle(node).zIndex,
+            }))
+            : [];
+        const top = (cx != null && typeof document.elementFromPoint === 'function')
+            ? document.elementFromPoint(cx, cy)
+            : null;
+
         return {
-            found: true,
-            propertyId: Number(propertyId),
-            hasMarkerData: !!layer.options?.markerData,
-            interactive: layer.options?.interactive !== false,
-            bubblingMouseEvents: layer.options?.bubblingMouseEvents !== false,
-            pane: layer.options?.pane || 'markerPane',
-            listensClick: typeof layer.listens === 'function' ? !!layer.listens('click') : null,
+            found: !!layer,
+            propertyId: id,
+            constructor: layer?.constructor?.name || (layer ? 'Layer' : null),
+            stamp,
+            lat: latlng?.lat ?? marker?.latitude ?? null,
+            lng: latlng?.lng ?? marker?.longitude ?? null,
+            pane: layer?.options?.pane || 'markerPane',
+            parentHost: savedPropertyHost.name,
+            inCluster: savedPropertyHost.name === 'clusterGroup',
+            onMap: !!(layer && map.hasLayer?.(layer)),
+            interactive: layer?.options?.interactive !== false,
+            bubblingMouseEvents: layer?.options?.bubblingMouseEvents !== false,
+            listensClick: typeof layer?.listens === 'function' ? !!layer.listens('click') : null,
+            status: marker?.status || null,
             iconClass: el?.className || null,
             pointerEvents: cs?.pointerEvents || null,
             zIndex: cs?.zIndex || null,
             opacity: cs?.opacity || null,
-            clientRect: el ? (() => {
-                const r = el.getBoundingClientRect();
-                return { left: r.left, top: r.top, width: r.width, height: r.height };
-            })() : null,
+            parentPointerEvents: parentCs?.pointerEvents || null,
+            markerPanePointerEvents: paneCs?.pointerEvents || null,
+            markerPaneZIndex: paneCs?.zIndex || null,
+            topElement: top ? { tag: top.tagName, className: String(top.className || '').slice(0, 120) } : null,
+            stack,
+            clientRect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null,
         };
-    }
-
-    function hitTestSavedMarkerFromMapEvent(event) {
-        const oe = event?.originalEvent;
-        const x = oe?.clientX;
-        const y = oe?.clientY;
-        if (x == null || y == null) return null;
-
-        // 1) DOM target (when the icon actually receives the event)
-        const target = oe?.target;
-        if (target && typeof target.closest === 'function') {
-            if (target.closest('.marker-cluster')) {
-                mapClickTrace('hit-test-cluster-dom');
-                return null;
-            }
-            const icon = target.closest('.leaflet-marker-icon, .map-house-pin');
-            if (icon) {
-                for (const { layer, marker } of layerByPropertyId.values()) {
-                    const el = layer.getElement?.() || layer._icon;
-                    if (el && (el === icon || el.contains(icon))) {
-                        mapClickTrace('hit-test-dom', { propertyId: marker.property_id || null });
-                        return marker;
-                    }
-                }
-            }
-        }
-
-        // 2) Geometric hit-test — required when an overlay (e.g. GoogleMutant) steals DOM clicks
-        //    but Leaflet still synthesizes map click at the same coordinates.
-        let best = null;
-        let bestArea = Infinity;
-        layerByPropertyId.forEach(({ layer, marker }) => {
-            const el = layer.getElement?.() || layer._icon;
-            if (!el) return;
-            const rect = el.getBoundingClientRect();
-            if (!rect.width || !rect.height) return;
-            if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
-            const area = rect.width * rect.height;
-            if (area < bestArea) {
-                bestArea = area;
-                best = marker;
-            }
-        });
-        if (best) {
-            mapClickTrace('hit-test-geometry', { propertyId: best.property_id || null });
-        }
-        return best;
     }
 
     function openSavedMarkerDetails(marker, via) {
@@ -1796,42 +1798,23 @@
     }
 
     function bindSavedMarkerClick(layer, marker) {
+        const stamp = typeof L.stamp === 'function' ? L.stamp(layer) : null;
+        mapRuntime('bindClick', { property: marker?.property_id || null, stamp });
         mapClickTrace('bindSavedMarkerClick', {
             propertyId: marker?.property_id || null,
+            stamp,
             listensBefore: typeof layer.listens === 'function' ? !!layer.listens('click') : null,
         });
 
         layer.on('click', (event) => {
-            mapClickTrace('leaflet-marker-click', { propertyId: marker.property_id || null });
+            mapClickTrace('leaflet-marker-click', { propertyId: marker.property_id || null, stamp });
             if (typeof event?.stopPropagation === 'function') {
                 event.stopPropagation();
             }
-            if (event?.originalEvent) {
-                L.DomEvent.stop(event.originalEvent);
-            }
             openSavedMarkerDetails(marker, 'bindSavedMarkerClick');
         });
-
-        // DOM insurance: cluster add/remove remounts the icon; re-bind on every 'add'.
         layer.on('add', () => {
-            const el = layer.getElement?.() || layer._icon;
-            if (!el) return;
-            el.style.pointerEvents = 'auto';
-            el.style.cursor = 'pointer';
-            el.setAttribute('role', 'button');
-            el.dataset.propertyId = String(marker.property_id || '');
-            if (el.dataset.mapDetailBound === '1') return;
-            el.dataset.mapDetailBound = '1';
-            L.DomEvent.on(el, 'click', (domEvent) => {
-                L.DomEvent.stop(domEvent);
-                mapClickTrace('dom-icon-click', { propertyId: marker.property_id || null });
-                openSavedMarkerDetails(marker, 'dom-icon-click');
-            });
-        });
-
-        mapClickTrace('bindSavedMarkerClick', {
-            propertyId: marker?.property_id || null,
-            listensAfter: typeof layer.listens === 'function' ? !!layer.listens('click') : null,
+            mapRuntime('layerAdded', { property: marker?.property_id || null, stamp });
         });
     }
 
@@ -1850,8 +1833,19 @@
             keyboard: true,
             riseOnHover: true,
         });
+        const stamp = typeof L.stamp === 'function' ? L.stamp(layer) : null;
+        mapRuntime('createSavedMarker', { property: marker.property_id || null, stamp });
         bindSavedMarkerClick(layer, marker);
         return layer;
+    }
+
+    function clearSavedPropertyLayers() {
+        propertyLayerGroup.clearLayers();
+        clusterGroup?.clearLayers();
+    }
+
+    function mountSavedPropertyLayer(layer) {
+        savedPropertyHost.host.addLayer(layer);
     }
 
     function renderMarkers(markers, { fit = false } = {}) {
@@ -1860,7 +1854,7 @@
             .filter((m) => matchesSearch(m, query))
             .filter((m) => matchesCommercialFilters(m));
 
-        clusterGroup.clearLayers();
+        clearSavedPropertyLayers();
         layerByPropertyId = new Map();
         const bounds = [];
 
@@ -1869,7 +1863,7 @@
             if (marker.property_id == null) return;
 
             const layer = createSavedMarkerLayer(marker);
-            clusterGroup.addLayer(layer);
+            mountSavedPropertyLayer(layer);
             layerByPropertyId.set(Number(marker.property_id), { layer, marker });
             bounds.push([marker.latitude, marker.longitude]);
         });
@@ -1881,7 +1875,6 @@
             ? `${filtered.length} ponto(s) nesta área`
             : 'Nenhum ponto nesta área.';
 
-        // Sprint 8.2.26: estado vazio não bloqueia; hint discreto 1× por lifecycle.
         const emptyState = document.getElementById('map-empty-state');
         if (emptyState) {
             emptyState.classList.remove('visible');
@@ -1962,7 +1955,7 @@
         // Hide original clustered marker while dragging a standalone one.
         const existing = propertyId ? layerByPropertyId.get(Number(propertyId)) : null;
         if (existing?.layer) {
-            clusterGroup.removeLayer(existing.layer);
+            savedPropertyHost.host.removeLayer(existing.layer);
         }
 
         const layer = L.marker([lat, lng], {
@@ -3112,15 +3105,6 @@
             region: !!regionSelectMode,
             canCreate: canCreatePoint,
         });
-
-        // Saved pin wins over "Novo ponto" — including when overlays steal marker DOM clicks.
-        const hitMarker = hitTestSavedMarkerFromMapEvent(event);
-        if (hitMarker) {
-            mapClickTrace('map-click-resolved-to-marker', { propertyId: hitMarker.property_id || null });
-            openSavedMarkerDetails(hitMarker, 'map-click-hit-test');
-            return;
-        }
-
         if (adjustState) {
             if (Date.now() < ignoreMapClickUntil) return;
             const layer = adjustState.layer;
@@ -3154,17 +3138,18 @@
         openCreateAtMapTap(event.latlng);
     });
 
-    clusterGroup.on('click', (event) => {
-        ignoreMapClickUntil = Date.now() + 500;
-        if (adjustState || regionSelectMode) return;
-        const layer = event.layer;
-        // Cluster bubble: let MarkerCluster spiderfy/zoom — do not open drawer.
-        if (!layer || typeof layer.getAllChildMarkers === 'function') return;
-        const marker = layer.options?.markerData;
-        if (!marker?.property_id) return;
-        mapClickTrace('leaflet-marker-click', { propertyId: marker.property_id || null, via: 'clusterGroup' });
-        openSavedMarkerDetails(marker, 'clusterGroup');
-    });
+    if (clusterGroup) {
+        clusterGroup.on('click', (event) => {
+            ignoreMapClickUntil = Date.now() + 500;
+            if (adjustState || regionSelectMode) return;
+            const layer = event.layer;
+            if (!layer || typeof layer.getAllChildMarkers === 'function') return;
+            const marker = layer.options?.markerData;
+            if (!marker?.property_id) return;
+            mapClickTrace('leaflet-marker-click', { propertyId: marker.property_id || null, via: 'clusterGroup' });
+            openSavedMarkerDetails(marker, 'clusterGroup');
+        });
+    }
 
     document.getElementById('drawer-close').addEventListener('click', closeDrawer);
     drawerBackdrop.addEventListener('click', closeDrawer);
@@ -3711,18 +3696,30 @@
     }, 60);
 
     try {
-        window.__mapInspectProperty = function mapInspectProperty(propertyId) {
+        window.__mapDebugProperty = function mapDebugProperty(propertyId) {
             const info = inspectSavedMarkerLayer(propertyId);
-            mapClickTrace('inspect-layer', info);
+            mapClickTrace('debug-property', info);
+            mapRuntime('debugProperty', info);
             return info;
         };
+        window.__mapInspectProperty = window.__mapDebugProperty;
         window.__mapOpenProperty = function mapOpenProperty(propertyId) {
-            const entry = layerByPropertyId.get(Number(propertyId));
-            if (!entry?.marker) {
-                mapClickTrace('inspect-open-miss', { propertyId: Number(propertyId) });
-                return false;
+            const id = Number(propertyId);
+            const entry = layerByPropertyId.get(id);
+            const marker = entry?.marker || markersCache.find((m) => Number(m.property_id) === id);
+            if (!marker) {
+                mapClickTrace('inspect-open-miss', { propertyId: id });
+                return { ok: false, reason: 'marker-not-in-cache', propertyId: id };
             }
-            return openSavedMarkerDetails(entry.marker, 'manual-inspect');
+            const opened = openSavedMarkerDetails(marker, 'manual-inspect');
+            return {
+                ok: opened,
+                propertyId: id,
+                via: 'manual-inspect',
+                drawerFound: !!drawer,
+                drawerOpen: !!drawer?.classList.contains('open'),
+                detailUrl: pointShowTemplate ? pointShowTemplate.replace('__PROPERTY__', id) : null,
+            };
         };
     } catch (_) { /* optional */ }
 })();
