@@ -310,7 +310,8 @@
         showCoverageOnHover: false,
         maxClusterRadius: 55,
         spiderfyOnMaxZoom: true,
-        disableClusteringAtZoom: 18,
+        // Uncluster at typical field zoom so saved pins stay clickable (was 18).
+        disableClusteringAtZoom: 16,
         iconCreateFunction(cluster) {
             const children = cluster.getAllChildMarkers();
             const counts = { customer: 0, interested: 0, visited: 0, new: 0 };
@@ -851,6 +852,7 @@
     }
 
     function openDrawer(marker) {
+        mapDebug('openPointDetails', { propertyId: marker?.property_id || null });
         selectedMarker = marker;
         pointDetails = null;
         const contactName = dash(marker.resident_name);
@@ -947,6 +949,7 @@
     }
 
     async function loadPointDetails(propertyId) {
+        mapDebug('detailRequest', { propertyId: propertyId || null });
         try {
             const url = pointShowTemplate.replace('__PROPERTY__', propertyId);
             const response = await mapFetch(url, {
@@ -959,7 +962,10 @@
                     'X-XSRF-TOKEN': xsrfToken(),
                 },
             });
-            if (!response.ok) throw new Error('Não foi possível abrir esta residência.');
+            if (!response.ok) {
+                mapDebug('detailRequest', { propertyId: propertyId || null, status: response.status });
+                throw new Error('Não foi possível abrir esta residência.');
+            }
             const payload = await response.json();
             const data = payload.data || {};
             pointDetails = data;
@@ -1362,6 +1368,17 @@
         return result?.message || fallback || 'Não foi possível salvar.';
     }
 
+    function revealReturnScheduleBlock(blockEl, target) {
+        if (!blockEl) return;
+        blockEl.classList.remove('hidden');
+        ensureReturnDefaults(target);
+        requestAnimationFrame(() => {
+            try {
+                blockEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            } catch (_) { /* optional */ }
+        });
+    }
+
     function syncVisitContractBlock(status) {
         const block = document.getElementById('visit-sale-finalize');
         const returnBlock = document.getElementById('visit-return-block');
@@ -1371,7 +1388,11 @@
         const isReturn = status === 'return_later';
         const isInterested = status === 'interested';
         block?.classList.toggle('hidden', !isContract);
-        returnBlock?.classList.toggle('hidden', !isReturn);
+        if (isReturn) {
+            revealReturnScheduleBlock(returnBlock, 'visit');
+        } else {
+            returnBlock?.classList.add('hidden');
+        }
         if (notesHint) {
             if (isContract) notesHint.textContent = '(opcional — observação da visita)';
             else if (isInterested || isReturn) notesHint.textContent = '(recomendado)';
@@ -1390,8 +1411,6 @@
             const fuTime = document.getElementById('visit-follow-up-time');
             if (fuDate) fuDate.value = '';
             if (fuTime) fuTime.value = '';
-        } else {
-            ensureReturnDefaults('visit');
         }
     }
 
@@ -1401,7 +1420,11 @@
         const notesHint = document.getElementById('point-notes-hint');
         const submitBtn = document.getElementById('point-submit');
         contract?.classList.toggle('hidden', status !== 'installation_requested');
-        ret?.classList.toggle('hidden', status !== 'return_later');
+        if (status === 'return_later') {
+            revealReturnScheduleBlock(ret, 'point');
+        } else {
+            ret?.classList.add('hidden');
+        }
         if (notesHint) {
             if (status === 'installation_requested') notesHint.textContent = '(opcional — observação da visita)';
             else if (status === 'interested' || status === 'return_later') notesHint.textContent = '(recomendado)';
@@ -1420,8 +1443,6 @@
             const fuTime = document.getElementById('point-follow-up-time');
             if (fuDate) fuDate.value = '';
             if (fuTime) fuTime.value = '';
-        } else {
-            ensureReturnDefaults('point');
         }
         document.querySelectorAll('.point-outcome').forEach((btn) => {
             btn.classList.toggle('is-selected', btn.dataset.status === status);
@@ -1655,6 +1676,36 @@
         toast('Nenhum ponto nesta área. Toque no mapa para adicionar.', 'success');
     }
 
+    function bindSavedMarkerClick(layer, marker) {
+        layer.on('click', (event) => {
+            L.DomEvent.stopPropagation(event);
+            if (event?.originalEvent) {
+                L.DomEvent.stopPropagation(event.originalEvent);
+            }
+            if (adjustState || regionSelectMode) return;
+            ignoreMapClickUntil = Date.now() + 400;
+            mapDebug('markerClick', { propertyId: marker.property_id || null });
+            openDrawer(marker);
+        });
+    }
+
+    function createSavedMarkerLayer(marker) {
+        const group = commercial?.groupOf(marker) || marker.commercial_group || 'new';
+        const layer = L.marker([marker.latitude, marker.longitude], {
+            icon: coloredIcon(
+                commercial?.colorOf?.(marker) || marker.color,
+                marker.location_kind || 'gps',
+                commercial?.markOf?.(marker) || ''
+            ),
+            commercialGroup: group,
+            markerData: marker,
+            keyboard: true,
+            riseOnHover: true,
+        });
+        bindSavedMarkerClick(layer, marker);
+        return layer;
+    }
+
     function renderMarkers(markers, { fit = false } = {}) {
         const query = searchInput.value;
         let filtered = markers
@@ -1667,24 +1718,9 @@
 
         filtered.forEach((marker) => {
             if (marker.latitude == null || marker.longitude == null) return;
-            const group = commercial?.groupOf(marker) || marker.commercial_group || 'new';
+            if (marker.property_id == null) return;
 
-            const layer = L.marker([marker.latitude, marker.longitude], {
-                icon: coloredIcon(
-                    commercial?.colorOf?.(marker) || marker.color,
-                    marker.location_kind || 'gps',
-                    commercial?.markOf?.(marker) || ''
-                ),
-                commercialGroup: group,
-                markerData: marker,
-            });
-            layer.on('click', (event) => {
-                L.DomEvent.stopPropagation(event);
-                if (adjustState || regionSelectMode) return;
-                ignoreMapClickUntil = Date.now() + 400;
-                mapDebug('markerClick', { propertyId: marker.property_id || null });
-                openDrawer(marker);
-            });
+            const layer = createSavedMarkerLayer(marker);
             clusterGroup.addLayer(layer);
             layerByPropertyId.set(Number(marker.property_id), { layer, marker });
             bounds.push([marker.latitude, marker.longitude]);
@@ -2212,25 +2248,33 @@
         const latNum = Number(lat);
         const lngNum = Number(lng);
         if (Number.isNaN(latNum) || Number.isNaN(lngNum)) return;
+        // Never steal clicks from saved property markers sitting on the same coords.
         draftLocationMarker = L.circleMarker([latNum, lngNum], {
             radius: 10,
             color: '#0ea5e9',
             weight: 3,
             fillColor: '#38bdf8',
             fillOpacity: 0.85,
+            interactive: false,
+            keyboard: false,
         }).addTo(map);
         draftLocationMarker.bindTooltip('Minha localização', { permanent: false, direction: 'top' });
     }
 
-    function centerMapOnCoords(lat, lng, zoom = 17) {
+    function centerMapOnCoords(lat, lng, zoom = 17, options = {}) {
         if (!map) return;
         const latNum = Number(lat);
         const lngNum = Number(lng);
         if (Number.isNaN(latNum) || Number.isNaN(lngNum)) return;
+        const showDraft = options.showDraft !== false;
         suppressMoveLoad = true;
         map.setView([latNum, lngNum], Math.max(map.getZoom?.() || 0, zoom));
         setTimeout(() => { suppressMoveLoad = false; }, 600);
-        showDraftLocationMarker(latNum, lngNum);
+        if (showDraft) {
+            showDraftLocationMarker(latNum, lngNum);
+        } else {
+            clearDraftLocationMarker();
+        }
     }
 
     function fillPointCoords(lat, lng, accuracy) {
@@ -2697,10 +2741,12 @@
                         if (status === 'return_later') bumpTodayChipIfNeeded(payload.follow_up_at);
                     }
                     // Sprint 8.2.8: vendedor volta ao mapa sem modal de ajuste.
+                    // Zoom at/above disableClusteringAtZoom; never re-cover the pin with the draft halo.
                     if (isFieldSeller) {
                         if (created.latitude != null && created.longitude != null) {
-                            centerMapOnCoords(created.latitude, created.longitude, 17);
+                            centerMapOnCoords(created.latitude, created.longitude, 16, { showDraft: false });
                         }
+                        clearDraftLocationMarker();
                         closeDrawer();
                     } else {
                         openDrawer(created);
@@ -2947,8 +2993,17 @@
         openCreateAtMapTap(event.latlng);
     });
 
-    clusterGroup.on('click', () => {
+    clusterGroup.on('click', (event) => {
         ignoreMapClickUntil = Date.now() + 400;
+        if (adjustState || regionSelectMode) return;
+        const layer = event.layer;
+        // Cluster bubble: let MarkerCluster spiderfy/zoom — do not open drawer.
+        if (!layer || typeof layer.getAllChildMarkers === 'function') return;
+        const marker = layer.options?.markerData;
+        if (!marker?.property_id) return;
+        // Fallback when the individual layer handler did not fire (pane / cluster routing).
+        mapDebug('markerClick', { propertyId: marker.property_id || null, via: 'clusterGroup' });
+        openDrawer(marker);
     });
 
     document.getElementById('drawer-close').addEventListener('click', closeDrawer);

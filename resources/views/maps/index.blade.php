@@ -604,21 +604,21 @@
                         <label class="text-xs text-slate-400">Anotação da visita <span class="text-slate-600" id="visit-notes-hint">(opcional)</span></label>
                         <textarea name="notes" id="visit-notes" rows="2" class="mt-1 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 py-2" placeholder="Ex.: voltar amanhã à tarde"></textarea>
                     </div>
-                    <div id="visit-return-block" class="hidden space-y-2">
+                    <div id="visit-return-block" class="hidden space-y-2 map-return-schedule-block">
                         <label class="text-xs text-slate-400">Quando voltar? <span class="text-rose-400/80">*</span></label>
                         <div class="flex flex-wrap gap-2" id="visit-return-shortcuts">
                             <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="1" data-target="visit">Amanhã</button>
                             <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="2" data-target="visit">+2 dias</button>
                             <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="pick" data-target="visit">Escolher data</button>
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
+                        <div class="grid grid-cols-2 gap-2 min-w-0">
+                            <div class="min-w-0">
                                 <label class="text-[11px] text-slate-500" for="visit-follow-up-date">Data</label>
-                                <input type="date" id="visit-follow-up-date" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" min="{{ now()->toDateString() }}">
+                                <input type="date" id="visit-follow-up-date" class="mt-1 w-full max-w-full min-w-0 h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" min="{{ now()->toDateString() }}">
                             </div>
-                            <div>
+                            <div class="min-w-0">
                                 <label class="text-[11px] text-slate-500" for="visit-follow-up-time">Horário <span class="text-slate-600">(opc.)</span></label>
-                                <input type="time" id="visit-follow-up-time" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3">
+                                <input type="time" id="visit-follow-up-time" class="mt-1 w-full max-w-full min-w-0 h-12 rounded-xl bg-slate-900 border border-slate-700 px-3">
                             </div>
                         </div>
                     </div>
@@ -764,21 +764,21 @@
                         'requiredChecklist' => $saleRequiredChecklist ?? [],
                         'sellableProducts' => $sellableProducts ?? [],
                     ])
-                    <div id="point-return-block" class="hidden space-y-2">
+                    <div id="point-return-block" class="hidden space-y-2 map-return-schedule-block">
                         <label class="text-xs text-slate-400">Quando voltar? <span class="text-rose-400/80">*</span></label>
                         <div class="flex flex-wrap gap-2" id="point-return-shortcuts">
                             <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="1" data-target="point">Amanhã</button>
                             <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="2" data-target="point">+2 dias</button>
                             <button type="button" class="return-shortcut h-10 px-3 rounded-xl border border-slate-700 text-xs font-semibold text-slate-200" data-days="pick" data-target="point">Escolher data</button>
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
+                        <div class="grid grid-cols-2 gap-2 min-w-0">
+                            <div class="min-w-0">
                                 <label class="text-[11px] text-slate-500" for="point-follow-up-date">Data</label>
-                                <input type="date" id="point-follow-up-date" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" min="{{ now()->toDateString() }}">
+                                <input type="date" id="point-follow-up-date" class="mt-1 w-full max-w-full min-w-0 h-12 rounded-xl bg-slate-900 border border-slate-700 px-3" min="{{ now()->toDateString() }}">
                             </div>
-                            <div>
+                            <div class="min-w-0">
                                 <label class="text-[11px] text-slate-500" for="point-follow-up-time">Horário <span class="text-slate-600">(opc.)</span></label>
-                                <input type="time" id="point-follow-up-time" class="mt-1 w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3">
+                                <input type="time" id="point-follow-up-time" class="mt-1 w-full max-w-full min-w-0 h-12 rounded-xl bg-slate-900 border border-slate-700 px-3">
                             </div>
                         </div>
                     </div>
@@ -1105,6 +1105,10 @@
         flex-direction: column;
         min-height: 0;
         width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        flex-shrink: 0;
+        box-sizing: border-box;
         max-height: min(100dvh, 100%);
         overflow: hidden;
         padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -1115,6 +1119,16 @@
         .map-operation-sheet {
             max-height: min(92dvh, 900px);
             align-self: center;
+        }
+        #point-modal .map-sheet-panel.map-operation-sheet,
+        #visit-modal .map-sheet-panel.map-operation-sheet {
+            /* Keep sheet width stable when conditional return/sale blocks appear */
+            width: 100%;
+            max-width: 28rem; /* sm:max-w-md */
+            min-width: min(100%, 28rem);
+            flex-basis: 28rem;
+            flex-grow: 0;
+            flex-shrink: 0;
         }
     }
     .map-sheet-header,
@@ -1127,6 +1141,25 @@
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
+    }
+    .map-return-schedule-block:not(.hidden) {
+        display: block !important;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    .map-return-schedule-block .grid {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+    .map-return-schedule-block input[type="date"],
+    .map-return-schedule-block input[type="time"] {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
     }
     .map-sheet-footer,
     .map-operation-footer {
