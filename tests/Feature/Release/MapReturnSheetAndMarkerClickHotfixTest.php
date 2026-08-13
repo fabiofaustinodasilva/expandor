@@ -76,7 +76,7 @@ class MapReturnSheetAndMarkerClickHotfixTest extends TestCase
         $this->assertStringContainsString('interactive: false', $js);
         $this->assertStringContainsString('showDraft: false', $js);
         $this->assertStringContainsString('clearDraftLocationMarker()', $js);
-        $this->assertStringContainsString("via: 'clusterGroup'", $js);
+        $this->assertStringContainsString("openSavedMarkerDetails(marker, 'clusterGroup')", $js);
         $this->assertStringContainsString('marker.property_id == null', $js);
     }
 

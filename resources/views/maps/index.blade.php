@@ -888,7 +888,23 @@
     .op-main { height: 100vh; }
     @media (max-width: 900px) { .op-main { height: calc(100dvh - 74px); } }
     .leaflet-container { background: #0b1220; font: inherit; }
-    /* Sprint 8.2.29 — house pins (property) vs circle GPS */
+    /* House pins must remain clickable above basemap overlays (GoogleMutant / canvas). */
+    .leaflet-pane.leaflet-marker-pane {
+        z-index: 660 !important;
+    }
+    .leaflet-pane.leaflet-shadow-pane {
+        z-index: 650 !important;
+    }
+    .leaflet-google-mutant,
+    .leaflet-pane.leaflet-overlay-pane .leaflet-google-mutant {
+        /* Keep tiles below marker pane; map clicks still reach Leaflet via mutant. */
+        z-index: 200 !important;
+    }
+    .leaflet-marker-icon.map-house-pin-icon,
+    .leaflet-marker-icon.map-house-pin-icon .map-house-pin {
+        pointer-events: auto !important;
+        cursor: pointer;
+    }
     .map-house-pin-icon { background: transparent !important; border: 0 !important; }
     .map-house-pin {
         position: relative;
@@ -1538,5 +1554,5 @@
 @endif
 <script src="{{ asset('js/map-provider.js') }}?v=6"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=58"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=59"></script>
 @endpush

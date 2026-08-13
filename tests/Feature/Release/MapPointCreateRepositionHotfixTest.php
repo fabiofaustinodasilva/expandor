@@ -36,7 +36,8 @@ class MapPointCreateRepositionHotfixTest extends TestCase
         $this->assertStringContainsString("mapDebug('openCreatePoint'", $js);
         $this->assertStringContainsString("mapDebug('markerClick'", $js);
         $this->assertStringContainsString('createSavedMarkerLayer', $js);
-        $this->assertStringContainsString('L.DomEvent.stopPropagation', $js);
+        $this->assertStringContainsString('hitTestSavedMarkerFromMapEvent', $js);
+        $this->assertStringContainsString('L.DomEvent.stop', $js);
         $this->assertStringContainsString('openMapModal', $js);
         $this->assertStringContainsString('startAdjustMode', $js);
         $this->assertStringContainsString('saveAdjustedPosition', $js);

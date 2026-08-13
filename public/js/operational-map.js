@@ -360,6 +360,12 @@
         } catch (_) { /* optional */ }
     }
 
+    function mapClickTrace(step, detail = {}) {
+        try {
+            console.info('[MapClickTrace]', step, detail);
+        } catch (_) { /* optional */ }
+    }
+
     function openMapModal(el) {
         if (!el) return;
         el.classList.remove('hidden');
@@ -852,7 +858,12 @@
     }
 
     function openDrawer(marker) {
+        mapClickTrace('openPointDetails', { propertyId: marker?.property_id || null });
         mapDebug('openPointDetails', { propertyId: marker?.property_id || null });
+        if (!drawer) {
+            mapClickTrace('drawer-open', { ok: false, reason: 'missing-drawer' });
+            return;
+        }
         selectedMarker = marker;
         pointDetails = null;
         const contactName = dash(marker.resident_name);
@@ -939,19 +950,32 @@
 
         drawer.classList.add('open');
         drawer.setAttribute('aria-hidden', 'false');
-        drawerBackdrop.classList.add('open');
+        drawerBackdrop?.classList.add('open');
+        mapClickTrace('drawer-open', {
+            ok: true,
+            propertyId: marker?.property_id || null,
+            hasOpenClass: drawer.classList.contains('open'),
+            ariaHidden: drawer.getAttribute('aria-hidden'),
+        });
         if (window.lucide) window.lucide.createIcons();
         highlightSelectedMarker();
 
         if (marker.property_id && pointShowTemplate) {
             loadPointDetails(marker.property_id);
+        } else {
+            mapClickTrace('fetch-point-detail', {
+                skipped: true,
+                propertyId: marker?.property_id || null,
+                hasTemplate: !!pointShowTemplate,
+            });
         }
     }
 
     async function loadPointDetails(propertyId) {
+        const url = pointShowTemplate.replace('__PROPERTY__', propertyId);
+        mapClickTrace('fetch-point-detail', { propertyId: propertyId || null, url });
         mapDebug('detailRequest', { propertyId: propertyId || null });
         try {
-            const url = pointShowTemplate.replace('__PROPERTY__', propertyId);
             const response = await mapFetch(url, {
                 method: 'GET',
                 credentials: 'same-origin',
@@ -961,6 +985,10 @@
                     'X-CSRF-TOKEN': csrfToken(),
                     'X-XSRF-TOKEN': xsrfToken(),
                 },
+            });
+            mapClickTrace('fetch-point-detail', {
+                propertyId: propertyId || null,
+                status: response.status,
             });
             if (!response.ok) {
                 mapDebug('detailRequest', { propertyId: propertyId || null, status: response.status });
@@ -1676,16 +1704,134 @@
         toast('Nenhum ponto nesta área. Toque no mapa para adicionar.', 'success');
     }
 
-    function bindSavedMarkerClick(layer, marker) {
-        layer.on('click', (event) => {
-            L.DomEvent.stopPropagation(event);
-            if (event?.originalEvent) {
-                L.DomEvent.stopPropagation(event.originalEvent);
+    function inspectSavedMarkerLayer(propertyId) {
+        const entry = layerByPropertyId.get(Number(propertyId));
+        if (!entry?.layer) {
+            return { found: false, propertyId: Number(propertyId) };
+        }
+        const layer = entry.layer;
+        const el = layer.getElement?.() || layer._icon || null;
+        const cs = el ? window.getComputedStyle(el) : null;
+        return {
+            found: true,
+            propertyId: Number(propertyId),
+            hasMarkerData: !!layer.options?.markerData,
+            interactive: layer.options?.interactive !== false,
+            bubblingMouseEvents: layer.options?.bubblingMouseEvents !== false,
+            pane: layer.options?.pane || 'markerPane',
+            listensClick: typeof layer.listens === 'function' ? !!layer.listens('click') : null,
+            iconClass: el?.className || null,
+            pointerEvents: cs?.pointerEvents || null,
+            zIndex: cs?.zIndex || null,
+            opacity: cs?.opacity || null,
+            clientRect: el ? (() => {
+                const r = el.getBoundingClientRect();
+                return { left: r.left, top: r.top, width: r.width, height: r.height };
+            })() : null,
+        };
+    }
+
+    function hitTestSavedMarkerFromMapEvent(event) {
+        const oe = event?.originalEvent;
+        const x = oe?.clientX;
+        const y = oe?.clientY;
+        if (x == null || y == null) return null;
+
+        // 1) DOM target (when the icon actually receives the event)
+        const target = oe?.target;
+        if (target && typeof target.closest === 'function') {
+            if (target.closest('.marker-cluster')) {
+                mapClickTrace('hit-test-cluster-dom');
+                return null;
             }
-            if (adjustState || regionSelectMode) return;
-            ignoreMapClickUntil = Date.now() + 400;
-            mapDebug('markerClick', { propertyId: marker.property_id || null });
-            openDrawer(marker);
+            const icon = target.closest('.leaflet-marker-icon, .map-house-pin');
+            if (icon) {
+                for (const { layer, marker } of layerByPropertyId.values()) {
+                    const el = layer.getElement?.() || layer._icon;
+                    if (el && (el === icon || el.contains(icon))) {
+                        mapClickTrace('hit-test-dom', { propertyId: marker.property_id || null });
+                        return marker;
+                    }
+                }
+            }
+        }
+
+        // 2) Geometric hit-test — required when an overlay (e.g. GoogleMutant) steals DOM clicks
+        //    but Leaflet still synthesizes map click at the same coordinates.
+        let best = null;
+        let bestArea = Infinity;
+        layerByPropertyId.forEach(({ layer, marker }) => {
+            const el = layer.getElement?.() || layer._icon;
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
+            const area = rect.width * rect.height;
+            if (area < bestArea) {
+                bestArea = area;
+                best = marker;
+            }
+        });
+        if (best) {
+            mapClickTrace('hit-test-geometry', { propertyId: best.property_id || null });
+        }
+        return best;
+    }
+
+    function openSavedMarkerDetails(marker, via) {
+        if (!marker?.property_id) return false;
+        if (adjustState || regionSelectMode) {
+            mapClickTrace('openPointDetails-blocked', {
+                via,
+                adjust: !!adjustState,
+                region: !!regionSelectMode,
+            });
+            return false;
+        }
+        ignoreMapClickUntil = Date.now() + 500;
+        mapClickTrace(via, { propertyId: marker.property_id || null });
+        mapDebug('markerClick', { propertyId: marker.property_id || null, via });
+        openDrawer(marker);
+        return true;
+    }
+
+    function bindSavedMarkerClick(layer, marker) {
+        mapClickTrace('bindSavedMarkerClick', {
+            propertyId: marker?.property_id || null,
+            listensBefore: typeof layer.listens === 'function' ? !!layer.listens('click') : null,
+        });
+
+        layer.on('click', (event) => {
+            mapClickTrace('leaflet-marker-click', { propertyId: marker.property_id || null });
+            if (typeof event?.stopPropagation === 'function') {
+                event.stopPropagation();
+            }
+            if (event?.originalEvent) {
+                L.DomEvent.stop(event.originalEvent);
+            }
+            openSavedMarkerDetails(marker, 'bindSavedMarkerClick');
+        });
+
+        // DOM insurance: cluster add/remove remounts the icon; re-bind on every 'add'.
+        layer.on('add', () => {
+            const el = layer.getElement?.() || layer._icon;
+            if (!el) return;
+            el.style.pointerEvents = 'auto';
+            el.style.cursor = 'pointer';
+            el.setAttribute('role', 'button');
+            el.dataset.propertyId = String(marker.property_id || '');
+            if (el.dataset.mapDetailBound === '1') return;
+            el.dataset.mapDetailBound = '1';
+            L.DomEvent.on(el, 'click', (domEvent) => {
+                L.DomEvent.stop(domEvent);
+                mapClickTrace('dom-icon-click', { propertyId: marker.property_id || null });
+                openSavedMarkerDetails(marker, 'dom-icon-click');
+            });
+        });
+
+        mapClickTrace('bindSavedMarkerClick', {
+            propertyId: marker?.property_id || null,
+            listensAfter: typeof layer.listens === 'function' ? !!layer.listens('click') : null,
         });
     }
 
@@ -1699,6 +1845,8 @@
             ),
             commercialGroup: group,
             markerData: marker,
+            interactive: true,
+            bubblingMouseEvents: true,
             keyboard: true,
             riseOnHover: true,
         });
@@ -2964,6 +3112,15 @@
             region: !!regionSelectMode,
             canCreate: canCreatePoint,
         });
+
+        // Saved pin wins over "Novo ponto" — including when overlays steal marker DOM clicks.
+        const hitMarker = hitTestSavedMarkerFromMapEvent(event);
+        if (hitMarker) {
+            mapClickTrace('map-click-resolved-to-marker', { propertyId: hitMarker.property_id || null });
+            openSavedMarkerDetails(hitMarker, 'map-click-hit-test');
+            return;
+        }
+
         if (adjustState) {
             if (Date.now() < ignoreMapClickUntil) return;
             const layer = adjustState.layer;
@@ -2989,21 +3146,24 @@
             toast('Sem permissão para adicionar pontos neste mapa.', 'error');
             return;
         }
-        if (Date.now() < ignoreMapClickUntil) return;
+        if (Date.now() < ignoreMapClickUntil) {
+            mapClickTrace('map-click-ignored-window');
+            return;
+        }
+        mapClickTrace('map-click-create');
         openCreateAtMapTap(event.latlng);
     });
 
     clusterGroup.on('click', (event) => {
-        ignoreMapClickUntil = Date.now() + 400;
+        ignoreMapClickUntil = Date.now() + 500;
         if (adjustState || regionSelectMode) return;
         const layer = event.layer;
         // Cluster bubble: let MarkerCluster spiderfy/zoom — do not open drawer.
         if (!layer || typeof layer.getAllChildMarkers === 'function') return;
         const marker = layer.options?.markerData;
         if (!marker?.property_id) return;
-        // Fallback when the individual layer handler did not fire (pane / cluster routing).
-        mapDebug('markerClick', { propertyId: marker.property_id || null, via: 'clusterGroup' });
-        openDrawer(marker);
+        mapClickTrace('leaflet-marker-click', { propertyId: marker.property_id || null, via: 'clusterGroup' });
+        openSavedMarkerDetails(marker, 'clusterGroup');
     });
 
     document.getElementById('drawer-close').addEventListener('click', closeDrawer);
@@ -3549,4 +3709,20 @@
         updateOfflineBadge();
         flushOfflineQueue({ silent: true }).catch(() => {});
     }, 60);
+
+    try {
+        window.__mapInspectProperty = function mapInspectProperty(propertyId) {
+            const info = inspectSavedMarkerLayer(propertyId);
+            mapClickTrace('inspect-layer', info);
+            return info;
+        };
+        window.__mapOpenProperty = function mapOpenProperty(propertyId) {
+            const entry = layerByPropertyId.get(Number(propertyId));
+            if (!entry?.marker) {
+                mapClickTrace('inspect-open-miss', { propertyId: Number(propertyId) });
+                return false;
+            }
+            return openSavedMarkerDetails(entry.marker, 'manual-inspect');
+        };
+    } catch (_) { /* optional */ }
 })();
