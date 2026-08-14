@@ -228,6 +228,32 @@ export function initSaleForm(products = [], saleFields = {}, prefix = '') {
     updateSaleReview();
 }
 
+export function applySaleCity({ city = '', cityId = null, locked = false } = {}) {
+    const input = $(fieldId('install-city'));
+    const hidden = $(fieldId('install-city-id'));
+    const hint = $(`${activePrefix}sale-install-city-hint`);
+    const name = String(city || '').trim();
+    const placeholderOnly = !name || /^selecionar$/i.test(name);
+
+    if (input) {
+        input.value = placeholderOnly ? '' : name;
+        if (locked && !placeholderOnly) {
+            input.readOnly = true;
+            input.placeholder = '';
+        } else {
+            input.readOnly = false;
+            input.placeholder = 'Digite a cidade';
+        }
+    }
+    if (hidden) {
+        hidden.value = cityId ? String(cityId) : '';
+    }
+    if (hint) {
+        hint.hidden = !(locked && !placeholderOnly);
+    }
+    updateSaleReview();
+}
+
 export function prefillSaleForm(data = {}) {
     const set = (key, value) => {
         const el = $(fieldId(key));
@@ -244,11 +270,11 @@ export function prefillSaleForm(data = {}) {
     set('install-number', data.number);
     set('install-neighborhood', data.neighborhood);
     set('install-reference', data.reference);
-    set('install-city', data.city);
-    const cityId = $(fieldId('install-city-id'));
-    if (cityId && data.city_id) {
-        cityId.value = String(data.city_id);
-    }
+    applySaleCity({
+        city: data.city,
+        cityId: data.city_id,
+        locked: Boolean(data.city_locked),
+    });
     updateSaleReview();
 }
 
@@ -457,6 +483,7 @@ if (typeof window !== 'undefined') {
         collectSalePayload,
         resetSaleForm,
         prefillSaleForm,
+        applySaleCity,
         updateSaleReview,
     };
 }

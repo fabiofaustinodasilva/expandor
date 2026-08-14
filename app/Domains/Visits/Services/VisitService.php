@@ -10,6 +10,7 @@ use App\Domains\Sales\Models\Sale;
 use App\Domains\Sales\Models\SaleItem;
 use App\Domains\Sales\Products\Models\Product;
 use App\Domains\Sales\Products\Services\StockService;
+use App\Domains\Sales\Territory\Models\City;
 use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Sales\Properties\Services\PropertyService;
 use App\Domains\Sales\Residents\Services\ResidentService;
@@ -140,7 +141,7 @@ class VisitService
                     'status' => $property->status?->value ?? (string) $property->getAttribute('status'),
                 ]);
 
-                $this->applyInstallationAddress($property, $data);
+                $this->applyInstallationAddress($property, $data, $campaign);
 
                 $phone = $data['customer_phone'] ?? $data['contact_phone'] ?? null;
                 $whatsapp = $data['customer_whatsapp'] ?? null;
@@ -455,7 +456,7 @@ class VisitService
     /**
      * @param  array<string, mixed>  $data
      */
-    protected function applyInstallationAddress(Property $property, array $data): void
+    protected function applyInstallationAddress(Property $property, array $data, Campaign $campaign): void
     {
         $address = $property->address;
         if ($address === null) {
@@ -489,8 +490,19 @@ class VisitService
         if ($reference !== '') {
             $updates['reference'] = $reference;
         }
-        // install_city is captured for handoff/display only.
-        // Never retarget city_id — that would drop the pin from campaign marker queries.
+
+        $campaignCityId = $campaign->city_id ? (int) $campaign->city_id : null;
+        if ($campaignCityId) {
+            $campaignCity = City::query()
+                ->where('company_id', $campaign->company_id)
+                ->whereKey($campaignCityId)
+                ->first();
+            if ($campaignCity !== null) {
+                $updates['city_id'] = $campaignCity->id;
+            }
+        }
+
+        // Never retarget lat/lng from sale address — pin stays on the property.
 
         if ($updates !== []) {
             $address->update($updates);

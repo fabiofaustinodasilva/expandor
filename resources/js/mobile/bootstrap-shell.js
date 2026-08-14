@@ -163,8 +163,7 @@ function syncCreateOutcomeBlocks(status) {
             street: $('point-street')?.value,
             number: $('point-number')?.value,
             neighborhood: $('point-sector-name')?.value,
-            city: cityNameFromSelect(),
-            city_id: $('point-city')?.value,
+            ...resolveSaleCity(),
         });
     }
     if (isReturn) {
@@ -341,9 +340,55 @@ function humanApiError(error, fallback) {
 
 function cityNameFromSelect() {
     const select = $('point-city');
+    const value = select?.value;
+    if (!value) {
+        return '';
+    }
     const option = select?.selectedOptions?.[0];
+    const name = option?.textContent?.trim() || '';
+    if (!name || /^selecionar$/i.test(name)) {
+        return '';
+    }
 
-    return option?.textContent?.trim() || '';
+    return name;
+}
+
+function campaignCityForSale() {
+    const ctx = bootstrap?.data?.campaign_context;
+    const campaignId = resolveCampaignId('visit') || resolveCampaignId('create') || ctx?.active_campaign_id;
+    const row = (ctx?.campaigns || []).find((item) => Number(item.id) === Number(campaignId));
+    if (row?.city_id && row?.city_name) {
+        return { city_id: row.city_id, city: row.city_name, city_locked: true };
+    }
+    if (ctx?.active_city_id && ctx?.active_city_name) {
+        return { city_id: ctx.active_city_id, city: ctx.active_city_name, city_locked: true };
+    }
+
+    return null;
+}
+
+function resolveSaleCity(property = {}) {
+    const fromCampaign = campaignCityForSale();
+    if (fromCampaign) {
+        return fromCampaign;
+    }
+    if (property.city_id || property.city) {
+        return {
+            city_id: property.city_id || null,
+            city: property.city || '',
+            city_locked: false,
+        };
+    }
+    const fromSelect = cityNameFromSelect();
+    if (fromSelect) {
+        return {
+            city_id: $('point-city')?.value || null,
+            city: fromSelect,
+            city_locked: false,
+        };
+    }
+
+    return { city_id: null, city: '', city_locked: false };
 }
 
 function commissionBadgeClass(status) {
@@ -690,8 +735,10 @@ function syncVisitOutcomeBlocks(status) {
             number: lastOpenedPoint?.number,
             neighborhood: lastOpenedPoint?.neighborhood,
             reference: lastOpenedPoint?.reference,
-            city: lastOpenedPoint?.city_name,
-            city_id: lastOpenedPoint?.city_id,
+            ...resolveSaleCity({
+                city: lastOpenedPoint?.city_name,
+                city_id: lastOpenedPoint?.city_id,
+            }),
         });
     }
 
@@ -985,10 +1032,17 @@ async function onCreatePoint(event) {
     }
 
     const citySelect = $('point-city');
-    let cityId = Number(citySelect?.value || 0);
+    const saleCity = resolveSaleCity();
+    let cityId = Number(saleCity.city_id || citySelect?.value || 0);
     if (!cityId && citySelect?.options?.length) {
-        cityId = Number(citySelect.options[0].value);
-        citySelect.value = String(cityId);
+        const usable = Array.from(citySelect.options).find((option) => option.value);
+        if (usable) {
+            cityId = Number(usable.value);
+            citySelect.value = String(cityId);
+        }
+    }
+    if (saleCity.city_id) {
+        cityId = Number(saleCity.city_id);
     }
     if (!cityId) {
         setCreateError('Território sem cidade ativa.');

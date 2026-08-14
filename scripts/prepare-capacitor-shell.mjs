@@ -170,7 +170,8 @@ function saleFormMarkup(prefix) {
                     <label class="field-label" for="${p}sale-install-reference">Ponto de referência</label>
                     <input class="field-input" id="${p}sale-install-reference" placeholder="Próximo à praça">
                     <label class="field-label" for="${p}sale-install-city">Cidade</label>
-                    <input class="field-input" id="${p}sale-install-city" readonly>
+                    <input class="field-input" id="${p}sale-install-city" placeholder="Digite a cidade" autocomplete="address-level2">
+                    <p class="card__meta" id="${p}sale-install-city-hint" hidden>Definida pela campanha</p>
                     <input type="hidden" id="${p}sale-install-city-id">
                 </section>
                 <section class="sale-section sale-section--contract">

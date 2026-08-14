@@ -39,12 +39,90 @@ class ExpVendedorCompleteSaleHandoffTest extends TestCase
         $this->mobileGet('/api/mobile/v1/bootstrap', $ctx['token'], $ctx['device'])
             ->assertOk()
             ->assertJsonPath('data.sale_fields.due_days', [5, 10, 15, 20, 25, 30])
+            ->assertJsonPath('data.campaign_context.campaigns.0.city_id', $ctx['city']->id)
+            ->assertJsonPath('data.campaign_context.campaigns.0.city_name', 'Bom Jardim de Goiás')
+            ->assertJsonPath('data.campaign_context.active_city_id', $ctx['city']->id)
+            ->assertJsonPath('data.campaign_context.active_city_name', 'Bom Jardim de Goiás')
             ->assertJsonStructure([
                 'data' => [
                     'sale_fields' => ['required', 'labels', 'due_days'],
-                    'campaign_context' => ['campaigns', 'has_campaign', 'active_campaign_id'],
+                    'campaign_context' => ['campaigns', 'has_campaign', 'active_campaign_id', 'active_city_id', 'active_city_name'],
                 ],
             ]);
+    }
+
+    public function test_sale_uses_campaign_city_not_client_forged_city(): void
+    {
+        $ctx = $this->opsContext();
+        $otherCity = City::factory()->create([
+            'company_id' => $ctx['seller']->company_id,
+            'name' => 'Cidade Estranha',
+        ]);
+        $point = $this->makePoint($ctx, -16.7, -51.2, 'Maria Antiga');
+        $this->assertSame($ctx['city']->id, (int) $point->address->city_id);
+
+        $this->mobilePostJson("/api/mobile/v1/points/{$point->id}/sales", $ctx['token'], $ctx['device'], $this->completeSalePayload([
+            'campaign_id' => $ctx['campaign']->id,
+            'install_city' => 'Selecionar',
+            'city_id' => $otherCity->id,
+        ], $ctx))->assertCreated();
+
+        $fresh = $point->fresh('address');
+        $this->assertSame($ctx['city']->id, (int) $fresh->address->city_id);
+        $this->assertEqualsWithDelta(-16.7, (float) $fresh->latitude, 0.0001);
+        $this->assertEqualsWithDelta(-51.2, (float) $fresh->longitude, 0.0001);
+        $this->assertSame('Rua Goiás', $fresh->address->street);
+    }
+
+    public function test_campaign_city_wins_over_property_city(): void
+    {
+        $ctx = $this->opsContext();
+        $otherCity = City::factory()->create([
+            'company_id' => $ctx['seller']->company_id,
+            'name' => 'Outro Município',
+        ]);
+        $point = $this->makePoint($ctx, -16.7, -51.2, 'Cliente');
+        $point->address->update(['city_id' => $otherCity->id]);
+
+        $this->mobilePostJson("/api/mobile/v1/points/{$point->id}/sales", $ctx['token'], $ctx['device'], $this->completeSalePayload([
+            'campaign_id' => $ctx['campaign']->id,
+            'install_city' => 'Outro Município',
+        ], $ctx))->assertCreated();
+
+        $this->assertSame($ctx['city']->id, (int) $point->fresh('address')->address->city_id);
+        $this->assertEqualsWithDelta(-16.7, (float) $point->fresh()->latitude, 0.0001);
+    }
+
+    public function test_cross_tenant_city_is_not_applied(): void
+    {
+        $ctx = $this->opsContext();
+        $foreign = $this->makeCompanyWithPlan('Empresa Cidade Estrangeira');
+        $foreignCity = City::factory()->create(['company_id' => $foreign->id, 'name' => 'Cidade de Fora']);
+        $point = $this->makePoint($ctx, -16.7, -51.2, 'Local');
+
+        $this->mobilePostJson("/api/mobile/v1/points/{$point->id}/sales", $ctx['token'], $ctx['device'], $this->completeSalePayload([
+            'campaign_id' => $ctx['campaign']->id,
+            'city_id' => $foreignCity->id,
+            'install_city' => 'Cidade de Fora',
+        ], $ctx))->assertCreated();
+
+        $this->assertSame($ctx['city']->id, (int) $point->fresh('address')->address->city_id);
+    }
+
+    public function test_shell_prefills_campaign_city_and_never_copies_selecionar(): void
+    {
+        $shell = (string) file_get_contents(resource_path('js/mobile/bootstrap-shell.js'));
+        $cart = (string) file_get_contents(resource_path('js/mobile/sale-cart.js'));
+        $prepare = (string) file_get_contents(base_path('scripts/prepare-capacitor-shell.mjs'));
+
+        $this->assertStringContainsString('resolveSaleCity', $shell);
+        $this->assertStringContainsString('campaignCityForSale', $shell);
+        $this->assertStringContainsString('active_city_name', $shell);
+        $this->assertStringContainsString('/^selecionar$/i', $shell);
+        $this->assertStringContainsString('applySaleCity', $cart);
+        $this->assertStringContainsString('Definida pela campanha', $prepare);
+        $this->assertStringContainsString('Digite a cidade', $prepare);
+        $this->assertStringNotContainsString("city: cityNameFromSelect()", $shell);
     }
 
     public function test_complete_sale_persists_client_address_due_day_products_and_handoff(): void

@@ -99,8 +99,15 @@ class MobileSellerOpsService
             ? 'Map data © Google'
             : '© OpenStreetMap contributors';
 
-        $activeCampaigns = $this->firstApproach->activeCampaignsFor($user);
-        $salePolicy = $this->saleFields->resolveForUser($user);
+            $activeCampaigns = $this->firstApproach->activeCampaignsFor($user)->loadMissing('city');
+            $salePolicy = $this->saleFields->resolveForUser($user);
+
+            $campaignPayload = $activeCampaigns->map(fn (Campaign $campaign) => [
+                'id' => $campaign->id,
+                'name' => $campaign->name,
+                'city_id' => $campaign->city_id ? (int) $campaign->city_id : null,
+                'city_name' => $campaign->city?->name,
+            ])->values()->all();
 
         return [
             'user' => $profile,
@@ -114,14 +121,17 @@ class MobileSellerOpsService
                 'today' => AppTime::today(),
             ],
             'campaign_context' => [
-                'campaigns' => $activeCampaigns->map(fn (Campaign $campaign) => [
-                    'id' => $campaign->id,
-                    'name' => $campaign->name,
-                ])->values()->all(),
+                'campaigns' => $campaignPayload,
                 'has_campaign' => $activeCampaigns->isNotEmpty(),
                 'requires_selection' => $activeCampaigns->count() > 1,
                 'active_campaign_id' => $activeCampaigns->count() === 1
                     ? $activeCampaigns->first()->id
+                    : null,
+                'active_city_id' => $activeCampaigns->count() === 1
+                    ? ($activeCampaigns->first()->city_id ? (int) $activeCampaigns->first()->city_id : null)
+                    : null,
+                'active_city_name' => $activeCampaigns->count() === 1
+                    ? $activeCampaigns->first()->city?->name
                     : null,
                 'no_campaign_message' => $activeCampaigns->isEmpty()
                     ? RegisterFirstApproachAction::NO_CAMPAIGN_MESSAGE
