@@ -87,18 +87,27 @@ if (!apiBase) {
     );
 }
 
+const webBase = String(process.env.CAP_WEB_ORIGIN || process.env.APP_URL || apiBase).replace(/\/$/, '');
+
 let connectSrc = "'self'";
 let imgSrc = ["'self'", 'data:', 'blob:', ...MAP_TILE_CSP_HOSTS].join(' ');
 let apiOrigin = '';
+let webOrigin = '';
 try {
     apiOrigin = new URL(apiBase).origin;
+    webOrigin = new URL(webBase).origin;
     connectSrc = `'self' ${apiOrigin} ${MAP_TILE_CSP_HOSTS.join(' ')}`;
     imgSrc += ` ${apiOrigin}`;
+    if (webOrigin !== apiOrigin) {
+        imgSrc += ` ${webOrigin}`;
+        connectSrc += ` ${webOrigin}`;
+    }
 } catch {
-    throw new Error(`Invalid CAP_API_URL/APP_URL for Capacitor shell: ${apiBase}`);
+    throw new Error(`Invalid CAP_API_URL/APP_URL/CAP_WEB_ORIGIN for Capacitor shell: ${apiBase} / ${webBase}`);
 }
 
 console.log('capacitor-shell API base:', apiBase);
+console.log('capacitor-shell web origin:', webBase);
 
 const csp = [
     "default-src 'self'",
@@ -107,7 +116,7 @@ const csp = [
     `img-src ${imgSrc}`,
     `connect-src ${connectSrc}`,
     "font-src 'self' data:",
-    `media-src 'self' blob: ${apiOrigin}`,
+    `media-src 'self' blob: ${apiOrigin}${webOrigin && webOrigin !== apiOrigin ? ` ${webOrigin}` : ''}`,
     "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com",
     "object-src 'none'",
     "base-uri 'self'",
@@ -117,7 +126,7 @@ const csp = [
 
 const runtimeConfig = [
     `window.EXPANDOR_API_BASE = ${JSON.stringify(apiBase)};`,
-    `window.EXPANDOR_WEB_ORIGIN = ${JSON.stringify(apiBase)};`,
+    `window.EXPANDOR_WEB_ORIGIN = ${JSON.stringify(webBase)};`,
     'window.EXPANDOR_APP_VERSION = "8.2.34";',
     '',
 ].join('\n');

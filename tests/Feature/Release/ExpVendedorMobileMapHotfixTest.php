@@ -74,7 +74,7 @@ class ExpVendedorMobileMapHotfixTest extends TestCase
         $this->assertStringContainsString('https://a.tile.openstreetmap.org', $html);
         $this->assertStringNotContainsString('https://*.tile.openstreetmap.org', $html);
         $this->assertStringNotContainsString('${imgSrc}', $html);
-        $this->assertStringContainsString('src="./runtime-config.js"', $html);
+        $this->assertStringContainsString('src="./runtime-config.js', $html);
         $this->assertStringNotContainsString('window.EXPANDOR_API_BASE', $html);
 
         if (is_file($logo)) {

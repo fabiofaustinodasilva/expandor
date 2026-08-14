@@ -5,34 +5,116 @@ function $(id) {
     return document.getElementById(id);
 }
 
+function isUnusableMediaOrigin(value) {
+    try {
+        const parsed = new URL(value);
+        return parsed.protocol === 'capacitor:'
+            || parsed.hostname === 'localhost'
+            || parsed.hostname === '127.0.0.1';
+    } catch {
+        return true;
+    }
+}
+
+function originFrom(value) {
+    try {
+        const parsed = new URL(value);
+
+        return `${parsed.protocol}//${parsed.host}`;
+    } catch {
+        return '';
+    }
+}
+
+function mediaOrigin() {
+    const web = String(window.EXPANDOR_WEB_ORIGIN || '').trim().replace(/\/$/, '');
+    const api = String(window.EXPANDOR_API_BASE || '').trim().replace(/\/$/, '');
+
+    if (web && !isUnusableMediaOrigin(web)) {
+        return originFrom(web);
+    }
+    if (api && !isUnusableMediaOrigin(api)) {
+        return originFrom(api);
+    }
+    if (web) {
+        return originFrom(web) || web;
+    }
+    if (api) {
+        return originFrom(api) || api;
+    }
+
+    return '';
+}
+
 function resolveMediaUrl(url) {
     if (!url) {
         return '';
     }
-    if (/^https?:\/\//i.test(url) || url.startsWith('data:') || url.startsWith('blob:')) {
-        return url;
-    }
-    const base = String(window.EXPANDOR_API_BASE || '').replace(/\/$/, '');
-    if (url.startsWith('/')) {
-        return base + url;
+    const raw = String(url).trim();
+    if (/^https?:\/\//i.test(raw) || raw.startsWith('data:') || raw.startsWith('blob:')) {
+        return raw;
     }
 
-    return `${base}/${url}`;
+    const origin = mediaOrigin();
+    if (!origin) {
+        return '';
+    }
+    if (raw.startsWith('/')) {
+        return origin + raw;
+    }
+
+    return `${origin}/${raw}`;
+}
+
+function logDeckImage(level, extra) {
+    const payload = {
+        product_id: extra.product_id ?? null,
+        raw: extra.raw ?? null,
+        resolved: extra.resolved ?? null,
+    };
+    if (level === 'warn') {
+        console.warn('[EXP ProductDeck] image', payload);
+
+        return;
+    }
+    console.info('[EXP ProductDeck] image', payload);
 }
 
 function mediaHtml(item) {
     const name = escapeHtml(item.name || 'Produto');
     if (item.video && item.video_embed) {
-        return `<div class="deck-media"><iframe src="${escapeHtml(resolveMediaUrl(item.video))}" title="Vídeo ${name}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`;
+        return `<div class="deck-media"><iframe src="${escapeHtml(item.video)}" title="Vídeo ${name}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`;
     }
     if (item.video && !item.video_embed) {
-        return `<div class="deck-media"><video controls playsinline preload="metadata" muted><source src="${escapeHtml(resolveMediaUrl(item.video))}"></video></div>`;
+        const src = escapeHtml(resolveMediaUrl(item.video) || item.video);
+        return `<div class="deck-media"><video controls playsinline preload="metadata" muted><source src="${src}"></video></div>`;
     }
     if (item.image) {
-        return `<div class="deck-media"><img src="${escapeHtml(resolveMediaUrl(item.image))}" alt="${name}"></div>`;
+        const resolved = resolveMediaUrl(item.image);
+        logDeckImage('info', { product_id: item.id, raw: item.image, resolved });
+        if (!resolved) {
+            return `<div class="deck-media"><div class="deck-media-empty" data-deck-fallback="1">${name}</div></div>`;
+        }
+
+        return `<div class="deck-media"><img src="${escapeHtml(resolved)}" alt="${name}" data-product-id="${escapeHtml(item.id)}" data-raw-src="${escapeHtml(item.image)}"></div>`;
     }
 
     return `<div class="deck-media"><div class="deck-media-empty">${name}</div></div>`;
+}
+
+function bindDeckImages(root) {
+    root?.querySelectorAll('.deck-media img')?.forEach((img) => {
+        img.addEventListener('error', () => {
+            const productId = img.getAttribute('data-product-id');
+            const raw = img.getAttribute('data-raw-src');
+            logDeckImage('warn', { product_id: productId, raw, resolved: img.getAttribute('src') });
+            const fallback = document.createElement('div');
+            fallback.className = 'deck-media-empty';
+            fallback.dataset.deckFallback = 'error';
+            fallback.textContent = img.getAttribute('alt') || 'Produto';
+            img.replaceWith(fallback);
+        });
+    });
 }
 
 export const PresentationScreen = {
@@ -194,6 +276,7 @@ export const PresentationScreen = {
                 </div>
             </article>`).join('');
 
+        bindDeckImages(track);
         this.goTo(this.index, false);
     },
 
@@ -334,4 +417,5 @@ export const PresentationScreen = {
 
 if (typeof window !== 'undefined') {
     window.ExpandorPresentationScreen = PresentationScreen;
+    window.ExpandorPresentationScreen.resolveMediaUrl = resolveMediaUrl;
 }

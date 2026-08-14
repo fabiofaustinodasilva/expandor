@@ -47,7 +47,15 @@ class ExpVendedorPresentationDeckTest extends TestCase
         $this->assertStringContainsString('openDetails', $js);
         $this->assertStringContainsString('contractCurrent', $js);
         $this->assertStringContainsString('resolveMediaUrl', $js);
+        $this->assertStringContainsString('EXPANDOR_WEB_ORIGIN', $js);
+        $this->assertStringContainsString("addEventListener('error'", $js);
+        $this->assertStringContainsString('[EXP ProductDeck] image', $js);
+        $this->assertStringNotContainsString('window.location.origin', $js);
         $this->assertStringNotContainsString('product-card', $js);
+
+        $this->assertStringContainsString('CAP_WEB_ORIGIN', $prepare);
+        $this->assertStringContainsString('img-src ${imgSrc}', $prepare);
+        $this->assertStringNotContainsString('img-src *', $prepare);
 
         $this->assertStringContainsString("PresentationScreen.open()", $bootstrap);
         $this->assertSame(
@@ -110,5 +118,95 @@ class ExpVendedorPresentationDeckTest extends TestCase
         $this->assertArrayHasKey('image', $row);
         $this->assertArrayHasKey('price', $row);
         $this->assertIsNumeric($row['price']);
+        $this->assertNull($row['image']);
+    }
+
+    public function test_products_api_returns_absolute_storage_image_from_app_url(): void
+    {
+        config(['app.url' => 'https://expandor.unicanetwork.com.br']);
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $company = $this->makeCompanyWithPlan('Empresa Foto Deck');
+        $seller = $this->makeUser($company, Role::SELLER, [
+            'email' => 'seller-foto-deck@exp.test',
+            'password' => 'password',
+        ]);
+        $path = 'companies/'.$company->id.'/products/comercial.webp';
+        \Illuminate\Support\Facades\Storage::disk('public')->put($path, 'webp-bytes');
+
+        Product::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Plano com foto',
+            'status' => Product::STATUS_ACTIVE,
+            'image' => $path,
+            'image_thumb' => 'companies/'.$company->id.'/products/thumbs/comercial.webp',
+        ]);
+        Product::factory()->inactive()->create([
+            'company_id' => $company->id,
+            'name' => 'Plano inativo',
+            'image' => $path,
+        ]);
+        $other = $this->makeCompanyWithPlan('Outra Empresa Foto');
+        Product::factory()->create([
+            'company_id' => $other->id,
+            'name' => 'Plano alienígena',
+            'status' => Product::STATUS_ACTIVE,
+            'image' => 'companies/'.$other->id.'/products/x.webp',
+        ]);
+
+        $device = '22222222-2222-4222-8222-000000000043';
+        $token = $this->postJson('/api/mobile/v1/login', [
+            'email' => $seller->email,
+            'password' => 'password',
+            'device_id' => $device,
+            'device_name' => 'Android',
+            'platform' => 'android',
+            'app_version' => '8.2.34',
+        ])->assertOk()->json('data.token');
+
+        $this->app['auth']->forgetGuards();
+        $this->flushSession();
+
+        $data = $this->withHeaders([
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+            'X-Device-Id' => $device,
+            'X-App-Version' => '8.2.34',
+        ])->getJson('/api/mobile/v1/products')->assertOk()->json('data');
+
+        $names = collect($data)->pluck('name')->all();
+        $this->assertContains('Plano com foto', $names);
+        $this->assertNotContains('Plano inativo', $names);
+        $this->assertNotContains('Plano alienígena', $names);
+
+        $row = collect($data)->firstWhere('name', 'Plano com foto');
+        $this->assertSame(
+            'https://expandor.unicanetwork.com.br/storage/'.$path,
+            $row['image']
+        );
+        $this->assertStringNotContainsString('/thumbs/', (string) $row['image']);
+    }
+
+    public function test_media_urls_absolutize_against_app_url_not_webview(): void
+    {
+        $media = app(\App\Domains\Media\Services\MediaUploadService::class);
+
+        config(['app.url' => 'http://localhost']);
+        $this->assertSame(
+            'http://localhost/storage/companies/1/products/a.webp',
+            $media->toAbsolutePublicUrl('/storage/companies/1/products/a.webp')
+        );
+
+        config(['app.url' => 'https://expandor.unicanetwork.com.br']);
+        $this->assertSame(
+            'https://cdn.example/x.webp',
+            $media->toAbsolutePublicUrl('https://cdn.example/x.webp')
+        );
+        $this->assertSame(
+            'https://expandor.unicanetwork.com.br/storage/companies/9/products/a.webp',
+            $media->toAbsolutePublicUrl('/storage/companies/9/products/a.webp')
+        );
+        $this->assertNull($media->toAbsolutePublicUrl(null));
+        $this->assertNull($media->toAbsolutePublicUrl(''));
     }
 }

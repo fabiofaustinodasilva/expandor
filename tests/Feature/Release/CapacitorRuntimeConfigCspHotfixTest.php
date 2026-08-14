@@ -15,13 +15,13 @@ class CapacitorRuntimeConfigCspHotfixTest extends TestCase
 
         $this->assertStringContainsString('runtime-config.js', $prepare);
         $this->assertStringContainsString('writeFileSync(join(outDir, \'runtime-config.js\')', $prepare);
-        $this->assertStringContainsString('src="./runtime-config.js"', $prepare);
-        $this->assertStringContainsString('src="./vendor/seller-app.js"', $prepare);
+        $this->assertStringContainsString('src="./runtime-config.js', $prepare);
+        $this->assertStringContainsString('src="./vendor/seller-app.js', $prepare);
         $htmlStart = strpos($prepare, 'const html = ');
         $this->assertNotFalse($htmlStart);
         $htmlChunk = substr($prepare, $htmlStart);
-        $runtimeInHtml = strpos($htmlChunk, 'src="./runtime-config.js"');
-        $appInHtml = strpos($htmlChunk, 'src="./vendor/seller-app.js"');
+        $runtimeInHtml = strpos($htmlChunk, 'src="./runtime-config.js');
+        $appInHtml = strpos($htmlChunk, 'src="./vendor/seller-app.js');
         $this->assertNotFalse($runtimeInHtml);
         $this->assertNotFalse($appInHtml);
         $this->assertLessThan($appInHtml, $runtimeInHtml);
@@ -50,12 +50,13 @@ class CapacitorRuntimeConfigCspHotfixTest extends TestCase
         $html = (string) file_get_contents($shellIndex);
         $js = (string) file_get_contents($runtime);
 
-        $this->assertStringContainsString('src="./runtime-config.js"', $html);
-        $this->assertStringContainsString('src="./vendor/seller-app.js"', $html);
+        $this->assertStringContainsString('src="./runtime-config.js', $html);
+        $this->assertStringContainsString('src="./vendor/seller-app.js', $html);
         $this->assertStringNotContainsString('window.EXPANDOR_API_BASE', $html);
         $this->assertStringContainsString("script-src 'self'", $html);
         $this->assertStringNotContainsString("script-src 'self' 'unsafe-inline'", $html);
         $this->assertMatchesRegularExpression('/window\.EXPANDOR_API_BASE\s*=\s*"[^"]+"/', $js);
+        $this->assertMatchesRegularExpression('/window\.EXPANDOR_WEB_ORIGIN\s*=\s*"[^"]+"/', $js);
         $this->assertDoesNotMatchRegularExpression('/APP_KEY|SMTP|password|secret|Bearer\s+[A-Za-z0-9]/i', $js);
 
         $runtimePos = strpos($html, 'runtime-config.js');

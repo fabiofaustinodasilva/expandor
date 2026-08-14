@@ -175,6 +175,16 @@ class Product extends Model
     }
 
     /**
+     * Same commercial image as the web deck, with APP_URL origin for native WebViews.
+     */
+    public function imageOriginalPublicUrl(): ?string
+    {
+        $media = app(\App\Domains\Media\Services\MediaUploadService::class);
+
+        return $media->toAbsolutePublicUrl($this->imageOriginalUrl() ?: $this->imageUrl());
+    }
+
+    /**
      * @return list<string>
      */
     public function benefitList(): array

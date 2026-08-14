@@ -215,6 +215,33 @@ class MediaUploadService
         return '/storage/'.$path;
     }
 
+    /**
+     * Canonical public URL for Capacitor / cross-origin clients.
+     * Relative paths from url() are resolved against APP_URL, never the WebView origin.
+     */
+    public function toAbsolutePublicUrl(?string $url): ?string
+    {
+        if ($url === null) {
+            return null;
+        }
+
+        $url = trim($url);
+        if ($url === '') {
+            return null;
+        }
+
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        $origin = rtrim((string) config('app.url'), '/');
+        if ($origin === '') {
+            return str_starts_with($url, '/') ? $url : '/'.$url;
+        }
+
+        return $origin.(str_starts_with($url, '/') ? $url : '/'.$url);
+    }
+
     public function exists(?string $path): bool
     {
         $path = $this->normalizeStoragePath($path);
