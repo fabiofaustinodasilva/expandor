@@ -216,30 +216,60 @@ class MediaUploadService
     }
 
     /**
+     * Public web path used by Blade (&lt;img src="/storage/..."&gt;).
+     * Accepts disk keys (companies/...), /storage/..., or absolute URLs.
+     * Does not require the file to exist — URL shape must match the web symlink.
+     */
+    public function publicRelativePath(?string $path): ?string
+    {
+        if ($path === null) {
+            return null;
+        }
+
+        $path = trim(str_replace('\\', '/', $path));
+        if ($path === '') {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        $path = ltrim($path, '/');
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, strlen('storage/'));
+        }
+        $path = ltrim((string) $path, '/');
+
+        $normalized = $this->normalizeStoragePath($path);
+        if ($normalized === null || ! $this->isAllowedStoragePath($normalized)) {
+            return null;
+        }
+
+        return '/storage/'.$normalized;
+    }
+
+    /**
      * Canonical public URL for Capacitor / cross-origin clients.
-     * Relative paths from url() are resolved against APP_URL, never the WebView origin.
+     * Relative paths are resolved against APP_URL, never the WebView origin.
      */
     public function toAbsolutePublicUrl(?string $url): ?string
     {
-        if ($url === null) {
+        $relative = $this->publicRelativePath($url);
+        if ($relative === null) {
             return null;
         }
 
-        $url = trim($url);
-        if ($url === '') {
-            return null;
-        }
-
-        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-            return $url;
+        if (str_starts_with($relative, 'http://') || str_starts_with($relative, 'https://')) {
+            return $relative;
         }
 
         $origin = rtrim((string) config('app.url'), '/');
         if ($origin === '') {
-            return str_starts_with($url, '/') ? $url : '/'.$url;
+            return $relative;
         }
 
-        return $origin.(str_starts_with($url, '/') ? $url : '/'.$url);
+        return $origin.$relative;
     }
 
     public function exists(?string $path): bool

@@ -46,7 +46,9 @@ class ExpVendedorPresentationDeckTest extends TestCase
         $this->assertStringContainsString('goTo', $js);
         $this->assertStringContainsString('openDetails', $js);
         $this->assertStringContainsString('contractCurrent', $js);
-        $this->assertStringContainsString('resolveMediaUrl', $js);
+        $this->assertStringContainsString('function publicStoragePath', $js);
+        $this->assertStringContainsString('/storage/${path}', $js);
+        $this->assertStringNotContainsString('return `${origin}/${raw}`', $js);
         $this->assertStringContainsString('EXPANDOR_WEB_ORIGIN', $js);
         $this->assertStringContainsString("addEventListener('error'", $js);
         $this->assertStringContainsString('[EXP ProductDeck] image', $js);
@@ -191,12 +193,6 @@ class ExpVendedorPresentationDeckTest extends TestCase
     {
         $media = app(\App\Domains\Media\Services\MediaUploadService::class);
 
-        config(['app.url' => 'http://localhost']);
-        $this->assertSame(
-            'http://localhost/storage/companies/1/products/a.webp',
-            $media->toAbsolutePublicUrl('/storage/companies/1/products/a.webp')
-        );
-
         config(['app.url' => 'https://expandor.unicanetwork.com.br']);
         $this->assertSame(
             'https://cdn.example/x.webp',
@@ -206,7 +202,68 @@ class ExpVendedorPresentationDeckTest extends TestCase
             'https://expandor.unicanetwork.com.br/storage/companies/9/products/a.webp',
             $media->toAbsolutePublicUrl('/storage/companies/9/products/a.webp')
         );
+        $this->assertSame(
+            'https://expandor.unicanetwork.com.br/storage/companies/3/products/thumbs/test.webp',
+            $media->toAbsolutePublicUrl('companies/3/products/thumbs/test.webp')
+        );
+        $this->assertSame(
+            'https://expandor.unicanetwork.com.br/storage/companies/3/products/thumbs/test.webp',
+            $media->toAbsolutePublicUrl('storage/companies/3/products/thumbs/test.webp')
+        );
+        $this->assertSame(
+            '/storage/companies/3/products/thumbs/test.webp',
+            $media->publicRelativePath('companies/3/products/thumbs/test.webp')
+        );
+        $this->assertSame(
+            '/storage/companies/3/products/thumbs/test.webp',
+            $media->publicRelativePath('/storage/companies/3/products/thumbs/test.webp')
+        );
+        $this->assertStringNotContainsString('/storage/storage/', (string) $media->toAbsolutePublicUrl('/storage/companies/1/a.webp'));
         $this->assertNull($media->toAbsolutePublicUrl(null));
         $this->assertNull($media->toAbsolutePublicUrl(''));
+    }
+
+    public function test_products_api_maps_stored_thumb_path_to_public_storage_url(): void
+    {
+        config(['app.url' => 'https://expandor.unicanetwork.com.br']);
+
+        $company = $this->makeCompanyWithPlan('Empresa Thumb Path');
+        $seller = $this->makeUser($company, Role::SELLER, [
+            'email' => 'seller-thumb-path@exp.test',
+            'password' => 'password',
+        ]);
+        Product::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Plano só thumb',
+            'status' => Product::STATUS_ACTIVE,
+            'image' => null,
+            'image_thumb' => 'companies/3/products/thumbs/test.webp',
+        ]);
+
+        $device = '22222222-2222-4222-8222-000000000044';
+        $token = $this->postJson('/api/mobile/v1/login', [
+            'email' => $seller->email,
+            'password' => 'password',
+            'device_id' => $device,
+            'device_name' => 'Android',
+            'platform' => 'android',
+            'app_version' => '8.2.34',
+        ])->assertOk()->json('data.token');
+
+        $this->app['auth']->forgetGuards();
+        $this->flushSession();
+
+        $row = collect($this->withHeaders([
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+            'X-Device-Id' => $device,
+            'X-App-Version' => '8.2.34',
+        ])->getJson('/api/mobile/v1/products')->assertOk()->json('data'))
+            ->firstWhere('name', 'Plano só thumb');
+
+        $this->assertSame(
+            'https://expandor.unicanetwork.com.br/storage/companies/3/products/thumbs/test.webp',
+            $row['image']
+        );
     }
 }

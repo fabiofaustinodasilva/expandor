@@ -181,7 +181,12 @@ class Product extends Model
     {
         $media = app(\App\Domains\Media\Services\MediaUploadService::class);
 
-        return $media->toAbsolutePublicUrl($this->imageOriginalUrl() ?: $this->imageUrl());
+        return $media->toAbsolutePublicUrl(
+            $this->imageOriginalUrl()
+            ?: $this->imageUrl()
+            ?: $this->image
+            ?: $this->image_thumb
+        );
     }
 
     /**

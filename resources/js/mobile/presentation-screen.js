@@ -46,24 +46,44 @@ function mediaOrigin() {
     return '';
 }
 
+function publicStoragePath(raw) {
+    const value = String(raw || '').trim().replace(/\\/g, '/');
+    if (!value) {
+        return '';
+    }
+    if (/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) {
+        return value;
+    }
+
+    let path = value.replace(/^\/+/, '');
+    if (path.startsWith('storage/')) {
+        path = path.slice('storage/'.length).replace(/^\/+/, '');
+    }
+    if (/^(companies|platform|brands|users)\//.test(path)) {
+        return `/storage/${path}`;
+    }
+    if (value.startsWith('/')) {
+        return value.startsWith('/storage/') ? value : `/${path}`;
+    }
+
+    return `/${path}`;
+}
+
 function resolveMediaUrl(url) {
     if (!url) {
         return '';
     }
-    const raw = String(url).trim();
-    if (/^https?:\/\//i.test(raw) || raw.startsWith('data:') || raw.startsWith('blob:')) {
-        return raw;
+    const publicPath = publicStoragePath(url);
+    if (/^https?:\/\//i.test(publicPath) || publicPath.startsWith('data:') || publicPath.startsWith('blob:')) {
+        return publicPath;
     }
 
     const origin = mediaOrigin();
-    if (!origin) {
+    if (!origin || !publicPath) {
         return '';
     }
-    if (raw.startsWith('/')) {
-        return origin + raw;
-    }
 
-    return `${origin}/${raw}`;
+    return origin + publicPath;
 }
 
 function logDeckImage(level, extra) {
@@ -418,4 +438,5 @@ export const PresentationScreen = {
 if (typeof window !== 'undefined') {
     window.ExpandorPresentationScreen = PresentationScreen;
     window.ExpandorPresentationScreen.resolveMediaUrl = resolveMediaUrl;
+    window.ExpandorPresentationScreen.publicStoragePath = publicStoragePath;
 }
