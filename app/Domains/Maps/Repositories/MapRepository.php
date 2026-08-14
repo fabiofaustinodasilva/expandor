@@ -154,7 +154,10 @@ class MapRepository
             $addressQuery->where('city_id', $campaign->city_id);
 
             if ($sectorIds !== []) {
-                $addressQuery->whereIn('sector_id', $sectorIds);
+                $addressQuery->where(function (Builder $sectorQuery) use ($sectorIds): void {
+                    $sectorQuery->whereIn('sector_id', $sectorIds)
+                        ->orWhereNull('sector_id');
+                });
             }
         });
     }

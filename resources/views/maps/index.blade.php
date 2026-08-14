@@ -901,8 +901,8 @@
 
 @push('styles')
 <style>
-    .op-main { height: 100vh; }
-    @media (max-width: 900px) { .op-main { height: calc(100dvh - 74px); } }
+    body.map-fullscreen .op-main { height: 100vh; }
+    @media (max-width: 900px) { body.map-fullscreen .op-main { height: calc(100dvh - 74px); } }
     .leaflet-container { background: #0b1220; font: inherit; }
     /* House pins must remain clickable above basemap overlays (GoogleMutant / canvas). */
     .leaflet-pane.leaflet-marker-pane {

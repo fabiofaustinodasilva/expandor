@@ -972,8 +972,8 @@ html.client-nav-lock body {
     box-sizing: border-box;
 }
 
-.op-shell,
-.shell {
+body.map-fullscreen .op-shell,
+body.map-fullscreen .shell {
     overflow-x: clip;
 }
 

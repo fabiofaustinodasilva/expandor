@@ -27,6 +27,18 @@
             background: var(--bg);
             color: var(--text-on-bg);
             overflow: {{ $isMap ? 'hidden' : 'auto' }};
+            display: block;
+            padding: 0;
+            place-items: unset;
+        }
+        body:not(.map-fullscreen) .op-main {
+            height: auto;
+            min-height: 0;
+            overflow: visible;
+        }
+        body:not(.map-fullscreen) .op-page {
+            height: auto;
+            overflow: visible;
         }
         .op-shell { display: grid; grid-template-columns: 72px minmax(0, 1fr); min-height: 100vh; }
         .op-rail {

@@ -18,6 +18,18 @@ class OperationalLayoutWidthRegressionTest extends TestCase
         $this->assertStringContainsString('max-width: none', $layout);
         $this->assertStringContainsString('grid-template-columns: 72px minmax(0, 1fr)', $layout);
         $this->assertStringContainsString('op-page op-content-wide', $layout);
+        $this->assertStringContainsString('body:not(.map-fullscreen) .op-main', $layout);
+        $this->assertStringContainsString('body:not(.map-fullscreen) .op-page', $layout);
+        $this->assertStringContainsString('body.map-fullscreen .op-shell', $layout);
+        $this->assertStringContainsString('body.map-fullscreen .op-main', $layout);
+
+        $shellCss = (string) file_get_contents(resource_path('css/exp-vendedor-shell.css'));
+        $this->assertStringContainsString('body:not(.client-ui):not(.seller-app-mode)', $shellCss);
+        $this->assertDoesNotMatchRegularExpression(
+            '/^body\s*\{\s*display:\s*grid/m',
+            $shellCss,
+            'EXP Vendedor body grid must not apply to operational web pages',
+        );
         $this->assertStringContainsString('filemtime($clientUiCss)', $layout);
         $this->assertStringContainsString('?v={{ $clientUiV }}', $layout);
 
@@ -58,9 +70,10 @@ class OperationalLayoutWidthRegressionTest extends TestCase
         $this->assertStringContainsString('id="map-page"', $map);
         $this->assertStringContainsString('id="operational-map"', $map);
         $this->assertStringContainsString('absolute inset-0', $map);
-        $this->assertStringContainsString('.op-main { height: 100vh; }', $map);
+        $this->assertStringContainsString('body.map-fullscreen .op-main { height: 100vh; }', $map);
 
-        $this->assertStringContainsString('.client-ui .op-content-wide', $css);
+        $this->assertStringContainsString('body.map-fullscreen .op-shell', $css);
+        $this->assertStringContainsString('overflow-x: clip', $css);
         $this->assertStringContainsString('max-width: none', $css);
     }
 
@@ -80,6 +93,8 @@ class OperationalLayoutWidthRegressionTest extends TestCase
         $js = (string) file_get_contents(public_path('js/operational-map.js'));
 
         $this->assertStringContainsString("layer.on('click'", $js);
+        $this->assertStringContainsString('[SalePropertyTrace]', $js);
+        $this->assertStringContainsString('function upsertCachedMarker', $js);
         $this->assertStringContainsString('openDrawer(marker)', $js);
         $this->assertStringContainsString('function openDrawer', $js);
         $this->assertStringContainsString('markerClusterGroup', $js);

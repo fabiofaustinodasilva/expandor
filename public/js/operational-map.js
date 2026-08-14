@@ -365,6 +365,48 @@
         return match ? decodeURIComponent(match[1]) : '';
     }
 
+    function salePropertyTrace(step, detail) {
+        try { console.info('[SalePropertyTrace]', step, detail); } catch (_) { /* optional */ }
+    }
+
+    function pinColorForStatus(status) {
+        if (status === 'installation_requested' || status === 'customer') return '#22c55e';
+        if (status === 'interested') return '#3b82f6';
+        if (status === 'return_later') return '#f97316';
+        if (status === 'no_interest') return '#64748b';
+        if (status === 'new') return '#ef4444';
+        return '#9ca3af';
+    }
+
+    function upsertCachedMarker(partial) {
+        const id = Number(partial.property_id);
+        if (!id) return;
+        const idx = markersCache.findIndex((m) => Number(m.property_id) === id);
+        const next = {
+            ...(idx >= 0 ? markersCache[idx] : {}),
+            ...partial,
+            property_id: id,
+            color: partial.color || pinColorForStatus(partial.status),
+            commercial_group: partial.commercial_group
+                || ((partial.status === 'installation_requested' || partial.status === 'customer')
+                    ? 'customer'
+                    : (partial.commercial_group || 'new')),
+        };
+        if (idx >= 0) {
+            markersCache[idx] = next;
+        } else {
+            markersCache.push(next);
+        }
+        salePropertyTrace('reload-marker', {
+            property_id: id,
+            included: true,
+            lat: next.latitude,
+            lng: next.longitude,
+            status: next.status,
+        });
+        renderMarkers(markersCache, { fit: false });
+    }
+
     function toast(message, type = 'success') {
         if (!toastEl) return;
         toastEl.textContent = message;
@@ -2368,8 +2410,14 @@
             }
         }
 
-        submitBtn.disabled = true;
-        visitError.classList.add('hidden');
+        if (selectedMarker) {
+            salePropertyTrace('before-sale', {
+                property_id: selectedMarker.property_id,
+                lat: selectedMarker.latitude,
+                lng: selectedMarker.longitude,
+                status: selectedMarker.status,
+            });
+        }
 
         const payload = {
             property_id: propertyId,
@@ -2387,10 +2435,6 @@
         if (selectedMarker) {
             payload.latitude = selectedMarker.latitude;
             payload.longitude = selectedMarker.longitude;
-        }
-        if (sellerGps) {
-            payload.latitude = sellerGps.latitude;
-            payload.longitude = sellerGps.longitude;
         }
 
         const body = new FormData();
@@ -2451,6 +2495,28 @@
                 openPostVisitModal();
             }
             await loadMarkers({ fit: false, useBbox: true });
+            if (propertyId) {
+                const fromApi = markersCache.find((m) => Number(m.property_id) === Number(propertyId));
+                salePropertyTrace('after-sale', {
+                    property_id: Number(propertyId),
+                    lat: fromApi?.latitude ?? selectedMarker?.latitude ?? null,
+                    lng: fromApi?.longitude ?? selectedMarker?.longitude ?? null,
+                    status: fromApi?.status ?? result?.data?.status ?? status,
+                });
+                salePropertyTrace('reload-marker', {
+                    property_id: Number(propertyId),
+                    included: Boolean(fromApi),
+                });
+                if (!fromApi && selectedMarker && status === 'installation_requested') {
+                    upsertCachedMarker({
+                        ...selectedMarker,
+                        property_id: Number(propertyId),
+                        status: result?.data?.status || 'installation_requested',
+                        status_label: result?.data?.status_label,
+                        color: pinColorForStatus(result?.data?.status || 'installation_requested'),
+                    });
+                }
+            }
 
             bumpDayMetric('visits');
             if (status === 'interested') bumpDayMetric('interested');
@@ -2959,6 +3025,7 @@
 
         const payload = {
             city_id: document.getElementById('point-city-id').value,
+            sector_id: document.getElementById('point-sector-id')?.value || sectorSelect?.value || '',
             street: document.getElementById('point-street').value.trim(),
             number: document.getElementById('point-number').value,
             latitude: document.getElementById('point-latitude').value,
@@ -3011,6 +3078,9 @@
             submitBtn.disabled = false;
             pointSubmitting = false;
             return;
+        }
+        if (!payload.sector_id) {
+            delete payload.sector_id;
         }
         if (!payload.city_id && citySelect.value) {
             payload.city_id = citySelect.value;
@@ -3099,10 +3169,27 @@
                     address: result.data.address,
                     resident_name: result.data.resident_name,
                     resident_phone: result.data.resident_phone,
-                    color: '#f97316',
+                    color: pinColorForStatus(result.data.status),
+                    commercial_group: (result.data.status === 'installation_requested' || result.data.status === 'customer')
+                        ? 'customer'
+                        : undefined,
                     location_kind: lastGpsAccuracy != null && lastGpsAccuracy > 50 ? 'low_accuracy' : 'gps',
                     updated_at: nowLabel(),
                 };
+                salePropertyTrace('after-sale', {
+                    property_id: result.data.property_id,
+                    lat: result.data.latitude,
+                    lng: result.data.longitude,
+                    status: result.data.status,
+                });
+                const included = markersCache.some((m) => Number(m.property_id) === Number(result.data.property_id));
+                salePropertyTrace('reload-marker', {
+                    property_id: result.data.property_id,
+                    included,
+                });
+                if (!included) {
+                    upsertCachedMarker(created);
+                }
                 if (mode === 'create') {
                     if (useFirstApproach) {
                         visitedInSession.add(Number(result.data.property_id));

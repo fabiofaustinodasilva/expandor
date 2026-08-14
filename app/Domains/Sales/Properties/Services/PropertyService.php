@@ -139,11 +139,17 @@ class PropertyService
             $resolvedStatus = $newStatus ?? $oldStatus;
 
             if ($newStatus !== null && $oldStatus !== $newStatus) {
-                $property->update([
+                $coords = [
                     'status' => $newStatus,
-                    'latitude' => $latitude ?? $property->latitude,
-                    'longitude' => $longitude ?? $property->longitude,
-                ]);
+                ];
+                // Visit GPS must not move an already geolocated pin.
+                if ($property->latitude === null && $latitude !== null && $latitude !== '') {
+                    $coords['latitude'] = $latitude;
+                }
+                if ($property->longitude === null && $longitude !== null && $longitude !== '') {
+                    $coords['longitude'] = $longitude;
+                }
+                $property->update($coords);
                 $property->refresh();
             }
 

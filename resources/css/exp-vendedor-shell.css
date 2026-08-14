@@ -25,7 +25,12 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html, body {
+/*
+ * This file is bundled into seller-app.css and loaded on operational WEB pages.
+ * Global body { display:grid; place-items:center } must NEVER apply to .client-ui
+ * (Agenda / Clientes / Resultado / Comissão). Scope to Capacitor shell only.
+ */
+body:not(.client-ui) {
     margin: 0;
     min-height: 100%;
     background: var(--bg);
@@ -34,7 +39,7 @@ html, body {
     -webkit-font-smoothing: antialiased;
 }
 
-body {
+body:not(.client-ui):not(.seller-app-mode) {
     display: grid;
     place-items: center;
     padding: calc(1rem + env(safe-area-inset-top, 0px))

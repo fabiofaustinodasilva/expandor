@@ -127,6 +127,47 @@ class CompleteSaleOfficeHandoffTest extends TestCase
             ->assertJsonValidationErrors('due_day');
     }
 
+    public function test_sold_property_stays_on_map_with_same_coordinates(): void
+    {
+        [$seller, $campaign, $property, $product] = $this->seedSaleContext();
+        $beforeLat = (string) $property->latitude;
+        $beforeLng = (string) $property->longitude;
+        $propertyId = (int) $property->id;
+
+        $before = collect($this->actingAs($seller)->getJson('/api/v1/maps/markers')->assertOk()->json('data.markers'));
+        $this->assertTrue($before->contains(fn ($m) => (int) $m['property_id'] === $propertyId));
+
+        $this->actingAs($seller)->postJson(route('map.visits.store', $campaign), $this->salePayload($property, $product, [
+            'due_day' => 15,
+            'latitude' => -10.1111111,
+            'longitude' => -50.2222222,
+            'install_city' => 'Outra Cidade Que Nao Deve Mover Pin',
+        ]))->assertCreated()
+            ->assertJsonPath('data.office_handoff.sale_id', fn ($id) => (int) $id > 0);
+
+        $property->refresh();
+        $this->assertNotNull($property->id);
+        $this->assertSame($propertyId, (int) $property->id);
+        $this->assertEqualsWithDelta((float) $beforeLat, (float) $property->latitude, 0.0000001);
+        $this->assertEqualsWithDelta((float) $beforeLng, (float) $property->longitude, 0.0000001);
+        $this->assertSame(\App\Domains\Sales\Properties\Enums\PropertyStatus::INSTALLATION_REQUESTED, $property->status);
+        $this->assertNull($property->deleted_at ?? null);
+
+        $this->assertDatabaseHas('sales', ['visit_id' => \App\Domains\Visits\Models\Visit::query()->where('property_id', $propertyId)->latest('id')->value('id')]);
+        $this->assertDatabaseHas('sales_commissions', [
+            'visit_id' => \App\Domains\Visits\Models\Visit::query()->where('property_id', $propertyId)->latest('id')->value('id'),
+        ]);
+
+        $after = collect($this->actingAs($seller)->getJson('/api/v1/maps/markers')->assertOk()->json('data.markers'));
+        $hit = $after->first(fn ($m) => (int) $m['property_id'] === $propertyId);
+        $this->assertNotNull($hit, 'markers API must still include the sold property');
+        $this->assertSame('installation_requested', $hit['status']);
+        $this->assertSame(\App\Domains\Maps\Enums\MapMarkerColor::GREEN->value, $hit['color']);
+        $this->assertSame('customer', $hit['commercial_group']);
+        $this->assertEqualsWithDelta((float) $beforeLat, (float) $hit['latitude'], 0.0000001);
+        $this->assertEqualsWithDelta((float) $beforeLng, (float) $hit['longitude'], 0.0000001);
+    }
+
     public function test_products_and_prices_come_from_backend_catalog(): void
     {
         [$seller, $campaign, $property, $product] = $this->seedSaleContext();

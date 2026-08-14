@@ -14,7 +14,6 @@ use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Sales\Properties\Services\PropertyService;
 use App\Domains\Sales\Residents\Services\ResidentService;
 use App\Domains\Sales\Support\SaleDueDays;
-use App\Domains\Sales\Territory\Models\City;
 use App\Domains\Security\Services\SecurityService;
 use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Enums\VisitStatus;
@@ -134,6 +133,13 @@ class VisitService
             );
 
             if ($status === VisitStatus::INSTALLATION_REQUESTED) {
+                \Illuminate\Support\Facades\Log::info('[SalePropertyTrace] before-sale', [
+                    'property_id' => $property->id,
+                    'lat' => $property->latitude,
+                    'lng' => $property->longitude,
+                    'status' => $property->status?->value ?? (string) $property->getAttribute('status'),
+                ]);
+
                 $this->applyInstallationAddress($property, $data);
 
                 $phone = $data['customer_phone'] ?? $data['contact_phone'] ?? null;
@@ -194,6 +200,14 @@ class VisitService
 
                     $this->generateCommission->executeForSaleItem($visit, $item, $lineProduct, $user);
                 }
+
+                $property->refresh();
+                \Illuminate\Support\Facades\Log::info('[SalePropertyTrace] after-sale', [
+                    'property_id' => $property->id,
+                    'lat' => $property->latitude,
+                    'lng' => $property->longitude,
+                    'status' => $property->status?->value ?? (string) $property->getAttribute('status'),
+                ]);
             }
 
             $this->security->recordAudit(
@@ -461,7 +475,6 @@ class VisitService
             $neighborhood = trim((string) $data['neighborhood']);
         }
         $reference = isset($data['install_reference']) ? trim((string) $data['install_reference']) : '';
-        $cityName = isset($data['install_city']) ? trim((string) $data['install_city']) : '';
 
         $updates = [];
         if ($street !== '') {
@@ -476,15 +489,8 @@ class VisitService
         if ($reference !== '') {
             $updates['reference'] = $reference;
         }
-        if ($cityName !== '') {
-            $city = City::query()
-                ->where('company_id', $property->company_id)
-                ->whereRaw('LOWER(name) = ?', [mb_strtolower($cityName)])
-                ->first();
-            if ($city !== null) {
-                $updates['city_id'] = $city->id;
-            }
-        }
+        // install_city is captured for handoff/display only.
+        // Never retarget city_id — that would drop the pin from campaign marker queries.
 
         if ($updates !== []) {
             $address->update($updates);
