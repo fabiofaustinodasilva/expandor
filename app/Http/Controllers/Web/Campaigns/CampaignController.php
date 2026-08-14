@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web\Campaigns;
 
 use App\Domains\Campaigns\Actions\ActivateCampaignAction;
+use App\Domains\Campaigns\Actions\DeleteCampaignAction;
 use App\Domains\Campaigns\Actions\FinishCampaignAction;
 use App\Domains\Campaigns\Actions\PauseCampaignAction;
 use App\Domains\Campaigns\Enums\CampaignStatus;
@@ -167,8 +168,12 @@ class CampaignController extends Controller
 
         $campaign->load(['users:id', 'sectors', 'city.geoMunicipality.state']);
 
+        $hasHistory = $campaign->hasOperationalHistory();
+
         return view('campaigns.edit', array_merge($this->formData($campaign), [
             'campaign' => $campaign,
+            'hasOperationalHistory' => $hasHistory,
+            'canDeleteSafely' => ! $hasHistory,
         ]));
     }
 
@@ -214,6 +219,17 @@ class CampaignController extends Controller
         return redirect()
             ->route('campaigns.index')
             ->with('success', 'Campanha finalizada.');
+    }
+
+    public function destroy(Campaign $campaign, DeleteCampaignAction $action): RedirectResponse
+    {
+        $this->authorize('delete', $campaign);
+
+        $action->execute($campaign);
+
+        return redirect()
+            ->route('campaigns.index')
+            ->with('success', 'Campanha excluída.');
     }
 
     /**

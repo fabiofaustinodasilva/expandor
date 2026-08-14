@@ -388,6 +388,7 @@ Route::middleware([
     Route::post('/campaigns/{campaign}/activate', [CampaignController::class, 'activate'])->name('campaigns.activate');
     Route::post('/campaigns/{campaign}/pause', [CampaignController::class, 'pause'])->name('campaigns.pause');
     Route::post('/campaigns/{campaign}/finish', [CampaignController::class, 'finish'])->name('campaigns.finish');
+    Route::delete('/campaigns/{campaign}', [CampaignController::class, 'destroy'])->name('campaigns.destroy');
 
     Route::get('/campaigns/{campaign}/visits', [VisitController::class, 'index'])->name('campaigns.visits.index');
     Route::get('/campaigns/{campaign}/visits/create', [VisitController::class, 'create'])->name('campaigns.visits.create');

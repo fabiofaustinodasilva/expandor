@@ -83,6 +83,21 @@ class CampaignService
         return $this->changeStatus($campaign, CampaignStatus::FINISHED);
     }
 
+    public function delete(Campaign $campaign): void
+    {
+        if ($campaign->hasOperationalHistory()) {
+            throw ValidationException::withMessages([
+                'campaign' => 'Esta campanha possui histórico de operação e não pode ser excluída. Finalize a campanha para impedir novas operações sem perder os dados existentes.',
+            ]);
+        }
+
+        DB::transaction(function () use ($campaign) {
+            $campaign->users()->detach();
+            $campaign->sectors()->detach();
+            $campaign->delete();
+        });
+    }
+
     public function changeStatus(Campaign $campaign, CampaignStatus $status): Campaign
     {
         if ($campaign->status === $status) {

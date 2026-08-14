@@ -5,6 +5,8 @@ namespace App\Domains\Campaigns\Models;
 use App\Domains\Campaigns\Enums\CampaignStatus;
 use App\Domains\Company\Models\Company;
 use App\Domains\Company\Models\User;
+use App\Domains\CRM\Models\Lead;
+use App\Domains\CRM\Models\Opportunity;
 use App\Domains\Sales\Territory\Models\City;
 use App\Domains\Sales\Territory\Models\Sector;
 use App\Tenancy\Concerns\BelongsToTenant;
@@ -76,5 +78,33 @@ class Campaign extends Model
     public function visits(): HasMany
     {
         return $this->hasMany(Visit::class);
+    }
+
+    public function leads(): HasMany
+    {
+        return $this->hasMany(Lead::class);
+    }
+
+    public function opportunities(): HasMany
+    {
+        return $this->hasMany(Opportunity::class);
+    }
+
+    /**
+     * Histórico operacional que impede exclusão física (visitas em cascade apagariam
+     * follow-ups, vendas e comissões).
+     */
+    public function hasOperationalHistory(): bool
+    {
+        if ($this->visits()->exists()) {
+            return true;
+        }
+
+        return $this->leads()->exists() || $this->opportunities()->exists();
+    }
+
+    public function canBeDeletedSafely(): bool
+    {
+        return ! $this->hasOperationalHistory();
     }
 }

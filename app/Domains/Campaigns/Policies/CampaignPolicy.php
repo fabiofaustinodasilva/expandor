@@ -43,4 +43,9 @@ class CampaignPolicy
     {
         return $this->update($user, $campaign);
     }
+
+    public function delete(User $user, Campaign $campaign): bool
+    {
+        return $this->update($user, $campaign);
+    }
 }
