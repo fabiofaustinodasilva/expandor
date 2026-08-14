@@ -72,8 +72,14 @@ export async function copyHandoffMessage(handoff, api) {
 }
 
 export async function openOfficeWhatsApp(handoff, api) {
-    if (!handoff?.whatsapp_enabled || !handoff?.whatsapp_url) {
-        toast('WhatsApp do escritório não está habilitado.', 'error');
+    const canSend = Boolean(handoff?.can_send ?? (handoff?.whatsapp_enabled && handoff?.whatsapp_url));
+    if (!canSend) {
+        toast(
+            handoff?.whatsapp_configured === false
+                ? 'WhatsApp do escritório não configurado.'
+                : 'WhatsApp do escritório não está habilitado.',
+            'error',
+        );
 
         return;
     }

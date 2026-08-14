@@ -30,6 +30,7 @@ final readonly class SaleHandoffData
         public string $message,
         public bool $whatsappEnabled,
         public ?string $whatsappUrl,
+        public bool $whatsappConfigured = false,
     ) {}
 
     /**
@@ -37,6 +38,8 @@ final readonly class SaleHandoffData
      */
     public function toArray(): array
     {
+        $canSend = $this->whatsappEnabled && filled($this->whatsappUrl);
+
         return [
             'sale_id' => $this->saleId,
             'sale_label' => 'Venda Expandor #'.$this->saleId,
@@ -51,6 +54,10 @@ final readonly class SaleHandoffData
             'message' => $this->message,
             'whatsapp_enabled' => $this->whatsappEnabled,
             'whatsapp_url' => $this->whatsappUrl,
+            'whatsapp_configured' => $this->whatsappConfigured,
+            'can_send' => $canSend,
+            'copy_available' => $this->message !== '',
+            'view_available' => $this->message !== '',
             'maps_url' => $this->mapsUrl(),
         ];
     }

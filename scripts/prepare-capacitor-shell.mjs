@@ -361,10 +361,11 @@ const html = `<!DOCTYPE html>
                 <button class="btn btn-accent btn-block" id="point-register-visit" type="button">Registrar visita</button>
                 <button class="btn btn-ghost btn-block" id="point-sheet-close" type="button">Fechar</button>
             </div>
-            <div class="sale-section sale-section--review" id="point-handoff-block" hidden>
+            <div class="sale-section sale-section--review sale-success-actions" id="point-handoff-block" hidden>
                 <p class="sale-section__title">Encaminhamento ao escritório</p>
-                <button type="button" class="btn btn-primary btn-block" id="point-handoff-whatsapp">Enviar no WhatsApp</button>
-                <button type="button" class="btn btn-ghost btn-block" id="point-handoff-copy">Copiar mensagem</button>
+                <p class="handoff-hint" id="point-handoff-hint" hidden></p>
+                <button type="button" class="btn btn-success btn-block" id="point-handoff-whatsapp">Enviar no WhatsApp</button>
+                <button type="button" class="btn btn-info btn-block" id="point-handoff-copy">Copiar mensagem</button>
                 <button type="button" class="btn btn-ghost btn-block" id="point-handoff-view">Ver mensagem</button>
             </div>
         </div>
@@ -563,9 +564,10 @@ const html = `<!DOCTYPE html>
                 <p class="card__meta" id="sale-success-commission"></p>
                 <p class="card__meta" id="sale-success-status"></p>
             </div>
-            <div class="sheet-body">
-                <button type="button" class="btn btn-primary btn-block" id="sale-success-whatsapp">Enviar para o escritório</button>
-                <button type="button" class="btn btn-ghost btn-block" id="sale-success-copy">Copiar mensagem</button>
+            <div class="sheet-body sale-success-actions">
+                <p class="handoff-hint" id="sale-success-handoff-hint" hidden></p>
+                <button type="button" class="btn btn-success btn-block" id="sale-success-whatsapp">Enviar para o escritório</button>
+                <button type="button" class="btn btn-info btn-block" id="sale-success-copy">Copiar mensagem</button>
                 <button type="button" class="btn btn-ghost btn-block" id="sale-success-view">Ver mensagem</button>
             </div>
             <div class="sheet-footer">
@@ -583,8 +585,8 @@ const html = `<!DOCTYPE html>
             </div>
             <div class="sheet-footer">
                 <div class="sheet-actions" style="grid-template-columns:1fr 1fr 1fr">
-                    <button type="button" class="btn btn-ghost" id="handoff-copy">Copiar</button>
-                    <button type="button" class="btn btn-primary" id="handoff-whatsapp">Enviar no WhatsApp</button>
+                    <button type="button" class="btn btn-info" id="handoff-copy">Copiar</button>
+                    <button type="button" class="btn btn-success" id="handoff-whatsapp">Enviar no WhatsApp</button>
                     <button type="button" class="btn btn-ghost" id="handoff-close">Fechar</button>
                 </div>
             </div>

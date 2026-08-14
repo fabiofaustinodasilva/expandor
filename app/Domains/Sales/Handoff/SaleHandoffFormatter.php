@@ -47,6 +47,7 @@ class SaleHandoffFormatter
         $commissionStatus = $this->commissionStatusLabel($commissions);
 
         $office = $company ? $this->officeWhatsApp->forCompany($company) : [
+            'enabled_flag' => false,
             'enabled' => false,
             'number' => '',
             'digits' => '',
@@ -78,6 +79,7 @@ class SaleHandoffFormatter
             message: '',
             whatsappEnabled: (bool) ($office['enabled'] ?? false),
             whatsappUrl: null,
+            whatsappConfigured: ($office['digits'] ?? '') !== '',
         );
 
         $message = $this->composeMessage($data);
@@ -109,6 +111,7 @@ class SaleHandoffFormatter
             message: $message,
             whatsappEnabled: $data->whatsappEnabled,
             whatsappUrl: $whatsappUrl,
+            whatsappConfigured: $data->whatsappConfigured,
         );
     }
 

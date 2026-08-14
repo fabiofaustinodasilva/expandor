@@ -46,6 +46,7 @@ class ExpVendedorCompleteSaleHandoffTest extends TestCase
             ->assertJsonStructure([
                 'data' => [
                     'sale_fields' => ['required', 'labels', 'due_days'],
+                    'office_handoff' => ['enabled', 'configured', 'whatsapp_enabled'],
                     'campaign_context' => ['campaigns', 'has_campaign', 'active_campaign_id', 'active_city_id', 'active_city_name'],
                 ],
             ]);
@@ -138,6 +139,10 @@ class ExpVendedorCompleteSaleHandoffTest extends TestCase
         $response->assertCreated()
             ->assertJsonPath('data.office_handoff.seller_name', $ctx['seller']->name)
             ->assertJsonPath('data.office_handoff.whatsapp_enabled', true)
+            ->assertJsonPath('data.office_handoff.can_send', true)
+            ->assertJsonPath('data.office_handoff.whatsapp_configured', true)
+            ->assertJsonPath('data.office_handoff.copy_available', true)
+            ->assertJsonPath('data.office_handoff.view_available', true)
             ->assertJsonPath('data.status', VisitStatus::INSTALLATION_REQUESTED->value);
 
         $saleId = (int) $response->json('data.office_handoff.sale_id');
@@ -253,7 +258,33 @@ class ExpVendedorCompleteSaleHandoffTest extends TestCase
         app(OfficeSalesWhatsAppSettings::class)->save($ctx['seller']->company, '64999998888', false);
         $disabled = $this->mobileGet("/api/mobile/v1/sales/{$saleId}/handoff", $ctx['token'], $ctx['device'])->json('data');
         $this->assertFalse($disabled['whatsapp_enabled']);
+        $this->assertFalse($disabled['can_send']);
+        $this->assertTrue($disabled['whatsapp_configured']);
+        $this->assertTrue($disabled['copy_available']);
+        $this->assertTrue($disabled['view_available']);
         $this->assertNull($disabled['whatsapp_url']);
+    }
+
+    public function test_handoff_without_office_number_keeps_copy_and_explains_send(): void
+    {
+        $ctx = $this->opsContext();
+        $ctx['seller']->company->update(['whatsapp' => null, 'phone' => null]);
+        app(OfficeSalesWhatsAppSettings::class)->save($ctx['seller']->company->fresh(), '', true);
+        $point = $this->makePoint($ctx, -16.7, -51.2, 'Cliente');
+        $created = $this->mobilePostJson("/api/mobile/v1/points/{$point->id}/sales", $ctx['token'], $ctx['device'], $this->completeSalePayload([
+            'campaign_id' => $ctx['campaign']->id,
+        ], $ctx))->assertCreated();
+        $handoff = $created->json('data.office_handoff');
+        $this->assertFalse($handoff['can_send']);
+        $this->assertFalse($handoff['whatsapp_configured']);
+        $this->assertTrue($handoff['copy_available']);
+        $this->assertTrue($handoff['view_available']);
+        $this->assertNull($handoff['whatsapp_url']);
+
+        $boot = $this->mobileGet('/api/mobile/v1/bootstrap', $ctx['token'], $ctx['device'])->assertOk()->json('data.office_handoff');
+        $this->assertFalse($boot['enabled']);
+        $this->assertFalse($boot['configured']);
+        $this->assertTrue($boot['whatsapp_enabled']);
     }
 
     public function test_visit_gps_does_not_overwrite_property_coordinates(): void
@@ -369,6 +400,10 @@ class ExpVendedorCompleteSaleHandoffTest extends TestCase
 
         $this->assertStringContainsString('sale-due-chips', $prepare);
         $this->assertStringContainsString('sale-success-sheet', $prepare);
+        $this->assertStringContainsString('btn-success', $prepare);
+        $this->assertStringContainsString('btn-info', $prepare);
+        $this->assertStringContainsString('Enviar para o escritório', $prepare);
+        $this->assertStringContainsString('sale-success-handoff-hint', $prepare);
         $this->assertStringContainsString('handoff-message-sheet', $prepare);
         $this->assertStringContainsString('point-handoff-block', $prepare);
         $this->assertStringContainsString('Dados do cliente', $prepare);
@@ -378,6 +413,9 @@ class ExpVendedorCompleteSaleHandoffTest extends TestCase
         $this->assertStringContainsString('copyHandoffMessage', $shell);
         $this->assertStringContainsString('showHandoffText', $shell);
         $this->assertStringContainsString('handleSaleSuccess', $shell);
+        $this->assertStringContainsString('canSendOfficeHandoff', $shell);
+        $this->assertStringContainsString('WhatsApp do escritório não configurado.', $shell);
+        $this->assertStringContainsString("debugFlow('saleSuccess'", $shell);
         $this->assertStringContainsString('Confirmando', $shell);
         $this->assertStringContainsString('submitBtn.disabled = true', $shell);
         $this->assertStringContainsString('loadResults()', $shell);
@@ -385,6 +423,10 @@ class ExpVendedorCompleteSaleHandoffTest extends TestCase
         $this->assertStringContainsString('loadClients()', $shell);
         $this->assertStringContainsString('allowGps: status !== \'installation_requested\'', $shell);
         $this->assertStringContainsString('SALE_NETWORK_ERROR', $shell);
+        $css = (string) file_get_contents(resource_path('css/exp-vendedor-shell.css'));
+        $this->assertStringContainsString('.btn-success', $css);
+        $this->assertStringContainsString('.btn-info', $css);
+        $this->assertStringContainsString('min-height: 44px', $css);
         $this->assertStringContainsString('SaleHandoffFormatter', $handoff);
         $this->assertStringContainsString('Plugins?.Clipboard', $handoff);
         $this->assertFileExists(base_path('docs/sprint-exp-vendedor-complete-sale-handoff/AUDIT.md'));

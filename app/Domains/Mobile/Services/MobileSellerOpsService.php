@@ -13,6 +13,7 @@ use App\Domains\Maps\DTOs\MapFiltersDTO;
 use App\Domains\Maps\Services\MapQueryService;
 use App\Domains\Mobile\Support\MobileApiTransformer;
 use App\Domains\Platform\Services\FeatureFlagService;
+use App\Domains\Sales\Handoff\OfficeSalesWhatsAppSettings;
 use App\Domains\Sales\Handoff\SaleHandoffService;
 use App\Domains\Sales\Models\Sale;
 use App\Domains\Sales\Products\Services\ProductCatalogService;
@@ -68,6 +69,7 @@ class MobileSellerOpsService
         protected FeatureFlagService $flags,
         protected FieldOpsPolicyResolver $fieldOps,
         protected SaleHandoffService $handoff,
+        protected OfficeSalesWhatsAppSettings $officeWhatsApp,
     ) {}
 
     /**
@@ -145,6 +147,7 @@ class MobileSellerOpsService
                 'labels' => SaleFieldKeys::labels(),
                 'due_days' => SaleDueDays::ALLOWED,
             ],
+            'office_handoff' => $this->officeHandoffCapability($company),
             'capabilities' => [
                 'gps' => true,
                 'offline' => false,
@@ -153,6 +156,30 @@ class MobileSellerOpsService
                 'presentation' => false,
             ],
             'session' => $this->mobileAuth->sessionPayload($user),
+        ];
+    }
+
+    /**
+     * Capability only — never expose the office WhatsApp number to the shell.
+     *
+     * @return array{enabled: bool, configured: bool, whatsapp_enabled: bool}
+     */
+    protected function officeHandoffCapability($company): array
+    {
+        if (! $company) {
+            return [
+                'enabled' => false,
+                'configured' => false,
+                'whatsapp_enabled' => false,
+            ];
+        }
+
+        $office = $this->officeWhatsApp->forCompany($company);
+
+        return [
+            'enabled' => (bool) $office['enabled'],
+            'configured' => ($office['digits'] ?? '') !== '',
+            'whatsapp_enabled' => (bool) ($office['enabled_flag'] ?? false),
         ];
     }
 

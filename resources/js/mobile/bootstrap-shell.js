@@ -1297,18 +1297,87 @@ function hideReward() {
     }
 }
 
+function canSendOfficeHandoff(handoff) {
+    if (handoff?.can_send != null) {
+        return Boolean(handoff.can_send);
+    }
+
+    return Boolean(handoff?.whatsapp_enabled && handoff?.whatsapp_url);
+}
+
+function handoffUnavailableHint(handoff) {
+    if (canSendOfficeHandoff(handoff)) {
+        return '';
+    }
+    const boot = bootstrap?.data?.office_handoff || {};
+    const configured = handoff?.whatsapp_configured ?? boot.configured;
+    if (configured === false) {
+        return 'WhatsApp do escritório não configurado.';
+    }
+    if ((handoff?.whatsapp_enabled ?? boot.whatsapp_enabled ?? boot.enabled) === false) {
+        return 'WhatsApp do escritório não está habilitado.';
+    }
+
+    return 'WhatsApp do escritório não configurado.';
+}
+
 function paintHandoffButtons(handoff) {
-    const enabled = Boolean(handoff?.whatsapp_enabled && handoff?.whatsapp_url);
+    const canSend = canSendOfficeHandoff(handoff);
     ['sale-success-whatsapp', 'handoff-whatsapp', 'point-handoff-whatsapp'].forEach((id) => {
         const el = $(id);
         if (el) {
-            el.hidden = !enabled;
+            el.hidden = !canSend;
+        }
+    });
+    const hint = handoffUnavailableHint(handoff);
+    ['sale-success-handoff-hint', 'point-handoff-hint'].forEach((id) => {
+        const el = $(id);
+        if (!el) {
+            return;
+        }
+        el.textContent = hint;
+        el.hidden = !hint;
+    });
+    const copyOk = Boolean(handoff?.copy_available ?? handoff?.message);
+    const viewOk = Boolean(handoff?.view_available ?? handoff?.message);
+    ['sale-success-copy', 'point-handoff-copy', 'handoff-copy'].forEach((id) => {
+        const el = $(id);
+        if (el) {
+            el.hidden = !copyOk;
+        }
+    });
+    ['sale-success-view', 'point-handoff-view'].forEach((id) => {
+        const el = $(id);
+        if (el) {
+            el.hidden = !viewOk;
         }
     });
 }
 
-function handleSaleSuccess(data) {
+async function hydrateSaleHandoff(data) {
     currentHandoff = data?.office_handoff || null;
+    const saleId = Number(data?.sale_id || currentHandoff?.sale_id || 0) || null;
+    if (saleId && !currentHandoff?.message) {
+        try {
+            const payload = await mobileApi.saleHandoff(saleId);
+            if (payload?.data) {
+                currentHandoff = payload.data;
+            }
+        } catch {
+            /* keep local payload */
+        }
+    }
+    const boot = bootstrap?.data?.office_handoff || {};
+    debugFlow('saleSuccess', {
+        sale_id: saleId,
+        handoff_available: Boolean(currentHandoff?.message),
+        office_whatsapp_enabled: Boolean(currentHandoff?.whatsapp_enabled ?? boot.whatsapp_enabled ?? boot.enabled),
+        office_whatsapp_configured: Boolean(currentHandoff?.whatsapp_configured ?? boot.configured),
+    });
+}
+
+async function handleSaleSuccess(data) {
+    await hydrateSaleHandoff(data);
     const awarded = data?.commission_awarded;
     if (awarded?.play_reward || awarded?.awarded) {
         playCommissionAudio();
