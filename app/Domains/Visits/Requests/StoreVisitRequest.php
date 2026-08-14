@@ -57,7 +57,11 @@ class StoreVisitRequest extends FormRequest
     {
         $companyId = app(TenantContext::class)->id();
         $isSale = $this->input('status') === VisitStatus::INSTALLATION_REQUESTED->value;
-        $saleRules = app(SaleFieldsPolicyResolver::class)->validationRulesForRequest($isSale, $companyId);
+        $saleRules = app(SaleFieldsPolicyResolver::class)->validationRulesForRequest(
+            $isSale,
+            $companyId,
+            $this->requiresDueDayOnSale(),
+        );
 
         return array_merge([
             'property_id' => [
@@ -91,5 +95,13 @@ class StoreVisitRequest extends FormRequest
         return array_merge([
             'follow_up_at.required' => 'Informe a data do retorno.',
         ], app(SaleFieldsPolicyResolver::class)->validationMessages());
+    }
+
+    /**
+     * Confirmar venda no mapa/agenda web exige vencimento. Mobile legado permanece opcional.
+     */
+    protected function requiresDueDayOnSale(): bool
+    {
+        return true;
     }
 }

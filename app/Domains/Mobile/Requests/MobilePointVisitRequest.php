@@ -45,4 +45,9 @@ class MobilePointVisitRequest extends StoreVisitRequest
             )
         );
     }
+
+    protected function requiresDueDayOnSale(): bool
+    {
+        return false;
+    }
 }

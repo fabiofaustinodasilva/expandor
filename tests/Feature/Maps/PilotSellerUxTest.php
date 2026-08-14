@@ -125,6 +125,7 @@ class PilotSellerUxTest extends TestCase
                 'items' => [['product_id' => $product->id, 'quantity' => 1]],
                 'customer_name' => 'João',
                 'customer_phone' => '11999990000',
+                'due_day' => 10,
                 'notes' => 'Observação da visita',
                 'sale_notes' => 'Observação da venda',
                 'latitude' => -23.5501,

@@ -241,6 +241,7 @@ class Sprint8223CommissionsV2Test extends TestCase
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'customer_name' => 'Cliente',
             'customer_phone' => '11988887777',
+            'due_day' => 15,
             'commission_amount' => 9999,
             'commission_type' => 'percentage',
             'commission_percentage' => 99,

@@ -214,6 +214,7 @@ class Sprint8223CommissionRewardHotfixTest extends TestCase
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'customer_name' => 'Cliente Reward',
             'customer_phone' => '11977776666',
+            'due_day' => 10,
         ]);
     }
 

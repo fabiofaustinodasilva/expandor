@@ -116,6 +116,7 @@ class FirstApproachTest extends TestCase
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'customer_name' => 'Maria Silva',
             'customer_phone' => '11988887777',
+            'due_day' => 10,
             'notes' => 'Observação da visita',
             'sale_notes' => 'Observação da venda',
         ]);

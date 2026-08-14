@@ -77,7 +77,7 @@ class SaleFieldsPolicyResolver
     /**
      * @return array<string, mixed>
      */
-    public function validationRulesForRequest(bool $isSale, ?int $companyId = null): array
+    public function validationRulesForRequest(bool $isSale, ?int $companyId = null, bool $requireDueDay = false): array
     {
         if (! $isSale) {
             return [];
@@ -90,6 +90,10 @@ class SaleFieldsPolicyResolver
             ? ['required']
             : ['nullable'];
 
+        $dueDayRules = $requireDueDay
+            ? ['required', 'integer', Rule::in(SaleDueDays::ALLOWED)]
+            : ['nullable', 'integer', Rule::in(SaleDueDays::ALLOWED)];
+
         return [
             'customer_name' => array_merge($req(SaleFieldKeys::NAME), ['string', 'max:255']),
             'customer_phone' => array_merge($req(SaleFieldKeys::PHONE), ['string', 'max:30']),
@@ -99,7 +103,7 @@ class SaleFieldsPolicyResolver
             'customer_email' => array_merge($req(SaleFieldKeys::EMAIL), ['email', 'max:255']),
             'sale_notes' => array_merge($req(SaleFieldKeys::NOTES), ['string', 'max:5000']),
             'customer_birth_date' => ['nullable', 'date'],
-            'due_day' => ['nullable', 'integer', Rule::in(SaleDueDays::ALLOWED)],
+            'due_day' => $dueDayRules,
             'install_street' => ['nullable', 'string', 'max:255'],
             'install_number' => ['nullable', 'string', 'max:30'],
             'install_neighborhood' => ['nullable', 'string', 'max:255'],
@@ -155,6 +159,7 @@ class SaleFieldsPolicyResolver
             'items.*.quantity.required' => 'Informe a quantidade.',
             'items.*.quantity.min' => 'Quantidade mínima: 1.',
             'sale_notes.required' => 'Informe as '.$labels[SaleFieldKeys::NOTES].'.',
+            'due_day.required' => 'Escolha o dia de vencimento.',
             'due_day.in' => 'Escolha o vencimento: 5, 10, 15, 20, 25 ou 30.',
             'product_id.exists' => 'Produto inválido ou inativo.',
         ];

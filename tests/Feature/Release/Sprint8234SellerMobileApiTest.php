@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Release;
 
+use App\Domains\Campaigns\Enums\CampaignStatus;
 use App\Domains\Campaigns\Models\Campaign;
 use App\Domains\Company\Models\Role;
 use App\Domains\Company\Models\User;
@@ -344,7 +345,8 @@ class Sprint8234SellerMobileApiTest extends TestCase
         $this->assertStringContainsString('nav-clients', $shell);
         $this->assertStringContainsString('nav-results', $shell);
         $this->assertStringContainsString('nav-commissions', $shell);
-        $this->assertStringContainsString('createPoint', $shell);
+        $this->assertStringContainsString('onCreatePoint', $shell);
+        $this->assertStringContainsString('create-point-form', $shell);
         $this->assertStringContainsString('showReward', $shell);
         $this->assertStringContainsString('commission_awarded', $shell);
         $this->assertStringContainsString('400', $shell);
@@ -388,7 +390,9 @@ class Sprint8234SellerMobileApiTest extends TestCase
         $campaign = Campaign::factory()->create([
             'company_id' => $companyId,
             'city_id' => $city->id,
+            'status' => CampaignStatus::ACTIVE,
         ]);
+        $campaign->users()->sync([$seller->id]);
         $campaign->sectors()->attach($sector->id);
         $product = Product::factory()->create([
             'company_id' => $companyId,

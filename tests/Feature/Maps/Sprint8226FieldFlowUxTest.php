@@ -91,8 +91,9 @@ class Sprint8226FieldFlowUxTest extends TestCase
         $html = $this->actingAs($seller)->get(route('map.index'))->assertOk()->getContent();
 
         $this->assertStringContainsString('data-sale-finalize-title="1"', $html);
+        $this->assertStringContainsString('CONFIRMAR VENDA', $html);
         $this->assertStringContainsString('Confirmar venda', $html);
-        $this->assertStringContainsString('Revise os produtos antes de finalizar.', $html);
+        $this->assertStringContainsString('Toque em Confirmar venda no rodapé para gravar.', $html);
         $this->assertStringContainsString('id="visit-sale-finalize"', $html);
         $this->assertStringContainsString('id="point-sale-finalize"', $html);
         $this->assertStringContainsString('sale-cart-add', $html);

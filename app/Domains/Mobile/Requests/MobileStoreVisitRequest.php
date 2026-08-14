@@ -25,7 +25,7 @@ class MobileStoreVisitRequest extends FormRequest
     {
         $companyId = app(TenantContext::class)->id();
         $isSale = $this->input('status') === VisitStatus::INSTALLATION_REQUESTED->value;
-        $saleRules = app(SaleFieldsPolicyResolver::class)->validationRulesForRequest($isSale, $companyId);
+        $saleRules = app(SaleFieldsPolicyResolver::class)->validationRulesForRequest($isSale, $companyId, false);
 
         // Mobile legado: se não enviar campos de venda, não quebrar prospecção.
         // Venda completa no app virá depois — por enquanto, sale rules só se payload indicar venda.

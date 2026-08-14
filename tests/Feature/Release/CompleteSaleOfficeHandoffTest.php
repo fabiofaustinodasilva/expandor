@@ -112,6 +112,19 @@ class CompleteSaleOfficeHandoffTest extends TestCase
             'due_day' => 12,
             'customer_name' => 'Cliente Invalido',
         ]))->assertStatus(422)->assertJsonValidationErrors('due_day');
+
+        $this->actingAs($seller)->postJson(route('map.visits.store', $campaign), $this->salePayload($this->cloneProperty($property), $product, [
+            'due_day' => null,
+            'customer_name' => 'Sem Vencimento',
+        ]))->assertStatus(422)->assertJsonValidationErrors('due_day');
+
+        $missing = $this->salePayload($this->cloneProperty($property), $product, [
+            'customer_name' => 'Sem Campo Due Day',
+        ]);
+        unset($missing['due_day']);
+        $this->actingAs($seller)->postJson(route('map.visits.store', $campaign), $missing)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('due_day');
     }
 
     public function test_products_and_prices_come_from_backend_catalog(): void

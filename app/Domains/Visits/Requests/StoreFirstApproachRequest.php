@@ -38,7 +38,7 @@ class StoreFirstApproachRequest extends FormRequest
     {
         $companyId = app(TenantContext::class)->id();
         $isSale = $this->input('status') === VisitStatus::INSTALLATION_REQUESTED->value;
-        $saleRules = app(SaleFieldsPolicyResolver::class)->validationRulesForRequest($isSale, $companyId);
+        $saleRules = app(SaleFieldsPolicyResolver::class)->validationRulesForRequest($isSale, $companyId, true);
 
         return array_merge([
             'city_id' => [
