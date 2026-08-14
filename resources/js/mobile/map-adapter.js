@@ -95,6 +95,21 @@ export const MapAdapter = {
         return this.map;
     },
 
+    waitForView() {
+        return new Promise((resolve) => {
+            if (!this.map) {
+                resolve();
+
+                return;
+            }
+            this.refreshLayout();
+            requestAnimationFrame(() => {
+                this.refreshLayout();
+                resolve();
+            });
+        });
+    },
+
     refreshLayout() {
         if (!this.map) {
             return;

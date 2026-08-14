@@ -250,6 +250,7 @@ const html = `<!DOCTYPE html>
         <main class="app-main">
             <section class="pane" id="pane-map">
                 <div id="seller-map"></div>
+                <p class="map-loading-hint" id="map-loading-hint" hidden>Carregando pontos...</p>
                 <div class="map-toolbar map-toolbar--left">
                     <button class="map-fab map-fab--present" id="map-present-products" type="button">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>

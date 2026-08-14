@@ -51,7 +51,7 @@ class ExpVendedorBootstrapCampaignFixTest extends TestCase
         $this->assertStringContainsString('paintCampaignContext()', $shell);
         $this->assertStringContainsString("paintCampaignInto('create')", $shell);
         $this->assertStringContainsString("paintCampaignInto('visit')", $shell);
-        $this->assertStringContainsString('void tryInitialMapGps()', $shell);
+        $this->assertStringContainsString('await prepareInitialMap()', $shell);
         $this->assertStringContainsString('MapAdapter.init', $shell);
     }
 

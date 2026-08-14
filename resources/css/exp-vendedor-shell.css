@@ -295,12 +295,30 @@ body.seller-app-mode {
     font-weight: 800;
 }
 
-#pane-map { padding: 0; }
+#pane-map { padding: 0; position: relative; }
 
 #seller-map {
     height: 100%;
     min-height: 280px;
     z-index: 1;
+}
+
+.map-loading-hint {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--nav-h) + 5.25rem);
+    transform: translateX(-50%);
+    z-index: 520;
+    margin: 0;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(11, 18, 32, 0.82);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    pointer-events: none;
+    white-space: nowrap;
 }
 
 .map-toolbar {

@@ -36,17 +36,48 @@ const GPS_FAIL = 'Não foi possível acessar sua localização.';
 const GPS_UNAVAILABLE_HINT = 'Localização indisponível. Use Meu Local quando quiser.';
 const GPS_PERMISSION_HINT = 'Permita localização para centralizar o mapa, ou use Meu Local.';
 const INITIAL_GPS_TIMEOUT_MS = 8000;
+const MAP_MARKERS_DEBOUNCE_MS = 280;
 const OFFLINE_MUTATION = 'Sem conexão. Esta ação ainda não pode ser concluída offline.';
 const SALE_NETWORK_ERROR = 'Não foi possível concluir a venda. Verifique sua conexão e tente novamente.';
 let bootstrap = null;
 let searchTimer = null;
 let layersOpen = false;
 let initialMapGpsDone = false;
+let markersRequestSeq = 0;
+let mapMarkerReloadTimer = null;
+let mapMarkerReloadsBound = false;
 let catalogProducts = [];
 let adjustUiMode = null; // null | 'create' | 'existing'
 let adjustPropertyCanAdjust = false;
 let lastOpenedPoint = null;
 let currentHandoff = null;
+
+function debugMap(step, detail = {}) {
+    try {
+        console.info('[EXP MapLoad]', step, detail);
+    } catch {
+        /* optional */
+    }
+}
+
+function setMapLoading(visible) {
+    const el = $('map-loading-hint');
+    if (el) {
+        el.hidden = !visible;
+    }
+}
+
+function mapBoundsLog() {
+    const q = MapAdapter.boundsQuery();
+
+    return {
+        south: q.min_latitude ?? null,
+        west: q.min_longitude ?? null,
+        north: q.max_latitude ?? null,
+        east: q.max_longitude ?? null,
+        zoom: MapAdapter.map?.getZoom?.() ?? null,
+    };
+}
 
 function debugFlow(step, detail = {}) {
     try {
@@ -425,14 +456,42 @@ function renderList(targetId, items, emptyTitle, emptyText, row) {
 }
 
 async function loadMarkers() {
+    const seq = ++markersRequestSeq;
     const bbox = MapAdapter.boundsQuery();
+    debugMap('markersRequest', { seq, ...mapBoundsLog() });
     const payload = await mobileApi.markers(bbox);
+    if (seq !== markersRequestSeq) {
+        debugMap('markersResponse', { seq, stale: true, count: null });
+
+        return;
+    }
     const markers = payload.data?.markers || payload.data || [];
+    const list = Array.isArray(markers) ? markers : [];
+    debugMap('markersResponse', { seq, stale: false, count: list.length });
     const selected = MapAdapter.selectedPropertyId;
-    MapAdapter.renderMarkers(Array.isArray(markers) ? markers : [], openPoint);
+    MapAdapter.renderMarkers(list, openPoint);
     if (selected != null) {
         MapAdapter.selectProperty(selected);
     }
+}
+
+function scheduleLoadMarkers() {
+    if (mapMarkerReloadTimer) {
+        clearTimeout(mapMarkerReloadTimer);
+    }
+    mapMarkerReloadTimer = setTimeout(() => {
+        mapMarkerReloadTimer = null;
+        loadMarkers().catch(() => {});
+    }, MAP_MARKERS_DEBOUNCE_MS);
+}
+
+function bindMapMarkerReloads() {
+    if (mapMarkerReloadsBound || !MapAdapter.map) {
+        return;
+    }
+    mapMarkerReloadsBound = true;
+    MapAdapter.map.on('moveend', scheduleLoadMarkers);
+    MapAdapter.map.on('zoomend', scheduleLoadMarkers);
 }
 
 async function openPoint(item) {
@@ -978,7 +1037,11 @@ async function tryInitialMapGps() {
             maximumAge: 0,
         });
         MapAdapter.recenterGps(position);
-        await loadMarkers();
+        debugMap('gpsResolved', {
+            accuracy: position.accuracy ?? null,
+            ...mapBoundsLog(),
+        });
+        await MapAdapter.waitForView();
     } catch (error) {
         if (error?.code === 'permission_denied') {
             toast(GPS_PERMISSION_HINT, 'status');
@@ -987,6 +1050,23 @@ async function tryInitialMapGps() {
         }
 
         toast(GPS_UNAVAILABLE_HINT, 'status');
+    }
+}
+
+async function prepareInitialMap() {
+    debugMap('initialStart');
+    MapAdapter.refreshLayout();
+    await MapAdapter.waitForView();
+    debugMap('mapReady', mapBoundsLog());
+    setMapLoading(true);
+    try {
+        await tryInitialMapGps();
+        debugMap('bounds', mapBoundsLog());
+        await loadMarkers();
+        bindMapMarkerReloads();
+        debugMap('initialComplete', mapBoundsLog());
+    } finally {
+        setMapLoading(false);
     }
 }
 
@@ -1517,8 +1597,7 @@ async function enterApp(data) {
         };
         await hydrateCatalog();
         renderVisitOutcomes();
-        await loadMarkers();
-        void tryInitialMapGps();
+        await prepareInitialMap();
         paintIcons();
     } catch (error) {
         toast(error.message || 'Não foi possível carregar o app.', 'error');
@@ -1682,13 +1761,25 @@ function bindApp() {
     $('sale-success-close')?.addEventListener('click', hideSaleSuccess);
     $('sale-success-copy')?.addEventListener('click', () => copyHandoffMessage(currentHandoff, mobileApi));
     $('sale-success-view')?.addEventListener('click', () => showHandoffText(currentHandoff));
-    $('sale-success-whatsapp')?.addEventListener('click', () => openOfficeWhatsApp(currentHandoff, mobileApi));
+    $('sale-success-whatsapp')?.addEventListener('click', () => {
+        openOfficeWhatsApp(currentHandoff, mobileApi).catch((error) => {
+            toast(error.message || 'Não foi possível abrir o WhatsApp. Você pode copiar a mensagem.', 'error');
+        });
+    });
     $('handoff-copy')?.addEventListener('click', () => copyHandoffMessage(currentHandoff, mobileApi));
-    $('handoff-whatsapp')?.addEventListener('click', () => openOfficeWhatsApp(currentHandoff, mobileApi));
+    $('handoff-whatsapp')?.addEventListener('click', () => {
+        openOfficeWhatsApp(currentHandoff, mobileApi).catch((error) => {
+            toast(error.message || 'Não foi possível abrir o WhatsApp. Você pode copiar a mensagem.', 'error');
+        });
+    });
     $('handoff-close')?.addEventListener('click', hideHandoffText);
     $('point-handoff-copy')?.addEventListener('click', () => copyHandoffMessage(currentHandoff, mobileApi));
     $('point-handoff-view')?.addEventListener('click', () => showHandoffText(currentHandoff));
-    $('point-handoff-whatsapp')?.addEventListener('click', () => openOfficeWhatsApp(currentHandoff, mobileApi));
+    $('point-handoff-whatsapp')?.addEventListener('click', () => {
+        openOfficeWhatsApp(currentHandoff, mobileApi).catch((error) => {
+            toast(error.message || 'Não foi possível abrir o WhatsApp. Você pode copiar a mensagem.', 'error');
+        });
+    });
 
     $('profile-btn')?.addEventListener('click', () => show('account-sheet', true));
     $('account-close')?.addEventListener('click', () => show('account-sheet', false));

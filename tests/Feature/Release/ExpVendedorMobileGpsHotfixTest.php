@@ -58,7 +58,9 @@ class ExpVendedorMobileGpsHotfixTest extends TestCase
 
         $this->assertStringContainsString('tryInitialMapGps', $shell);
         $this->assertStringContainsString('initialMapGpsDone', $shell);
-        $this->assertStringContainsString('void tryInitialMapGps()', $shell);
+        $this->assertStringContainsString('prepareInitialMap', $shell);
+        $this->assertStringContainsString('await prepareInitialMap()', $shell);
+        $this->assertStringNotContainsString('void tryInitialMapGps()', $shell);
         $this->assertStringContainsString('INITIAL_GPS_TIMEOUT_MS', $shell);
         $this->assertStringContainsString('ensureForegroundPermission', $shell);
         $this->assertStringContainsString('LocationService.getCurrentPosition', $shell);

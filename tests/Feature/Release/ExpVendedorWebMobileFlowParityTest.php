@@ -52,7 +52,7 @@ class ExpVendedorWebMobileFlowParityTest extends TestCase
         $this->assertStringContainsString('visit-campaign-label', $prepare);
         $this->assertStringContainsString('visit-outcome-list', $prepare);
         $this->assertStringContainsString('visit-return-block', $prepare);
-        $this->assertStringContainsString('visit-sale-block', $prepare);
+        $this->assertStringContainsString('${p}sale-block', $prepare);
         $this->assertStringContainsString('sale-cart-lines', $prepare);
 
         $this->assertStringContainsString('interested', $outcomes);

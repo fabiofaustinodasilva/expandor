@@ -15,6 +15,10 @@ async function json(path, options = {}) {
     }
 
     const response = await apiFetch(path, options);
+    if (response.status === 204) {
+        return {};
+    }
+
     let payload = {};
     try {
         const text = await response.text();
