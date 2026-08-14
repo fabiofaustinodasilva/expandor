@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web\Visits;
 
 use App\Domains\Campaigns\Models\Campaign;
+use App\Domains\Sales\Handoff\SaleHandoffService;
 use App\Domains\Visits\Actions\RegisterVisitAction;
 use App\Domains\Visits\Models\Visit;
 use App\Domains\Visits\Repositories\VisitRepository;
@@ -57,7 +58,7 @@ class VisitController extends Controller
             ->with('success', 'Visita registrada com sucesso.');
     }
 
-    public function show(Visit $visit): View
+    public function show(Visit $visit, SaleHandoffService $handoff): View
     {
         $this->authorize('view', $visit);
 
@@ -67,10 +68,13 @@ class VisitController extends Controller
             'property.histories' => fn ($q) => $q->latest('created_at')->limit(10),
             'user:id,name',
             'followUps.user:id,name',
+            'sale.items',
+            'sale.resident',
         ]);
 
         return view('visits.show', [
             'visit' => $visit,
+            'officeHandoff' => $handoff->forVisit($visit),
         ]);
     }
 }

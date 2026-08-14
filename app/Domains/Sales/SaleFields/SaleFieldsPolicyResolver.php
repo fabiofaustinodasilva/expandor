@@ -6,6 +6,7 @@ use App\Domains\Company\Models\Company;
 use App\Domains\Company\Models\CompanySetting;
 use App\Domains\Company\Models\User;
 use App\Domains\Sales\Products\Models\Product;
+use App\Domains\Sales\Support\SaleDueDays;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -97,6 +98,13 @@ class SaleFieldsPolicyResolver
             'customer_rg' => array_merge($req(SaleFieldKeys::RG), ['string', 'max:32']),
             'customer_email' => array_merge($req(SaleFieldKeys::EMAIL), ['email', 'max:255']),
             'sale_notes' => array_merge($req(SaleFieldKeys::NOTES), ['string', 'max:5000']),
+            'customer_birth_date' => ['nullable', 'date'],
+            'due_day' => ['nullable', 'integer', Rule::in(SaleDueDays::ALLOWED)],
+            'install_street' => ['nullable', 'string', 'max:255'],
+            'install_number' => ['nullable', 'string', 'max:30'],
+            'install_neighborhood' => ['nullable', 'string', 'max:255'],
+            'install_reference' => ['nullable', 'string', 'max:255'],
+            'install_city' => ['nullable', 'string', 'max:120'],
             // Carrinho items[] (PDV) ou legado product_id (mobile/compat).
             'items' => array_values(array_filter([
                 $policy->requires(SaleFieldKeys::PRODUCT)
@@ -147,6 +155,7 @@ class SaleFieldsPolicyResolver
             'items.*.quantity.required' => 'Informe a quantidade.',
             'items.*.quantity.min' => 'Quantidade mínima: 1.',
             'sale_notes.required' => 'Informe as '.$labels[SaleFieldKeys::NOTES].'.',
+            'due_day.in' => 'Escolha o vencimento: 5, 10, 15, 20, 25 ou 30.',
             'product_id.exists' => 'Produto inválido ou inativo.',
         ];
     }

@@ -70,6 +70,7 @@ use App\Http\Controllers\Web\SalesApp\SalesAppTrainingController;
 use App\Http\Controllers\Web\Training\TrainingCategoryController;
 use App\Http\Controllers\Web\Training\TrainingContentController;
 use App\Http\Controllers\Web\Sales\Properties\AddressController;
+use App\Http\Controllers\Web\Sales\SaleHandoffController;
 use App\Http\Controllers\Web\Sales\Properties\PropertyController;
 use App\Http\Controllers\Web\Sales\Residents\ResidentController;
 use App\Http\Controllers\Web\Sales\Territory\CityController;
@@ -340,6 +341,9 @@ Route::middleware([
 
     Route::get('/clientes', [\App\Http\Controllers\Web\Customers\CustomerController::class, 'index'])->name('customers.index');
     Route::get('/clientes/{property}', [\App\Http\Controllers\Web\Customers\CustomerController::class, 'show'])->name('customers.show');
+    Route::get('/vendas/{sale}/handoff', [SaleHandoffController::class, 'show'])->name('sales.handoff.show');
+    Route::post('/vendas/{sale}/handoff/copiar', [SaleHandoffController::class, 'copied'])->name('sales.handoff.copied');
+    Route::post('/vendas/{sale}/handoff/abrir', [SaleHandoffController::class, 'opened'])->name('sales.handoff.opened');
     Route::delete('/clientes/{property}', [\App\Http\Controllers\Web\Customers\CustomerController::class, 'destroy'])->name('customers.destroy');
 
     Route::get('/comissoes', [SalesCommissionController::class, 'index'])->name('commissions.index');

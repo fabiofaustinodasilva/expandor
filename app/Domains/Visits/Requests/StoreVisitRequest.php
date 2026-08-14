@@ -25,6 +25,11 @@ class StoreVisitRequest extends FormRequest
             $merged['follow_up_at'] = $normalized?->format('Y-m-d H:i:s');
         }
 
+        $birth = trim((string) ($merged['customer_birth_date'] ?? $this->input('customer_birth_date', '')));
+        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $birth, $m)) {
+            $merged['customer_birth_date'] = $m[3].'-'.$m[2].'-'.$m[1];
+        }
+
         $this->merge($merged);
     }
 
@@ -37,6 +42,8 @@ class StoreVisitRequest extends FormRequest
         foreach ([
             'customer_name', 'customer_phone', 'customer_whatsapp', 'customer_document',
             'customer_rg', 'customer_email', 'product_id', 'negotiated_amount', 'sale_notes',
+            'customer_birth_date', 'due_day', 'install_street', 'install_number',
+            'install_neighborhood', 'install_reference', 'install_city',
         ] as $key) {
             if ($this->exists($key) && $this->input($key) === '') {
                 $out[$key] = null;

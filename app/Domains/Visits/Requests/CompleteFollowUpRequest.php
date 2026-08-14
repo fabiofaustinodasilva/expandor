@@ -24,6 +24,11 @@ class CompleteFollowUpRequest extends FormRequest
                 'follow_up_at' => $normalized?->format('Y-m-d H:i:s'),
             ]);
         }
+
+        $birth = trim((string) $this->input('customer_birth_date', ''));
+        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $birth, $m)) {
+            $this->merge(['customer_birth_date' => $m[3].'-'.$m[2].'-'.$m[1]]);
+        }
     }
 
     public function rules(): array

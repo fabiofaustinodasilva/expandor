@@ -34,7 +34,7 @@ class Sprint8229MapVisualPolishTest extends TestCase
 
         $html = $this->actingAs($admin)->get(route('map.index'))->assertOk()->getContent();
 
-        $this->assertStringContainsString('operational-map.js?v=60', $html);
+        $this->assertStringContainsString('operational-map.js?v=62', $html);
         $this->assertStringContainsString('map-provider.js?v=6', $html);
         $this->assertStringContainsString('map-house-pin', $html);
         $this->assertStringContainsString('map-legend-pin', $html);
@@ -122,12 +122,12 @@ class Sprint8229MapVisualPolishTest extends TestCase
 
         app(TenantContext::class)->set($company, $manager);
         $managerHtml = $this->actingAs($manager)->get(route('map.index'))->assertOk()->getContent();
-        $this->assertStringContainsString('operational-map.js?v=60', $managerHtml);
+        $this->assertStringContainsString('operational-map.js?v=62', $managerHtml);
         $this->assertStringContainsString('map-house-pin', $managerHtml);
 
         app(TenantContext::class)->set($company, $seller);
         $sellerHtml = $this->actingAs($seller)->get(route('map.index'))->assertOk()->getContent();
-        $this->assertStringContainsString('operational-map.js?v=60', $sellerHtml);
+        $this->assertStringContainsString('operational-map.js?v=62', $sellerHtml);
         $this->assertStringContainsString('map-house-pin', $sellerHtml);
         $this->assertStringContainsString('Minha localização', $sellerHtml);
     }

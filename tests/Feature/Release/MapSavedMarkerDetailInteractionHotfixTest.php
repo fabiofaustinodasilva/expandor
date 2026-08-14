@@ -41,7 +41,7 @@ class MapSavedMarkerDetailInteractionHotfixTest extends TestCase
         $this->assertStringContainsString('window.__mapOpenProperty', $js);
         $this->assertStringContainsString("[MapRuntime]", $js);
         $this->assertStringContainsString('map-saved-property-layer.js', $blade);
-        $this->assertStringContainsString('operational-map.js\') }}?v=61', $blade);
+        $this->assertStringContainsString('operational-map.js\') }}?v=62', $blade);
     }
 
     public function test_detail_endpoint_works_for_finalized_and_open_statuses(): void

@@ -88,4 +88,61 @@
             </tbody>
         </table>
     </div>
+
+    @if(!empty($officeHandoff))
+        <div class="card" style="margin-top:1rem;" data-sale-handoff="1">
+            <h2 style="margin-top:0; font-size:1.05rem;">Encaminhamento ao escritório</h2>
+            <p class="header-meta">{{ $officeHandoff->toArray()['sale_label'] }}</p>
+            @if($officeHandoff->commissionLabel)
+                <p><strong>Comissão:</strong> {{ $officeHandoff->commissionLabel }}
+                    @if($officeHandoff->commissionStatus)
+                        ({{ $officeHandoff->commissionStatus }})
+                    @endif
+                </p>
+            @endif
+            <div class="actions" style="flex-wrap:wrap; gap:.5rem;">
+                @if($officeHandoff->whatsappEnabled && $officeHandoff->whatsappUrl)
+                    <a class="btn btn-primary" href="{{ $officeHandoff->whatsappUrl }}" target="_blank" rel="noopener"
+                       data-handoff-open="{{ $visit->sale?->id }}">Enviar no WhatsApp</a>
+                @endif
+                <button class="btn btn-ghost" type="button" data-handoff-copy="{{ $visit->sale?->id }}">Copiar mensagem</button>
+                <button class="btn btn-ghost" type="button" data-handoff-view>Ver mensagem</button>
+            </div>
+            <pre id="sale-handoff-message" style="display:none; white-space:pre-wrap; margin-top:1rem; font-size:.9rem;">{{ $officeHandoff->message }}</pre>
+        </div>
+        <script>
+            (function () {
+                var msg = document.getElementById('sale-handoff-message');
+                var csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                document.querySelector('[data-handoff-view]')?.addEventListener('click', function () {
+                    if (msg) msg.style.display = msg.style.display === 'none' ? 'block' : 'none';
+                });
+                document.querySelector('[data-handoff-copy]')?.addEventListener('click', function () {
+                    var text = msg ? msg.textContent : '';
+                    var saleId = this.getAttribute('data-handoff-copy');
+                    var done = function () {
+                        fetch('/vendas/' + saleId + '/handoff/copiar', {
+                            method: 'POST',
+                            headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        alert('Mensagem copiada.');
+                    };
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(done).catch(function () {
+                            if (msg) { msg.style.display = 'block'; msg.focus(); }
+                        });
+                    } else if (msg) {
+                        msg.style.display = 'block';
+                    }
+                });
+                document.querySelector('[data-handoff-open]')?.addEventListener('click', function () {
+                    var saleId = this.getAttribute('data-handoff-open');
+                    fetch('/vendas/' + saleId + '/handoff/abrir', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                });
+            })();
+        </script>
+    @endif
 @endsection

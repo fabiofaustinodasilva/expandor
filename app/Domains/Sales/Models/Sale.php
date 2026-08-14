@@ -27,6 +27,7 @@ class Sale extends Model
         'resident_id',
         'product_id',
         'negotiated_amount',
+        'due_day',
         'notes',
         'attributes',
     ];
@@ -35,6 +36,7 @@ class Sale extends Model
     {
         return [
             'negotiated_amount' => 'decimal:2',
+            'due_day' => 'integer',
             'attributes' => 'array',
         ];
     }

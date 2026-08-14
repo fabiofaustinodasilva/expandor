@@ -35,6 +35,24 @@
             @error('required_fields.*')<div class="header-meta" style="color:#fca5a5;">{{ $message }}</div>@enderror
         </fieldset>
 
+        <fieldset style="border:0;margin:1.5rem 0 0;padding:0;">
+            <legend style="font-weight:700;font-size:1.05rem;margin-bottom:.35rem;">WhatsApp do escritório</legend>
+            <p class="header-meta" style="margin:0 0 1rem;">
+                Após confirmar uma venda, o vendedor poderá encaminhar os dados organizados para o WhatsApp do escritório.
+            </p>
+            <div class="form-group">
+                <label for="office_sales_whatsapp">WhatsApp que recebe novas vendas</label>
+                <input class="form-control" id="office_sales_whatsapp" name="office_sales_whatsapp"
+                       value="{{ old('office_sales_whatsapp', $officeWhatsApp['number'] ?? '') }}"
+                       placeholder="(64) 99999-9999">
+            </div>
+            <label style="display:flex;gap:.65rem;align-items:flex-start;margin-top:.75rem;cursor:pointer;">
+                <input type="checkbox" name="office_sales_whatsapp_enabled" value="1"
+                    @checked(old('office_sales_whatsapp_enabled', $officeWhatsApp['enabled_flag'] ?? false))>
+                <span>Permitir encaminhamento de novas vendas</span>
+            </label>
+        </fieldset>
+
         <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.25rem;">
             <a href="{{ route('operations.settings') }}" class="btn btn-ghost">Cancelar</a>
             <button type="submit" class="btn btn-primary">Salvar</button>

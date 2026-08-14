@@ -22,10 +22,10 @@ class MapRepository
     {
         $query = $this->baseQuery($filters)
             ->with([
-                'address:id,street,number,neighborhood,city_id,sector_id',
+                'address:id,street,number,neighborhood,reference,city_id,sector_id',
                 'address.city:id,name',
                 'residents' => fn ($q) => $q
-                    ->select(['id', 'property_id', 'name', 'phone', 'whatsapp', 'document', 'is_primary_contact', 'status'])
+                    ->select(['id', 'property_id', 'name', 'phone', 'whatsapp', 'document', 'birth_date', 'is_primary_contact', 'status'])
                     ->orderByDesc('is_primary_contact')
                     ->orderBy('name'),
             ])

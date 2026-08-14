@@ -13,6 +13,8 @@ use App\Domains\Sales\Products\Services\StockService;
 use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Sales\Properties\Services\PropertyService;
 use App\Domains\Sales\Residents\Services\ResidentService;
+use App\Domains\Sales\Support\SaleDueDays;
+use App\Domains\Sales\Territory\Models\City;
 use App\Domains\Security\Services\SecurityService;
 use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Enums\VisitStatus;
@@ -132,12 +134,21 @@ class VisitService
             );
 
             if ($status === VisitStatus::INSTALLATION_REQUESTED) {
+                $this->applyInstallationAddress($property, $data);
+
+                $phone = $data['customer_phone'] ?? $data['contact_phone'] ?? null;
+                $whatsapp = $data['customer_whatsapp'] ?? null;
+                if (filled($phone) && ! filled($whatsapp)) {
+                    $whatsapp = $phone;
+                }
+
                 $resident = $this->residents->upsertPrimaryContact($property, [
                     'name' => $data['customer_name'] ?? $data['contact_name'] ?? null,
-                    'phone' => $data['customer_phone'] ?? $data['contact_phone'] ?? null,
-                    'whatsapp' => $data['customer_whatsapp'] ?? null,
+                    'phone' => $phone,
+                    'whatsapp' => $whatsapp,
                     'email' => $data['customer_email'] ?? null,
                     'document' => $data['customer_document'] ?? null,
+                    'birth_date' => $data['customer_birth_date'] ?? null,
                 ]);
 
                 $attributes = [];
@@ -145,6 +156,8 @@ class VisitService
                 if ($rg !== '') {
                     $attributes['rg'] = $rg;
                 }
+
+                $dueDay = $this->normalizeDueDay($data['due_day'] ?? null);
 
                 $total = 0.0;
                 foreach ($cartLines as $line) {
@@ -157,6 +170,7 @@ class VisitService
                     'resident_id' => $resident?->id,
                     'product_id' => $productId,
                     'negotiated_amount' => round($total, 2),
+                    'due_day' => $dueDay,
                     'notes' => $data['sale_notes'] ?? null,
                     'attributes' => $attributes !== [] ? $attributes : null,
                 ]);
@@ -344,6 +358,13 @@ class VisitService
                 'customer_document' => $data['customer_document'] ?? null,
                 'customer_rg' => $data['customer_rg'] ?? null,
                 'customer_email' => $data['customer_email'] ?? null,
+                'customer_birth_date' => $data['customer_birth_date'] ?? null,
+                'due_day' => $data['due_day'] ?? null,
+                'install_street' => $data['install_street'] ?? null,
+                'install_number' => $data['install_number'] ?? null,
+                'install_neighborhood' => $data['install_neighborhood'] ?? null,
+                'install_reference' => $data['install_reference'] ?? null,
+                'install_city' => $data['install_city'] ?? null,
                 'sale_notes' => $data['sale_notes'] ?? null,
                 'user_id' => $actor->id,
                 'latitude' => $data['latitude'] ?? $property->latitude ?? $originVisit->latitude,
@@ -415,5 +436,73 @@ class VisitService
         }
 
         return $product;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function applyInstallationAddress(Property $property, array $data): void
+    {
+        $address = $property->address;
+        if ($address === null) {
+            return;
+        }
+
+        $street = isset($data['install_street']) ? trim((string) $data['install_street']) : '';
+        if ($street === '' && isset($data['street'])) {
+            $street = trim((string) $data['street']);
+        }
+        $number = isset($data['install_number']) ? trim((string) $data['install_number']) : '';
+        if ($number === '' && isset($data['number'])) {
+            $number = trim((string) $data['number']);
+        }
+        $neighborhood = isset($data['install_neighborhood']) ? trim((string) $data['install_neighborhood']) : '';
+        if ($neighborhood === '' && isset($data['neighborhood'])) {
+            $neighborhood = trim((string) $data['neighborhood']);
+        }
+        $reference = isset($data['install_reference']) ? trim((string) $data['install_reference']) : '';
+        $cityName = isset($data['install_city']) ? trim((string) $data['install_city']) : '';
+
+        $updates = [];
+        if ($street !== '') {
+            $updates['street'] = $street;
+        }
+        if ($number !== '') {
+            $updates['number'] = $number;
+        }
+        if ($neighborhood !== '') {
+            $updates['neighborhood'] = $neighborhood;
+        }
+        if ($reference !== '') {
+            $updates['reference'] = $reference;
+        }
+        if ($cityName !== '') {
+            $city = City::query()
+                ->where('company_id', $property->company_id)
+                ->whereRaw('LOWER(name) = ?', [mb_strtolower($cityName)])
+                ->first();
+            if ($city !== null) {
+                $updates['city_id'] = $city->id;
+            }
+        }
+
+        if ($updates !== []) {
+            $address->update($updates);
+        }
+    }
+
+    protected function normalizeDueDay(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (! SaleDueDays::isValid($value)) {
+            throw ValidationException::withMessages([
+                'due_day' => 'Escolha o vencimento: 5, 10, 15, 20, 25 ou 30.',
+            ]);
+        }
+
+        return (int) $value;
     }
 }

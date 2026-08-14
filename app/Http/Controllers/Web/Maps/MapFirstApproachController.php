@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web\Maps;
 
 use App\Domains\Commissions\Support\CommissionAwardedPayload;
+use App\Domains\Sales\Handoff\SaleHandoffService;
 use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Visits\Actions\RegisterFirstApproachAction;
 use App\Domains\Visits\Enums\VisitStatus;
@@ -17,6 +18,7 @@ class MapFirstApproachController extends Controller
     public function store(
         StoreFirstApproachRequest $request,
         RegisterFirstApproachAction $action,
+        SaleHandoffService $handoff,
     ): JsonResponse {
         $this->authorize('create', Property::class);
         $this->authorize('create', Visit::class);
@@ -48,6 +50,10 @@ class MapFirstApproachController extends Controller
             $awarded = CommissionAwardedPayload::fromVisit($visit->fresh(['sale.items']));
             if ($awarded !== null) {
                 $data['commission_awarded'] = $awarded;
+            }
+            $office = $handoff->forVisit($visit);
+            if ($office !== null) {
+                $data['office_handoff'] = $office->toArray();
             }
         }
 

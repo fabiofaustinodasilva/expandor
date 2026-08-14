@@ -25,6 +25,7 @@ class Address extends Model
         'number',
         'complement',
         'neighborhood',
+        'reference',
         'zipcode',
         'latitude',
         'longitude',

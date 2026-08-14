@@ -28,6 +28,7 @@ class ResidentService
                 'whatsapp' => $data['whatsapp'] ?? null,
                 'email' => $data['email'] ?? null,
                 'document' => $data['document'] ?? null,
+                'birth_date' => $data['birth_date'] ?? null,
                 'is_primary_contact' => (bool) ($data['is_primary_contact'] ?? false),
                 'status' => ResidentStatus::from($data['status'] ?? ResidentStatus::ACTIVE->value),
                 'notes' => $data['notes'] ?? null,
@@ -59,6 +60,7 @@ class ResidentService
                 'whatsapp' => $data['whatsapp'] ?? null,
                 'email' => $data['email'] ?? null,
                 'document' => $data['document'] ?? null,
+                'birth_date' => $data['birth_date'] ?? null,
                 'is_primary_contact' => (bool) ($data['is_primary_contact'] ?? false),
                 'notes' => $data['notes'] ?? null,
             ]);
@@ -112,7 +114,8 @@ class ResidentService
      *     phone?: string|null,
      *     whatsapp?: string|null,
      *     email?: string|null,
-     *     document?: string|null
+     *     document?: string|null,
+     *     birth_date?: string|null
      * }  $data
      */
     public function upsertPrimaryContact(Property $property, array $data): ?Resident
@@ -122,8 +125,9 @@ class ResidentService
         $whatsapp = isset($data['whatsapp']) ? trim((string) $data['whatsapp']) : '';
         $email = isset($data['email']) ? trim((string) $data['email']) : '';
         $document = isset($data['document']) ? trim((string) $data['document']) : '';
+        $birthDate = isset($data['birth_date']) ? trim((string) $data['birth_date']) : '';
 
-        $hasAny = $name !== '' || $phone !== '' || $whatsapp !== '' || $email !== '' || $document !== '';
+        $hasAny = $name !== '' || $phone !== '' || $whatsapp !== '' || $email !== '' || $document !== '' || $birthDate !== '';
         if (! $hasAny) {
             return Resident::query()
                 ->where('property_id', $property->id)
@@ -150,6 +154,7 @@ class ResidentService
             'whatsapp' => $whatsapp !== '' ? $whatsapp : $primary?->whatsapp,
             'email' => $email !== '' ? $email : $primary?->email,
             'document' => $document !== '' ? $document : $primary?->document,
+            'birth_date' => $birthDate !== '' ? $birthDate : $primary?->birth_date,
             'is_primary_contact' => true,
             'status' => ResidentStatus::ACTIVE->value,
         ];

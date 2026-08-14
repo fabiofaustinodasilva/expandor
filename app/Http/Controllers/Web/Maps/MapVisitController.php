@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Maps;
 
 use App\Domains\Campaigns\Models\Campaign;
 use App\Domains\Commissions\Support\CommissionAwardedPayload;
+use App\Domains\Sales\Handoff\SaleHandoffService;
 use App\Domains\Visits\Actions\RegisterVisitAction;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Domains\Visits\Models\Visit;
@@ -19,6 +20,7 @@ class MapVisitController extends Controller
         Campaign $campaign,
         RegisterVisitAction $action,
         VisitService $visits,
+        SaleHandoffService $handoff,
     ): JsonResponse {
         $this->authorize('create', Visit::class);
 
@@ -46,6 +48,10 @@ class MapVisitController extends Controller
             $awarded = CommissionAwardedPayload::fromVisit($visit->fresh(['sale.items']));
             if ($awarded !== null) {
                 $payload['commission_awarded'] = $awarded;
+            }
+            $office = $handoff->forVisit($visit);
+            if ($office !== null) {
+                $payload['office_handoff'] = $office->toArray();
             }
         }
 

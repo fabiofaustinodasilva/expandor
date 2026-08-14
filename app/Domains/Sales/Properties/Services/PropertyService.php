@@ -48,6 +48,7 @@ class PropertyService
             'number' => $data['number'] ?? null,
             'complement' => $data['complement'] ?? null,
             'neighborhood' => $data['neighborhood'] ?? null,
+            'reference' => array_key_exists('reference', $data) ? $data['reference'] : $address->reference,
             'zipcode' => $data['zipcode'] ?? null,
             'latitude' => $data['latitude'] ?? null,
             'longitude' => $data['longitude'] ?? null,

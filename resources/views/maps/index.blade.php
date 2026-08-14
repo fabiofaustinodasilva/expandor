@@ -646,6 +646,22 @@
         </div>
     </div>
 
+    <div id="sale-handoff-modal" class="fixed inset-0 z-[110] hidden items-end sm:items-center justify-center p-0 sm:p-4">
+        <div id="sale-handoff-backdrop" class="absolute inset-0 bg-black/60"></div>
+        <div class="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-slate-950 border border-emerald-700/50 p-5">
+            <div class="text-emerald-300 font-semibold text-lg">✓ Venda realizada!</div>
+            <p id="sale-handoff-label" class="text-sm text-slate-300 mt-1"></p>
+            <p id="sale-handoff-commission" class="text-sm text-emerald-200 mt-1"></p>
+            <div class="mt-4 space-y-2">
+                <a id="sale-handoff-whatsapp" class="hidden w-full h-12 rounded-xl bg-emerald-500 text-slate-950 font-bold inline-flex items-center justify-center" target="_blank" rel="noopener">Enviar para o escritório</a>
+                <button type="button" id="sale-handoff-copy" class="w-full h-12 rounded-xl border border-slate-600 text-sm font-semibold">Copiar mensagem</button>
+                <button type="button" id="sale-handoff-view" class="w-full h-11 rounded-xl border border-slate-700 text-sm">Ver mensagem</button>
+                <button type="button" id="sale-handoff-close" class="w-full h-11 rounded-xl border border-slate-700 text-sm">Voltar ao mapa</button>
+            </div>
+            <pre id="sale-handoff-text" class="hidden mt-3 whitespace-pre-wrap text-xs text-slate-300 max-h-48 overflow-y-auto"></pre>
+        </div>
+    </div>
+
     {{-- New point modal — Map Operation Sheet (Sprint 8.2.26) --}}
     <div id="point-modal" class="fixed inset-0 z-[100] hidden items-end sm:items-center justify-center p-0 sm:p-4"
          role="dialog" aria-modal="true" aria-labelledby="point-modal-title" data-map-operation-sheet="1">
@@ -1121,7 +1137,7 @@
     /* Sprint 8.2.26 — Map Operation Sheet: altura flex correta + CTA acessível */
     #visit-modal.open, #point-modal.open, #delete-point-modal.open,
     #adjust-confirm-modal.open, #post-create-adjust-modal.open, #region-campaign-modal.open,
-    #post-visit-modal.open, #seller-day-brief.open, #seller-tips-modal.open {
+    #post-visit-modal.open, #seller-day-brief.open, #seller-tips-modal.open, #sale-handoff-modal.open {
         display: flex !important;
     }
 
@@ -1577,5 +1593,5 @@
 <script src="{{ asset('js/map-provider.js') }}?v=6"></script>
 <script src="{{ asset('js/map-saved-property-layer.js') }}?v=1"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=61"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=62"></script>
 @endpush

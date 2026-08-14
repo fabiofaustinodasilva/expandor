@@ -25,6 +25,7 @@ class Resident extends Model
         'whatsapp',
         'email',
         'document',
+        'birth_date',
         'is_primary_contact',
         'status',
         'notes',
@@ -34,6 +35,7 @@ class Resident extends Model
     {
         return [
             'is_primary_contact' => 'boolean',
+            'birth_date' => 'date',
             'status' => ResidentStatus::class,
         ];
     }

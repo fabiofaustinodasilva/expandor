@@ -1198,9 +1198,16 @@
         phone: 'customer-phone',
         whatsapp: 'customer-whatsapp',
         document: 'customer-document',
+        birth: 'customer-birth',
         rg: 'customer-rg',
         email: 'customer-email',
         notes: 'sale-notes',
+        street: 'install-street',
+        number: 'install-number',
+        neighborhood: 'install-neighborhood',
+        reference: 'install-reference',
+        city: 'install-city',
+        dueDay: 'due-day',
     };
 
     /** @type {Record<string, Array<{uid: string, productId: number, quantity: number}>>} */
@@ -1330,6 +1337,7 @@
 
         if (empty) empty.classList.toggle('hidden', lines.length > 0);
         if (totalEl) totalEl.textContent = moneyBr(cartGrandTotal(prefix));
+        refreshSaleReview(prefix);
     }
 
     function addSaleCartLine(prefix) {
@@ -1417,11 +1425,18 @@
         const val = (suffix) => (document.getElementById(`${prefix}-${suffix}`)?.value || '').trim();
         out.customer_name = val('customer-name');
         out.customer_phone = val('customer-phone');
-        out.customer_whatsapp = val('customer-whatsapp');
+        out.customer_whatsapp = val('customer-phone');
         out.customer_document = val('customer-document');
+        out.customer_birth_date = val('customer-birth');
         out.customer_rg = val('customer-rg');
         out.customer_email = val('customer-email');
         out.sale_notes = val('sale-notes');
+        out.due_day = val('due-day');
+        out.install_street = val('install-street');
+        out.install_number = val('install-number');
+        out.install_neighborhood = val('install-neighborhood');
+        out.install_reference = val('install-reference');
+        out.install_city = val('install-city');
         out.items = (saleCarts[prefix] || [])
             .filter((l) => Number(l.productId) > 0)
             .map((l) => ({
@@ -1467,7 +1482,115 @@
             const items = (saleCarts[prefix] || []).filter((l) => Number(l.productId) > 0);
             if (items.length === 0) return 'Adicione ao menos um produto à venda.';
         }
+        const due = (document.getElementById(`${prefix}-due-day`)?.value || '').trim();
+        if (!due) return 'Escolha o dia de vencimento.';
+        if (!['5', '10', '15', '20', '25', '30'].includes(due)) return 'Vencimento inválido.';
         return null;
+    }
+
+    function maskCpf(value) {
+        const d = String(value || '').replace(/\D/g, '').slice(0, 11);
+        return d
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+
+    function maskPhoneBr(value) {
+        const d = String(value || '').replace(/\D/g, '').slice(0, 11);
+        if (d.length <= 10) {
+            return d.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').trim();
+        }
+        return d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').trim();
+    }
+
+    function maskBirth(value) {
+        const d = String(value || '').replace(/\D/g, '').slice(0, 8);
+        if (d.length <= 2) return d;
+        if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+        return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+    }
+
+    function setDueDay(prefix, day) {
+        const hidden = document.getElementById(`${prefix}-due-day`);
+        if (hidden) hidden.value = String(day || '');
+        document.querySelectorAll(`[data-due-day-group="${prefix}"] .due-day-chip`).forEach((btn) => {
+            const on = String(btn.dataset.day) === String(day);
+            btn.classList.toggle('border-orange-400', on);
+            btn.classList.toggle('bg-orange-600', on);
+            btn.classList.toggle('text-slate-950', on);
+        });
+        refreshSaleReview(prefix);
+    }
+
+    function refreshSaleReview(prefix) {
+        const box = document.getElementById(`${prefix}-sale-review`);
+        if (!box) return;
+        const data = collectSaleFinalizeFields(prefix);
+        const first = (saleCarts[prefix] || []).find((l) => Number(l.productId) > 0);
+        const product = first ? findProduct(prefix, first.productId) : null;
+        const cpf = (data.customer_document || '').replace(/\D/g, '');
+        const maskedCpf = cpf ? '***.***.***-**' : '';
+        const lines = [
+            data.customer_name || 'Cliente',
+            maskedCpf ? `CPF: ${maskedCpf}` : '',
+            product ? `${product.name}` : '',
+            product ? moneyBr(cartGrandTotal(prefix)) : '',
+            data.due_day ? `Vencimento: Dia ${data.due_day}` : '',
+            [data.install_street, data.install_number].filter(Boolean).join(', '),
+            data.install_neighborhood || '',
+            data.install_city || '',
+        ].filter(Boolean);
+        box.innerHTML = lines.map((line) => `<div>${line}</div>`).join('');
+    }
+
+    function prefillSaleFromMarker(prefix, marker) {
+        if (!marker) return;
+        const set = (suffix, value) => {
+            const el = document.getElementById(`${prefix}-${suffix}`);
+            if (el && value) el.value = value;
+        };
+        set('customer-name', marker.resident_name);
+        set('customer-phone', maskPhoneBr(marker.resident_phone || marker.resident_whatsapp || ''));
+        set('customer-document', maskCpf(marker.resident_document || ''));
+        set('customer-birth', marker.resident_birth_date || '');
+        set('install-street', marker.street || '');
+        set('install-number', marker.number || '');
+        set('install-neighborhood', marker.neighborhood || '');
+        set('install-reference', marker.reference || '');
+        set('install-city', marker.city_name || '');
+        refreshSaleReview(prefix);
+    }
+
+    let lastHandoff = null;
+
+    function openSaleHandoffModal(payload) {
+        lastHandoff = payload || null;
+        const modal = document.getElementById('sale-handoff-modal');
+        if (!modal || !payload) return;
+        document.getElementById('sale-handoff-label').textContent = payload.sale_label || '';
+        const commissionEl = document.getElementById('sale-handoff-commission');
+        commissionEl.textContent = payload.commission_label
+            ? `Comissão: ${payload.commission_label}`
+            : '';
+        const wa = document.getElementById('sale-handoff-whatsapp');
+        if (payload.whatsapp_enabled && payload.whatsapp_url) {
+            wa.href = payload.whatsapp_url;
+            wa.classList.remove('hidden');
+        } else {
+            wa.classList.add('hidden');
+            wa.removeAttribute('href');
+        }
+        const text = document.getElementById('sale-handoff-text');
+        if (text) {
+            text.textContent = payload.message || '';
+            text.classList.add('hidden');
+        }
+        modal.classList.add('open');
+    }
+
+    function closeSaleHandoffModal() {
+        document.getElementById('sale-handoff-modal')?.classList.remove('open');
     }
 
     function appendFormPayload(body, data, prefix = '') {
@@ -1530,8 +1653,12 @@
         }
         if (!isContract) {
             clearSaleFinalizeFields('visit');
-        } else if ((saleCarts.visit || []).length === 0) {
-            renderSaleCart('visit');
+        } else {
+            prefillSaleFromMarker('visit', selectedMarker);
+            if ((saleCarts.visit || []).length === 0) {
+                renderSaleCart('visit');
+            }
+            refreshSaleReview('visit');
         }
         if (!isReturn) {
             const fuDate = document.getElementById('visit-follow-up-date');
@@ -1562,8 +1689,23 @@
         }
         if (status !== 'installation_requested') {
             clearSaleFinalizeFields('point');
-        } else if ((saleCarts.point || []).length === 0) {
-            renderSaleCart('point');
+        } else {
+            const street = document.getElementById('point-street')?.value || '';
+            const number = document.getElementById('point-number')?.value || '';
+            const name = document.getElementById('point-contact-name')?.value || '';
+            const phone = document.getElementById('point-contact-phone')?.value || '';
+            const set = (id, value) => {
+                const el = document.getElementById(id);
+                if (el && value && !el.value) el.value = value;
+            };
+            set('point-customer-name', name);
+            set('point-customer-phone', maskPhoneBr(phone));
+            set('point-install-street', street);
+            set('point-install-number', number);
+            if ((saleCarts.point || []).length === 0) {
+                renderSaleCart('point');
+            }
+            refreshSaleReview('point');
         }
         if (status !== 'return_later') {
             const fuDate = document.getElementById('point-follow-up-date');
@@ -2293,13 +2435,20 @@
 
             closeVisitModal();
             closeDrawer();
-            if (status === 'installation_requested' && result?.data?.commission_awarded) {
+            if (status === 'installation_requested' && result?.data?.office_handoff) {
+                if (result?.data?.commission_awarded) {
+                    consumeCommissionAwardFromResponse(result.data);
+                }
+                openSaleHandoffModal(result.data.office_handoff);
+            } else if (status === 'installation_requested' && result?.data?.commission_awarded) {
                 consumeCommissionAwardFromResponse(result.data);
                 if (!result.data.commission_awarded.awarded && !result.data.commission_awarded.play_reward) {
                     toast(saleRegisteredToast);
                 }
+                openPostVisitModal();
             } else {
                 toast(status === 'installation_requested' ? saleRegisteredToast : 'Visita registrada');
+                openPostVisitModal();
             }
             await loadMarkers({ fit: false, useBbox: true });
 
@@ -2307,8 +2456,6 @@
             if (status === 'interested') bumpDayMetric('interested');
             if (status === 'installation_requested') bumpDayMetric('contracts');
             if (status === 'return_later') bumpTodayChipIfNeeded(followUpAt);
-
-            openPostVisitModal();
         } catch (error) {
             if (!navigator.onLine && window.ExpandorOfflineQueue) {
                 window.ExpandorOfflineQueue.enqueue('visit.create', payload);
@@ -2923,7 +3070,12 @@
             clearDraftLocationMarker();
             clearRememberedContractProduct();
             const saleDone = useFirstApproach && status === 'installation_requested';
-            if (saleDone && result?.data?.commission_awarded) {
+            if (saleDone && result?.data?.office_handoff) {
+                if (result?.data?.commission_awarded) {
+                    consumeCommissionAwardFromResponse(result.data);
+                }
+                openSaleHandoffModal(result.data.office_handoff);
+            } else if (saleDone && result?.data?.commission_awarded) {
                 consumeCommissionAwardFromResponse(result.data);
                 if (!result.data.commission_awarded.awarded && !result.data.commission_awarded.play_reward) {
                     toast(saleRegisteredToast || 'Cadastro salvo');
@@ -3256,6 +3408,69 @@
             const prefix = btn.dataset.prefix || 'visit';
             addSaleCartLine(prefix);
         });
+    });
+    document.querySelectorAll('.due-day-chip').forEach((btn) => {
+        btn.addEventListener('click', () => setDueDay(btn.dataset.prefix, btn.dataset.day));
+    });
+    ['visit', 'point', 'agenda'].forEach((prefix) => {
+        document.getElementById(`${prefix}-customer-document`)?.addEventListener('input', (e) => {
+            e.target.value = maskCpf(e.target.value);
+            refreshSaleReview(prefix);
+        });
+        document.getElementById(`${prefix}-customer-phone`)?.addEventListener('input', (e) => {
+            e.target.value = maskPhoneBr(e.target.value);
+            refreshSaleReview(prefix);
+        });
+        document.getElementById(`${prefix}-customer-birth`)?.addEventListener('input', (e) => {
+            e.target.value = maskBirth(e.target.value);
+            refreshSaleReview(prefix);
+        });
+        ['customer-name', 'install-street', 'install-number', 'install-neighborhood', 'install-city'].forEach((suffix) => {
+            document.getElementById(`${prefix}-${suffix}`)?.addEventListener('input', () => refreshSaleReview(prefix));
+        });
+    });
+    document.getElementById('sale-handoff-close')?.addEventListener('click', () => closeSaleHandoffModal());
+    document.getElementById('sale-handoff-backdrop')?.addEventListener('click', () => closeSaleHandoffModal());
+    document.getElementById('sale-handoff-view')?.addEventListener('click', () => {
+        document.getElementById('sale-handoff-text')?.classList.toggle('hidden');
+    });
+    document.getElementById('sale-handoff-copy')?.addEventListener('click', async () => {
+        const text = lastHandoff?.message || '';
+        const saleId = lastHandoff?.sale_id;
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(text);
+                toast('Mensagem copiada.');
+            } else {
+                document.getElementById('sale-handoff-text')?.classList.remove('hidden');
+            }
+        } catch (e) {
+            document.getElementById('sale-handoff-text')?.classList.remove('hidden');
+        }
+        if (saleId) {
+            mapFetch(`/vendas/${saleId}/handoff/copiar`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+            }).catch(() => {});
+        }
+    });
+    document.getElementById('sale-handoff-whatsapp')?.addEventListener('click', () => {
+        const saleId = lastHandoff?.sale_id;
+        if (!saleId) return;
+        mapFetch(`/vendas/${saleId}/handoff/abrir`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken(),
+            },
+        }).catch(() => {});
     });
     document.getElementById('btn-next-house')?.addEventListener('click', () => goToNextHouse());
 
