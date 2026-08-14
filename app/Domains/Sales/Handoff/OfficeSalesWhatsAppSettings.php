@@ -16,7 +16,7 @@ final class OfficeSalesWhatsAppSettings
      */
     public function forCompany(Company $company): array
     {
-        $enabledFlag = $this->read($company->id, self::ENABLED_KEY) === '1';
+        $enabledFlag = $this->flagEnabled($this->read($company->id, self::ENABLED_KEY));
         $number = trim((string) $this->read($company->id, self::NUMBER_KEY));
         if ($number === '') {
             $number = trim((string) ($company->whatsapp ?: $company->phone ?: ''));
@@ -33,11 +33,11 @@ final class OfficeSalesWhatsAppSettings
 
     public function save(Company $company, ?string $number, bool $enabled): void
     {
-        CompanySetting::query()->updateOrCreate(
+        CompanySetting::query()->withoutGlobalScopes()->updateOrCreate(
             ['company_id' => $company->id, 'key' => self::NUMBER_KEY],
             ['value' => trim((string) $number)]
         );
-        CompanySetting::query()->updateOrCreate(
+        CompanySetting::query()->withoutGlobalScopes()->updateOrCreate(
             ['company_id' => $company->id, 'key' => self::ENABLED_KEY],
             ['value' => $enabled ? '1' : '0']
         );
@@ -59,10 +59,18 @@ final class OfficeSalesWhatsAppSettings
     protected function read(int $companyId, string $key): ?string
     {
         $value = CompanySetting::query()
+            ->withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->where('key', $key)
             ->value('value');
 
         return $value === null ? null : (string) $value;
+    }
+
+    protected function flagEnabled(?string $value): bool
+    {
+        $normalized = strtolower(trim((string) $value));
+
+        return in_array($normalized, ['1', 'true', 'on', 'yes'], true);
     }
 }

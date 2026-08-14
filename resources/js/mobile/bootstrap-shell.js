@@ -1309,12 +1309,10 @@ function handoffUnavailableHint(handoff) {
     if (canSendOfficeHandoff(handoff)) {
         return '';
     }
-    const boot = bootstrap?.data?.office_handoff || {};
-    const configured = handoff?.whatsapp_configured ?? boot.configured;
-    if (configured === false) {
+    if (handoff?.whatsapp_configured === false) {
         return 'WhatsApp do escritório não configurado.';
     }
-    if ((handoff?.whatsapp_enabled ?? boot.whatsapp_enabled ?? boot.enabled) === false) {
+    if (handoff?.whatsapp_enabled === false) {
         return 'WhatsApp do escritório não está habilitado.';
     }
 
@@ -1355,24 +1353,26 @@ function paintHandoffButtons(handoff) {
 }
 
 async function hydrateSaleHandoff(data) {
-    currentHandoff = data?.office_handoff || null;
-    const saleId = Number(data?.sale_id || currentHandoff?.sale_id || 0) || null;
-    if (saleId && !currentHandoff?.message) {
+    const fromSale = data?.office_handoff && typeof data.office_handoff === 'object'
+        ? data.office_handoff
+        : null;
+    currentHandoff = fromSale;
+    const saleId = Number(data?.sale_id || fromSale?.sale_id || 0) || null;
+    if (saleId) {
         try {
             const payload = await mobileApi.saleHandoff(saleId);
-            if (payload?.data) {
+            if (payload?.data && typeof payload.data === 'object') {
                 currentHandoff = payload.data;
             }
         } catch {
-            /* keep local payload */
+            /* keep sale 2xx handoff */
         }
     }
-    const boot = bootstrap?.data?.office_handoff || {};
     debugFlow('saleSuccess', {
         sale_id: saleId,
         handoff_available: Boolean(currentHandoff?.message),
-        office_whatsapp_enabled: Boolean(currentHandoff?.whatsapp_enabled ?? boot.whatsapp_enabled ?? boot.enabled),
-        office_whatsapp_configured: Boolean(currentHandoff?.whatsapp_configured ?? boot.configured),
+        office_whatsapp_enabled: Boolean(currentHandoff?.whatsapp_enabled),
+        office_whatsapp_configured: Boolean(currentHandoff?.whatsapp_configured),
     });
 }
 

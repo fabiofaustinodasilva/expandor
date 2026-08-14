@@ -17,6 +17,7 @@ use App\Domains\Sales\Territory\Models\City;
 use App\Domains\Sales\Territory\Models\Sector;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Support\AppTime;
+use App\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\CreatesTenantUsers;
 use Tests\TestCase;
@@ -46,7 +47,7 @@ class ExpVendedorCompleteSaleHandoffTest extends TestCase
             ->assertJsonStructure([
                 'data' => [
                     'sale_fields' => ['required', 'labels', 'due_days'],
-                    'office_handoff' => ['enabled', 'configured', 'whatsapp_enabled'],
+                    'office_handoff' => ['enabled', 'configured', 'whatsapp_enabled', 'can_send', 'whatsapp_configured'],
                     'campaign_context' => ['campaigns', 'has_campaign', 'active_campaign_id', 'active_city_id', 'active_city_name'],
                 ],
             ]);
@@ -284,7 +285,96 @@ class ExpVendedorCompleteSaleHandoffTest extends TestCase
         $boot = $this->mobileGet('/api/mobile/v1/bootstrap', $ctx['token'], $ctx['device'])->assertOk()->json('data.office_handoff');
         $this->assertFalse($boot['enabled']);
         $this->assertFalse($boot['configured']);
-        $this->assertTrue($boot['whatsapp_enabled']);
+        $this->assertFalse($boot['can_send']);
+        $this->assertFalse($boot['whatsapp_configured']);
+        $this->assertFalse($boot['whatsapp_enabled']);
+    }
+
+    public function test_web_and_mobile_handoff_share_company_settings_resolver(): void
+    {
+        $ctx = $this->opsContext();
+        app(OfficeSalesWhatsAppSettings::class)->save($ctx['seller']->company, '64999998888', true);
+        $point = $this->makePoint($ctx, -16.7, -51.2, 'Cliente');
+
+        $web = $this->actingAs($ctx['seller'])->postJson(route('map.visits.store', $ctx['campaign']), [
+            'property_id' => $point->id,
+            'status' => VisitStatus::INSTALLATION_REQUESTED->value,
+            'complete_sale' => true,
+            'items' => [['product_id' => $ctx['product']->id, 'quantity' => 1]],
+            'customer_name' => 'João da Silva',
+            'customer_document' => '529.982.247-25',
+            'customer_birth_date' => '15/03/1990',
+            'customer_phone' => '(64) 99999-9999',
+            'install_street' => 'Rua Goiás',
+            'install_number' => '123',
+            'install_neighborhood' => 'Centro',
+            'install_reference' => 'Próximo à praça',
+            'install_city' => $ctx['city']->name,
+            'due_day' => 10,
+        ])->assertCreated();
+
+        $this->assertTrue($web->json('data.office_handoff.can_send'));
+        $this->assertTrue($web->json('data.office_handoff.whatsapp_configured'));
+        $this->assertNotEmpty($web->json('data.office_handoff.whatsapp_url'));
+
+        $mobilePoint = $this->makePoint($ctx, -16.71, -51.21, 'Cliente Mobile');
+        $mobile = $this->mobilePostJson("/api/mobile/v1/points/{$mobilePoint->id}/sales", $ctx['token'], $ctx['device'], $this->completeSalePayload([
+            'campaign_id' => $ctx['campaign']->id,
+            'customer_name' => 'Cliente Mobile',
+        ], $ctx))->assertCreated();
+
+        $this->assertTrue($mobile->json('data.office_handoff.can_send'));
+        $this->assertTrue($mobile->json('data.office_handoff.whatsapp_configured'));
+        $this->assertSame(
+            (bool) $web->json('data.office_handoff.can_send'),
+            (bool) $mobile->json('data.office_handoff.can_send'),
+        );
+
+        $saleId = (int) $mobile->json('data.sale_id');
+        $get = $this->mobileGet("/api/mobile/v1/sales/{$saleId}/handoff", $ctx['token'], $ctx['device'])->assertOk();
+        $this->assertTrue($get->json('data.can_send'));
+        $this->assertTrue($get->json('data.whatsapp_configured'));
+        $this->assertNotEmpty($get->json('data.message'));
+        $this->assertNotEmpty($get->json('data.whatsapp_url'));
+        $this->assertTrue($get->json('data.copy_available'));
+        $this->assertTrue($get->json('data.view_available'));
+    }
+
+    public function test_office_whatsapp_resolves_even_if_tenant_context_differs(): void
+    {
+        $ctx = $this->opsContext();
+        app(OfficeSalesWhatsAppSettings::class)->save($ctx['seller']->company, '64999998888', true);
+        $foreign = $this->makeCompanyWithPlan('Empresa Contexto Estranho');
+        $foreignUser = $this->makeUser($foreign, Role::SELLER, ['email' => 'foreign-context@test']);
+        app(TenantContext::class)->set($foreign, $foreignUser);
+
+        $resolved = app(OfficeSalesWhatsAppSettings::class)->forCompany($ctx['seller']->company->fresh());
+        $this->assertTrue($resolved['enabled_flag']);
+        $this->assertTrue($resolved['enabled']);
+        $this->assertNotSame('', $resolved['digits']);
+    }
+
+    public function test_handoff_follows_settings_changed_after_bootstrap(): void
+    {
+        $ctx = $this->opsContext();
+        app(OfficeSalesWhatsAppSettings::class)->save($ctx['seller']->company, '', false);
+        $boot = $this->mobileGet('/api/mobile/v1/bootstrap', $ctx['token'], $ctx['device'])->assertOk()->json('data.office_handoff');
+        $this->assertFalse($boot['can_send']);
+
+        app(OfficeSalesWhatsAppSettings::class)->save($ctx['seller']->company->fresh(), '64999998888', true);
+
+        $point = $this->makePoint($ctx, -16.7, -51.2, 'Cliente');
+        $created = $this->mobilePostJson("/api/mobile/v1/points/{$point->id}/sales", $ctx['token'], $ctx['device'], $this->completeSalePayload([
+            'campaign_id' => $ctx['campaign']->id,
+        ], $ctx))->assertCreated();
+
+        $this->assertTrue($created->json('data.office_handoff.can_send'));
+        $this->assertTrue($created->json('data.office_handoff.whatsapp_configured'));
+        $saleId = (int) $created->json('data.sale_id');
+        $this->mobileGet("/api/mobile/v1/sales/{$saleId}/handoff", $ctx['token'], $ctx['device'])
+            ->assertOk()
+            ->assertJsonPath('data.can_send', true)
+            ->assertJsonPath('data.whatsapp_configured', true);
     }
 
     public function test_visit_gps_does_not_overwrite_property_coordinates(): void
@@ -416,6 +506,9 @@ class ExpVendedorCompleteSaleHandoffTest extends TestCase
         $this->assertStringContainsString('canSendOfficeHandoff', $shell);
         $this->assertStringContainsString('WhatsApp do escritório não configurado.', $shell);
         $this->assertStringContainsString("debugFlow('saleSuccess'", $shell);
+        $this->assertStringContainsString('mobileApi.saleHandoff(saleId)', $shell);
+        $this->assertStringNotContainsString('?? boot.configured', $shell);
+        $this->assertStringNotContainsString('saleId && !currentHandoff?.message', $shell);
         $this->assertStringContainsString('Confirmando', $shell);
         $this->assertStringContainsString('submitBtn.disabled = true', $shell);
         $this->assertStringContainsString('loadResults()', $shell);

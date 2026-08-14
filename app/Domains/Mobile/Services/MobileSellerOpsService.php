@@ -179,7 +179,9 @@ class MobileSellerOpsService
         return [
             'enabled' => (bool) $office['enabled'],
             'configured' => ($office['digits'] ?? '') !== '',
-            'whatsapp_enabled' => (bool) ($office['enabled_flag'] ?? false),
+            'can_send' => (bool) $office['enabled'],
+            'whatsapp_configured' => ($office['digits'] ?? '') !== '',
+            'whatsapp_enabled' => (bool) $office['enabled'],
         ];
     }
 

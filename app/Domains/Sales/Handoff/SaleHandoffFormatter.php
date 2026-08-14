@@ -5,6 +5,7 @@ namespace App\Domains\Sales\Handoff;
 use App\Domains\Commissions\Enums\SalesCommissionStatus;
 use App\Domains\Commissions\Models\SalesCommission;
 use App\Domains\Sales\Models\Sale;
+use Illuminate\Support\Facades\Log;
 
 class SaleHandoffFormatter
 {
@@ -88,7 +89,7 @@ class SaleHandoffFormatter
             $whatsappUrl = 'https://wa.me/'.$office['digits'].'?text='.rawurlencode($message);
         }
 
-        return new SaleHandoffData(
+        $resolved = new SaleHandoffData(
             saleId: $data->saleId,
             companyName: $data->companyName,
             customerName: $data->customerName,
@@ -113,6 +114,15 @@ class SaleHandoffFormatter
             whatsappUrl: $whatsappUrl,
             whatsappConfigured: $data->whatsappConfigured,
         );
+
+        Log::info('[OfficeHandoffDebug]', [
+            'company_id' => $company?->id,
+            'enabled_setting' => (bool) ($office['enabled_flag'] ?? false),
+            'has_number' => ($office['digits'] ?? '') !== '',
+            'resolved_can_send' => $resolved->whatsappEnabled && filled($resolved->whatsappUrl),
+        ]);
+
+        return $resolved;
     }
 
     protected function composeMessage(SaleHandoffData $data): string
