@@ -91,6 +91,9 @@ export const mobileApi = {
     commissions: (params) => json(`/api/mobile/v1/commissions${query(params)}`),
     results: () => json('/api/mobile/v1/results'),
     territory: (params) => json(`/api/mobile/v1/territory${query(params)}`),
+    saleHandoff: (id) => json(`/api/mobile/v1/sales/${id}/handoff`),
+    handoffCopied: (id) => json(`/api/mobile/v1/sales/${id}/handoff/copied`, { method: 'POST' }),
+    handoffOpened: (id) => json(`/api/mobile/v1/sales/${id}/handoff/opened`, { method: 'POST' }),
 };
 
 if (typeof window !== 'undefined') {

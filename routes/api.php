@@ -87,6 +87,12 @@ Route::prefix('mobile/v1')->middleware('throttle:api')->group(function (): void 
         Route::post('/points/{point}/sales', [MobilePointVisitOpsController::class, 'sale'])
             ->middleware('throttle:60,1');
 
+        Route::get('/sales/{sale}/handoff', [\App\Http\Controllers\Api\Mobile\V1\SaleHandoffOpsController::class, 'show']);
+        Route::post('/sales/{sale}/handoff/copied', [\App\Http\Controllers\Api\Mobile\V1\SaleHandoffOpsController::class, 'copied'])
+            ->middleware('throttle:60,1');
+        Route::post('/sales/{sale}/handoff/opened', [\App\Http\Controllers\Api\Mobile\V1\SaleHandoffOpsController::class, 'opened'])
+            ->middleware('throttle:60,1');
+
         Route::get('/agenda', [MobileAgendaOpsController::class, 'index']);
         Route::post('/follow-ups/{followUp}/complete', [MobileAgendaOpsController::class, 'complete'])
             ->middleware('throttle:60,1');

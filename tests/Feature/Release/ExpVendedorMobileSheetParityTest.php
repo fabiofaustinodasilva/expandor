@@ -25,9 +25,11 @@ class ExpVendedorMobileSheetParityTest extends TestCase
         $this->assertStringContainsString('sheet-footer', $prepare);
         $this->assertStringContainsString('point-sector-name', $prepare);
         $this->assertStringContainsString('Digite o setor ou bairro', $prepare);
-        $this->assertStringContainsString('create-sale-block', $prepare);
+        $this->assertStringContainsString('saleFormMarkup', $prepare);
+        $this->assertStringContainsString('${p}sale-block', $prepare);
+        $this->assertStringContainsString("saleFormMarkup('create-')", $prepare);
         $this->assertStringContainsString('Salvar ponto', $prepare);
-        $this->assertStringContainsString('Confirmar venda', $prepare);
+        $this->assertStringContainsString('CONFIRMAR VENDA', $prepare);
         $this->assertStringContainsString('+ Adicionar produto', $prepare);
 
         $this->assertStringNotContainsString('point-status', $prepare);

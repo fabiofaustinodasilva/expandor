@@ -125,6 +125,81 @@ writeFileSync(join(outDir, 'runtime-config.js'), runtimeConfig);
 const shellVersion = String(process.env.EXPANDOR_SHELL_VERSION || '8.2.34').trim();
 const buildStamp = new Date().toISOString();
 
+function saleFormMarkup(prefix) {
+    const p = prefix;
+    return `
+            <div class="visit-block" id="${p}sale-block" hidden>
+                <p class="sheet__section-title">CONFIRMAR VENDA</p>
+                <ol class="sale-steps">
+                    <li>Cliente</li>
+                    <li>Endereço</li>
+                    <li>Contratação</li>
+                    <li>Revisão</li>
+                </ol>
+                <section class="sale-section sale-section--client">
+                    <p class="sale-section__title">Dados do cliente</p>
+                    <label class="field-label" for="${p}sale-name">Nome Completo <span id="${p}sale-name-required" class="req-star">*</span></label>
+                    <input class="field-input" id="${p}sale-name" placeholder="João da Silva" autocomplete="name">
+                    <label class="field-label" for="${p}sale-document">CPF <span id="${p}sale-document-required" class="req-star">*</span></label>
+                    <input class="field-input" id="${p}sale-document" placeholder="000.000.000-00" inputmode="numeric" autocomplete="off">
+                    <label class="field-label" for="${p}sale-birth">Data de nascimento <span class="req-star">*</span></label>
+                    <input class="field-input" id="${p}sale-birth" placeholder="dd/mm/aaaa" inputmode="numeric" autocomplete="bday">
+                    <label class="field-label" for="${p}sale-phone">Telefone / WhatsApp <span id="${p}sale-phone-required" class="req-star">*</span></label>
+                    <input class="field-input" id="${p}sale-phone" placeholder="(64) 99999-9999" inputmode="tel" autocomplete="tel">
+                    <div id="${p}sale-whatsapp-wrap" hidden>
+                        <label class="field-label" for="${p}sale-whatsapp">WhatsApp <span id="${p}sale-whatsapp-required" class="req-star" hidden>*</span></label>
+                        <input class="field-input" id="${p}sale-whatsapp" placeholder="WhatsApp" inputmode="tel">
+                    </div>
+                    <div id="${p}sale-rg-wrap" hidden>
+                        <label class="field-label" for="${p}sale-rg">RG <span id="${p}sale-rg-required" class="req-star" hidden>*</span></label>
+                        <input class="field-input" id="${p}sale-rg" placeholder="RG">
+                    </div>
+                    <div id="${p}sale-email-wrap" hidden>
+                        <label class="field-label" for="${p}sale-email">E-mail <span id="${p}sale-email-required" class="req-star" hidden>*</span></label>
+                        <input class="field-input" id="${p}sale-email" placeholder="E-mail" type="email" autocomplete="email">
+                    </div>
+                </section>
+                <section class="sale-section sale-section--address">
+                    <p class="sale-section__title">Endereço da instalação</p>
+                    <label class="field-label" for="${p}sale-install-street">Rua / Avenida <span class="req-star">*</span></label>
+                    <input class="field-input" id="${p}sale-install-street" placeholder="Rua Goiás" autocomplete="street-address">
+                    <label class="field-label" for="${p}sale-install-number">Número</label>
+                    <input class="field-input" id="${p}sale-install-number" placeholder="123" inputmode="numeric">
+                    <label class="field-label" for="${p}sale-install-neighborhood">Bairro</label>
+                    <input class="field-input" id="${p}sale-install-neighborhood" placeholder="Centro">
+                    <label class="field-label" for="${p}sale-install-reference">Ponto de referência</label>
+                    <input class="field-input" id="${p}sale-install-reference" placeholder="Próximo à praça">
+                    <label class="field-label" for="${p}sale-install-city">Cidade</label>
+                    <input class="field-input" id="${p}sale-install-city" readonly>
+                    <input type="hidden" id="${p}sale-install-city-id">
+                </section>
+                <section class="sale-section sale-section--contract">
+                    <p class="sale-section__title">Contratação</p>
+                    <p class="field-label">Dia de vencimento <span class="req-star">*</span></p>
+                    <input type="hidden" id="${p}sale-due-day">
+                    <div class="due-day-chips" id="${p}sale-due-chips"></div>
+                    <div class="sale-cart-head">
+                        <label class="field-label">Produtos <span id="${p}sale-product-required" class="req-star" hidden>*</span></label>
+                        <button type="button" class="btn btn-ghost" id="${p}sale-cart-add">+ Adicionar produto</button>
+                    </div>
+                    <div id="${p}sale-cart-lines" class="sale-cart-lines"></div>
+                    <p class="card__meta" id="${p}sale-cart-empty">Nenhum produto ainda. Toque em “+ Adicionar produto”.</p>
+                    <div class="sale-cart-total">
+                        <span class="muted">Total</span>
+                        <strong id="${p}sale-cart-total">R$ 0,00</strong>
+                    </div>
+                    <div id="${p}sale-notes-wrap" hidden>
+                        <label class="field-label" for="${p}sale-notes">Observações da venda <span id="${p}sale-notes-required" class="req-star" hidden>*</span></label>
+                        <textarea class="field-textarea" id="${p}sale-notes" placeholder="Observações comerciais desta venda"></textarea>
+                    </div>
+                </section>
+                <section class="sale-section sale-section--review">
+                    <p class="sale-section__title">Revisão</p>
+                    <div class="sale-review" id="${p}sale-review"></div>
+                </section>
+            </div>`;
+}
+
 const html = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -285,6 +360,12 @@ const html = `<!DOCTYPE html>
                 <button class="btn btn-accent btn-block" id="point-register-visit" type="button">Registrar visita</button>
                 <button class="btn btn-ghost btn-block" id="point-sheet-close" type="button">Fechar</button>
             </div>
+            <div class="sale-section sale-section--review" id="point-handoff-block" hidden>
+                <p class="sale-section__title">Encaminhamento ao escritório</p>
+                <button type="button" class="btn btn-primary btn-block" id="point-handoff-whatsapp">Enviar no WhatsApp</button>
+                <button type="button" class="btn btn-ghost btn-block" id="point-handoff-copy">Copiar mensagem</button>
+                <button type="button" class="btn btn-ghost btn-block" id="point-handoff-view">Ver mensagem</button>
+            </div>
         </div>
 
         <div class="sheet" id="adjust-sheet" hidden>
@@ -345,40 +426,7 @@ const html = `<!DOCTYPE html>
                 </div>
             </div>
                 
-            <div class="visit-block" id="sale-block" hidden>
-                <p class="sheet__section-title">CONFIRMAR VENDA</p>
-                <p class="card__meta">Revise os produtos antes de finalizar.</p>
-                <label class="field-label" for="sale-name">Nome completo <span id="sale-name-required" class="req-star" hidden>*</span></label>
-                <input class="field-input" id="sale-name" placeholder="Nome completo" autocomplete="name">
-                <label class="field-label" for="sale-phone">Telefone <span id="sale-phone-required" class="req-star" hidden>*</span></label>
-                <input class="field-input" id="sale-phone" placeholder="Telefone" inputmode="tel" autocomplete="tel">
-                <label class="field-label" for="sale-whatsapp">WhatsApp <span id="sale-whatsapp-required" class="req-star" hidden>*</span></label>
-                <input class="field-input" id="sale-whatsapp" placeholder="WhatsApp" inputmode="tel">
-                <div class="sheet-actions" style="grid-template-columns:1fr 1fr;margin-top:0.55rem">
-                    <div>
-                        <label class="field-label" for="sale-document">CPF <span id="sale-document-required" class="req-star" hidden>*</span></label>
-                        <input class="field-input" id="sale-document" placeholder="CPF">
-                    </div>
-                    <div>
-                        <label class="field-label" for="sale-rg">RG <span id="sale-rg-required" class="req-star" hidden>*</span></label>
-                        <input class="field-input" id="sale-rg" placeholder="RG">
-                    </div>
-                </div>
-                <label class="field-label" for="sale-email">E-mail <span id="sale-email-required" class="req-star" hidden>*</span></label>
-                <input class="field-input" id="sale-email" placeholder="E-mail" type="email" autocomplete="email">
-                <div class="sale-cart-head">
-                    <label class="field-label">Produtos <span id="sale-product-required" class="req-star" hidden>*</span></label>
-                    <button type="button" class="btn btn-ghost" id="sale-cart-add">+ Adicionar produto</button>
-                </div>
-                <div id="sale-cart-lines" class="sale-cart-lines"></div>
-                <p class="card__meta" id="sale-cart-empty">Nenhum produto ainda. Toque em “+ Adicionar produto”.</p>
-                <div class="sale-cart-total">
-                    <span class="muted">Total</span>
-                    <strong id="sale-cart-total">R$ 0,00</strong>
-                </div>
-                <label class="field-label" for="sale-notes">Observações da venda <span id="sale-notes-required" class="req-star" hidden>*</span></label>
-                <textarea class="field-textarea" id="sale-notes" placeholder="Observações comerciais desta venda"></textarea>
-            </div>
+            ${saleFormMarkup('')}
 
                 <div id="visit-error" class="banner" hidden data-kind="error"></div>
             </div>
@@ -446,40 +494,7 @@ const html = `<!DOCTYPE html>
                 </div>
             </div>
                     
-            <div class="visit-block" id="create-sale-block" hidden>
-                <p class="sheet__section-title">CONFIRMAR VENDA</p>
-                <p class="card__meta">Revise os produtos antes de finalizar.</p>
-                <label class="field-label" for="create-sale-name">Nome completo <span id="create-sale-name-required" class="req-star" hidden>*</span></label>
-                <input class="field-input" id="create-sale-name" placeholder="Nome completo" autocomplete="name">
-                <label class="field-label" for="create-sale-phone">Telefone <span id="create-sale-phone-required" class="req-star" hidden>*</span></label>
-                <input class="field-input" id="create-sale-phone" placeholder="Telefone" inputmode="tel" autocomplete="tel">
-                <label class="field-label" for="create-sale-whatsapp">WhatsApp <span id="create-sale-whatsapp-required" class="req-star" hidden>*</span></label>
-                <input class="field-input" id="create-sale-whatsapp" placeholder="WhatsApp" inputmode="tel">
-                <div class="sheet-actions" style="grid-template-columns:1fr 1fr;margin-top:0.55rem">
-                    <div>
-                        <label class="field-label" for="create-sale-document">CPF <span id="create-sale-document-required" class="req-star" hidden>*</span></label>
-                        <input class="field-input" id="create-sale-document" placeholder="CPF">
-                    </div>
-                    <div>
-                        <label class="field-label" for="create-sale-rg">RG <span id="create-sale-rg-required" class="req-star" hidden>*</span></label>
-                        <input class="field-input" id="create-sale-rg" placeholder="RG">
-                    </div>
-                </div>
-                <label class="field-label" for="create-sale-email">E-mail <span id="create-sale-email-required" class="req-star" hidden>*</span></label>
-                <input class="field-input" id="create-sale-email" placeholder="E-mail" type="email" autocomplete="email">
-                <div class="sale-cart-head">
-                    <label class="field-label">Produtos <span id="create-sale-product-required" class="req-star" hidden>*</span></label>
-                    <button type="button" class="btn btn-ghost" id="create-sale-cart-add">+ Adicionar produto</button>
-                </div>
-                <div id="create-sale-cart-lines" class="sale-cart-lines"></div>
-                <p class="card__meta" id="create-sale-cart-empty">Nenhum produto ainda. Toque em “+ Adicionar produto”.</p>
-                <div class="sale-cart-total">
-                    <span class="muted">Total</span>
-                    <strong id="create-sale-cart-total">R$ 0,00</strong>
-                </div>
-                <label class="field-label" for="create-sale-notes">Observações da venda <span id="create-sale-notes-required" class="req-star" hidden>*</span></label>
-                <textarea class="field-textarea" id="create-sale-notes" placeholder="Observações comerciais desta venda"></textarea>
-            </div>
+            ${saleFormMarkup('create-')}
 
                     <details class="address-advanced" id="create-address-advanced" style="margin-top:1rem">
                         <summary class="field-label" style="cursor:pointer">Endereço (opcional no campo)</summary>
@@ -536,6 +551,42 @@ const html = `<!DOCTYPE html>
                 <button class="btn btn-ghost" id="presentation-close" type="button">Fechar</button>
             </header>
             <div class="presentation-pane__body" id="presentation-list"></div>
+        </div>
+
+        <div class="sheet" id="sale-success-sheet" hidden>
+            <div class="sheet-header">
+                <div class="sheet__handle"></div>
+                <p class="sheet__section-title sale-success__kicker">VENDA CONFIRMADA</p>
+                <h3 class="sheet__title" id="sale-success-title">Venda realizada!</h3>
+                <p class="card__title" id="sale-success-label">Venda Expandor</p>
+                <p class="card__meta" id="sale-success-commission"></p>
+                <p class="card__meta" id="sale-success-status"></p>
+            </div>
+            <div class="sheet-body">
+                <button type="button" class="btn btn-primary btn-block" id="sale-success-whatsapp">Enviar para o escritório</button>
+                <button type="button" class="btn btn-ghost btn-block" id="sale-success-copy">Copiar mensagem</button>
+                <button type="button" class="btn btn-ghost btn-block" id="sale-success-view">Ver mensagem</button>
+            </div>
+            <div class="sheet-footer">
+                <button type="button" class="btn btn-ghost btn-block" id="sale-success-close">Voltar ao mapa</button>
+            </div>
+        </div>
+
+        <div class="sheet" id="handoff-message-sheet" hidden>
+            <div class="sheet-header">
+                <div class="sheet__handle"></div>
+                <h3 class="sheet__title">Mensagem ao escritório</h3>
+            </div>
+            <div class="sheet-body">
+                <pre class="handoff-message" id="handoff-message-text"></pre>
+            </div>
+            <div class="sheet-footer">
+                <div class="sheet-actions" style="grid-template-columns:1fr 1fr 1fr">
+                    <button type="button" class="btn btn-ghost" id="handoff-copy">Copiar</button>
+                    <button type="button" class="btn btn-primary" id="handoff-whatsapp">Enviar no WhatsApp</button>
+                    <button type="button" class="btn btn-ghost" id="handoff-close">Fechar</button>
+                </div>
+            </div>
         </div>
 
         <div id="reward-overlay" hidden>

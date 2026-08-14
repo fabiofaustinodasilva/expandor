@@ -38,7 +38,11 @@ class StoreFirstApproachRequest extends FormRequest
     {
         $companyId = app(TenantContext::class)->id();
         $isSale = $this->input('status') === VisitStatus::INSTALLATION_REQUESTED->value;
-        $saleRules = app(SaleFieldsPolicyResolver::class)->validationRulesForRequest($isSale, $companyId, true);
+        $saleRules = app(SaleFieldsPolicyResolver::class)->validationRulesForRequest(
+            $isSale,
+            $companyId,
+            $this->requiresDueDayOnSale(),
+        );
 
         return array_merge([
             'city_id' => [
@@ -90,5 +94,13 @@ class StoreFirstApproachRequest extends FormRequest
             'street.required' => 'Informe a rua ou use Local GPS.',
             'follow_up_at.required' => 'Informe a data do retorno.',
         ], app(SaleFieldsPolicyResolver::class)->validationMessages());
+    }
+
+    /**
+     * Confirmar venda na web exige vencimento. Mobile legado permanece opcional.
+     */
+    protected function requiresDueDayOnSale(): bool
+    {
+        return true;
     }
 }

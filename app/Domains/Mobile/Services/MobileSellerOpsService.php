@@ -13,7 +13,10 @@ use App\Domains\Maps\DTOs\MapFiltersDTO;
 use App\Domains\Maps\Services\MapQueryService;
 use App\Domains\Mobile\Support\MobileApiTransformer;
 use App\Domains\Platform\Services\FeatureFlagService;
+use App\Domains\Sales\Handoff\SaleHandoffService;
+use App\Domains\Sales\Models\Sale;
 use App\Domains\Sales\Products\Services\ProductCatalogService;
+use App\Domains\Sales\Support\SaleDueDays;
 use App\Domains\Sales\SaleFields\SaleFieldKeys;
 use App\Domains\Sales\SaleFields\SaleFieldsPolicyResolver;
 use App\Domains\Company\Support\FieldOps\FieldOpsPolicyResolver;
@@ -33,6 +36,7 @@ use App\Domains\Visits\Actions\RegisterVisitAction;
 use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Domains\Visits\Models\FollowUp;
+use App\Domains\Visits\Models\Visit;
 use App\Domains\Visits\Services\VisitService;
 use App\Domains\Visits\Support\FollowUpSchedule;
 use App\Support\AppTime;
@@ -63,6 +67,7 @@ class MobileSellerOpsService
         protected TerritoryRepository $territory,
         protected FeatureFlagService $flags,
         protected FieldOpsPolicyResolver $fieldOps,
+        protected SaleHandoffService $handoff,
     ) {}
 
     /**
@@ -128,6 +133,7 @@ class MobileSellerOpsService
             'sale_fields' => [
                 'required' => $salePolicy->checklist(),
                 'labels' => SaleFieldKeys::labels(),
+                'due_days' => SaleDueDays::ALLOWED,
             ],
             'capabilities' => [
                 'gps' => true,
@@ -244,6 +250,8 @@ class MobileSellerOpsService
             $data['street'] = 'Posição no mapa';
         }
 
+        unset($data['complete_sale']);
+
         $result = $this->firstApproach->execute($data, $user);
         $property = $result['property']->load(['address', 'residents']);
         $visit = $result['visit']->load(['sale.items', 'followUps', 'campaign']);
@@ -256,13 +264,7 @@ class MobileSellerOpsService
         ]);
 
         if ($visit->status === VisitStatus::INSTALLATION_REQUESTED) {
-            $awarded = CommissionAwardedPayload::fromVisit($visit);
-            if ($awarded !== null) {
-                $payload['commission_awarded'] = $awarded;
-                $payload['sale_id'] = $awarded['sale_id'];
-                $payload['commission_id'] = $awarded['commission_id'];
-                $payload['commission_amount'] = $awarded['amount'];
-            }
+            $payload = $this->attachSaleOutcome($payload, $visit);
         }
 
         return $payload;
@@ -308,6 +310,7 @@ class MobileSellerOpsService
 
     public function presentPoint(Property $property, ?User $actor = null): array
     {
+        $property->loadMissing(['address.city', 'residents', 'visits']);
         $dossier = $this->customers->presentDossier($property);
         $resident = $property->residents->sortByDesc('is_primary_contact')->first()
             ?? $property->residents->first();
@@ -336,6 +339,15 @@ class MobileSellerOpsService
                 ? 'https://wa.me/'.preg_replace('/\D+/', '', (string) ($resident->whatsapp ?: $resident->phone))
                 : null,
             'can_adjust' => $canAdjust,
+            'last_sale_id' => $this->lastSaleIdForProperty($property),
+            'city_name' => $property->address?->city?->name,
+            'city_id' => $property->address?->city_id,
+            'street' => $property->address?->street,
+            'number' => $property->address?->number,
+            'neighborhood' => $property->address?->neighborhood,
+            'reference' => $property->address?->reference,
+            'resident_document' => $resident?->document,
+            'resident_birth_date' => $resident?->birth_date?->format('d/m/Y'),
         ]);
     }
 
@@ -427,6 +439,7 @@ class MobileSellerOpsService
      */
     public function registerPointVisit(User $user, Property $property, array $data): array
     {
+        unset($data['complete_sale']);
         $campaign = $this->firstApproach->resolveCampaign($user, $data['campaign_id'] ?? null);
         $data['campaign_id'] = $campaign->id;
         $data['property_id'] = $property->id;
@@ -449,21 +462,15 @@ class MobileSellerOpsService
         ];
 
         if ($visit->status === VisitStatus::INSTALLATION_REQUESTED) {
-            $awarded = CommissionAwardedPayload::fromVisit($visit);
-            if ($awarded !== null) {
-                $payload['commission_awarded'] = $awarded;
-                $payload['sale_id'] = $awarded['sale_id'];
-                $payload['commission_id'] = $awarded['commission_id'];
-                $payload['commission_amount'] = $awarded['amount'];
-                $sale = $visit->sale;
-                $payload['total'] = $sale?->negotiated_amount;
-                $payload['items'] = $sale?->items->map(fn ($item) => [
-                    'id' => $item->id,
-                    'product_name' => $item->product_name,
-                    'quantity' => $item->quantity,
-                    'unit_price' => $item->unit_price,
-                ])->values()->all();
-            }
+            $payload = $this->attachSaleOutcome($payload, $visit);
+            $sale = $visit->sale;
+            $payload['total'] = $sale?->negotiated_amount;
+            $payload['items'] = $sale?->items->map(fn ($item) => [
+                'id' => $item->id,
+                'product_name' => $item->product_name,
+                'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price,
+            ])->values()->all();
         }
 
         return $payload;
@@ -522,6 +529,7 @@ class MobileSellerOpsService
             throw new AuthorizationException('Somente o responsável pode concluir este retorno.');
         }
 
+        unset($data['complete_sale']);
         $result = $this->completeFollowUp->execute($followUp, $data, $user);
         $visit = $result['visit'];
         $payload = [
@@ -533,10 +541,7 @@ class MobileSellerOpsService
         ];
 
         if ($visit->status === VisitStatus::INSTALLATION_REQUESTED) {
-            $awarded = CommissionAwardedPayload::fromVisit($visit->fresh(['sale.items']));
-            if ($awarded !== null) {
-                $payload['commission_awarded'] = $awarded;
-            }
+            $payload = $this->attachSaleOutcome($payload, $visit->fresh(['sale.items']));
         }
 
         return $payload;
@@ -664,6 +669,40 @@ class MobileSellerOpsService
         return $property->status instanceof PropertyStatus
             ? $property->status
             : PropertyStatus::from((string) $property->status);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function attachSaleOutcome(array $payload, Visit $visit): array
+    {
+        $awarded = CommissionAwardedPayload::fromVisit($visit);
+        if ($awarded !== null) {
+            $payload['commission_awarded'] = $awarded;
+            $payload['sale_id'] = $awarded['sale_id'];
+            $payload['commission_id'] = $awarded['commission_id'];
+            $payload['commission_amount'] = $awarded['amount'];
+        }
+
+        $office = $this->handoff->forVisit($visit);
+        if ($office !== null) {
+            $payload['office_handoff'] = $office->toArray();
+            $payload['sale_id'] = $payload['sale_id'] ?? $office->saleId;
+        }
+
+        return $payload;
+    }
+
+    protected function lastSaleIdForProperty(Property $property): ?int
+    {
+        $id = Sale::query()
+            ->where('company_id', $property->company_id)
+            ->whereHas('visit', fn ($q) => $q->where('property_id', $property->id))
+            ->latest('id')
+            ->value('id');
+
+        return $id !== null ? (int) $id : null;
     }
 
     /**

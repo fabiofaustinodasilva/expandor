@@ -35,7 +35,11 @@ class CompleteFollowUpRequest extends FormRequest
     {
         $companyId = app(TenantContext::class)->id();
         $isSale = $this->input('status') === VisitStatus::INSTALLATION_REQUESTED->value;
-        $saleRules = app(SaleFieldsPolicyResolver::class)->validationRulesForRequest($isSale, $companyId, true);
+        $saleRules = app(SaleFieldsPolicyResolver::class)->validationRulesForRequest(
+            $isSale,
+            $companyId,
+            $this->requiresDueDayOnSale(),
+        );
 
         return array_merge([
             'status' => ['required', Rule::enum(VisitStatus::class)],
@@ -59,5 +63,13 @@ class CompleteFollowUpRequest extends FormRequest
             'status.required' => 'Selecione o resultado do retorno.',
             'follow_up_at.required' => 'Informe a data do novo retorno.',
         ], app(SaleFieldsPolicyResolver::class)->validationMessages());
+    }
+
+    /**
+     * Agenda web exige vencimento na venda. Mobile legado permanece opcional.
+     */
+    protected function requiresDueDayOnSale(): bool
+    {
+        return true;
     }
 }

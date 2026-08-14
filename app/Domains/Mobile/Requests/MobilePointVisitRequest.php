@@ -2,15 +2,15 @@
 
 namespace App\Domains\Mobile\Requests;
 
-use App\Domains\Mobile\Support\MobileAuthResponse;
+use App\Domains\Mobile\Requests\Concerns\RequiresDueDayOnCompleteSale;
 use App\Domains\Visits\Requests\StoreVisitRequest;
 use App\Tenancy\TenantContext;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
 class MobilePointVisitRequest extends StoreVisitRequest
 {
+    use RequiresDueDayOnCompleteSale;
+
     protected function prepareForValidation(): void
     {
         parent::prepareForValidation();
@@ -31,23 +31,11 @@ class MobilePointVisitRequest extends StoreVisitRequest
                 'integer',
                 Rule::exists('campaigns', 'id')->where(fn ($q) => $q->where('company_id', $companyId)),
             ],
-        ]);
+        ], $this->completeSaleExtraRules());
     }
 
-    protected function failedValidation(Validator $validator): void
+    public function messages(): array
     {
-        throw new HttpResponseException(
-            MobileAuthResponse::error(
-                'Verifique os dados informados.',
-                'validation_error',
-                422,
-                $validator->errors()->toArray(),
-            )
-        );
-    }
-
-    protected function requiresDueDayOnSale(): bool
-    {
-        return false;
+        return array_merge(parent::messages(), $this->completeSaleExtraMessages());
     }
 }

@@ -23,13 +23,21 @@ import {
     resetSaleForm,
     addCartLine,
     setSalePrefix,
+    prefillSaleForm,
 } from './sale-cart.js';
+import {
+    copyHandoffMessage,
+    openOfficeWhatsApp,
+    showHandoffText,
+    hideHandoffText,
+} from './sale-handoff.js';
 
 const GPS_FAIL = 'Não foi possível acessar sua localização.';
 const GPS_UNAVAILABLE_HINT = 'Localização indisponível. Use Meu Local quando quiser.';
 const GPS_PERMISSION_HINT = 'Permita localização para centralizar o mapa, ou use Meu Local.';
 const INITIAL_GPS_TIMEOUT_MS = 8000;
 const OFFLINE_MUTATION = 'Sem conexão. Esta ação ainda não pode ser concluída offline.';
+const SALE_NETWORK_ERROR = 'Não foi possível concluir a venda. Verifique sua conexão e tente novamente.';
 let bootstrap = null;
 let searchTimer = null;
 let layersOpen = false;
@@ -37,6 +45,8 @@ let initialMapGpsDone = false;
 let catalogProducts = [];
 let adjustUiMode = null; // null | 'create' | 'existing'
 let adjustPropertyCanAdjust = false;
+let lastOpenedPoint = null;
+let currentHandoff = null;
 
 function debugFlow(step, detail = {}) {
     try {
@@ -147,6 +157,15 @@ function syncCreateOutcomeBlocks(status) {
     if (isSale) {
         resetSaleForm('create-');
         initSaleForm(catalogProducts, bootstrap?.data?.sale_fields || {}, 'create-');
+        prefillSaleForm({
+            name: $('point-contact')?.value,
+            phone: $('point-phone')?.value,
+            street: $('point-street')?.value,
+            number: $('point-number')?.value,
+            neighborhood: $('point-sector-name')?.value,
+            city: cityNameFromSelect(),
+            city_id: $('point-city')?.value,
+        });
     }
     if (isReturn) {
         ensureReturnDefaults('create-follow-up-date', 'create-follow-up-time', 'create-return-shortcuts');
@@ -305,6 +324,28 @@ function toast(message, kind = 'error') {
     el.textContent = message || '';
 }
 
+if (typeof window !== 'undefined') {
+    window.ExpandorToast = toast;
+}
+
+function humanApiError(error, fallback) {
+    const first = error?.payload?.errors
+        ? Object.values(error.payload.errors).flat().find(Boolean)
+        : null;
+    if (error?.code === 'network_offline' || error?.message?.includes('conexão') || error?.message?.includes('internet')) {
+        return fallback || SALE_NETWORK_ERROR;
+    }
+
+    return first || error?.message || fallback || 'Não foi possível concluir.';
+}
+
+function cityNameFromSelect() {
+    const select = $('point-city');
+    const option = select?.selectedOptions?.[0];
+
+    return option?.textContent?.trim() || '';
+}
+
 function commissionBadgeClass(status) {
     const value = String(status || '').toLowerCase();
     if (value === 'paid') {
@@ -360,6 +401,7 @@ async function openPoint(item) {
 
     const payload = await mobileApi.point(id);
     const point = payload.data || {};
+    lastOpenedPoint = point;
     $('point-title').textContent = point.resident_name || point.name || `Imóvel #${id}`;
     $('point-meta').textContent = [
         point.status_label || propertyStatusLabel(point.status),
@@ -386,6 +428,7 @@ async function openPoint(item) {
     }
     show('point-sheet', true);
     paintIcons($('point-sheet'));
+    renderPointHandoff(point);
 }
 
 function openAdjustSheet(metaText) {
@@ -536,7 +579,10 @@ function openCreateSheet(lat, lng, label, source = 'unknown') {
     const err = $('create-error');
     if (err) { err.hidden = true; err.textContent = ''; }
     const submit = $('create-point-submit');
-    if (submit) submit.textContent = 'Salvar ponto';
+    if (submit) {
+        submit.disabled = false;
+        submit.textContent = 'Salvar ponto';
+    }
     show('visit-sheet', false);
     show('point-sheet', false);
     show('create-sheet', true);
@@ -557,13 +603,17 @@ function resolveCampaignIdForSubmit() {
     return Number($('visit-campaign')?.value || $('point-campaign')?.value || 0);
 }
 
-async function resolveVisitCoordinates(propertyId) {
+async function resolveVisitCoordinates(propertyId, { allowGps = true } = {}) {
     const marker = MapAdapter.markerRegistry?.get(Number(propertyId))?.data;
     if (marker?.latitude != null && marker?.longitude != null) {
         return {
             latitude: Number(marker.latitude),
             longitude: Number(marker.longitude),
         };
+    }
+
+    if (!allowGps) {
+        return {};
     }
 
     try {
@@ -630,6 +680,19 @@ function syncVisitOutcomeBlocks(status) {
     if (isSale) {
         resetSaleForm('');
         initSaleForm(catalogProducts, bootstrap?.data?.sale_fields || {}, '');
+        prefillSaleForm({
+            name: lastOpenedPoint?.resident_name,
+            phone: lastOpenedPoint?.resident_phone,
+            whatsapp: lastOpenedPoint?.resident_whatsapp,
+            document: lastOpenedPoint?.resident_document,
+            birth_date: lastOpenedPoint?.resident_birth_date,
+            street: lastOpenedPoint?.street,
+            number: lastOpenedPoint?.number,
+            neighborhood: lastOpenedPoint?.neighborhood,
+            reference: lastOpenedPoint?.reference,
+            city: lastOpenedPoint?.city_name,
+            city_id: lastOpenedPoint?.city_id,
+        });
     }
 
     if (isReturn) {
@@ -687,6 +750,11 @@ function openVisitSheet(propertyId, options = {}) {
         notes.value = '';
     }
     setVisitError('');
+    const submit = $('visit-submit');
+    if (submit) {
+        submit.disabled = false;
+        submit.textContent = 'Salvar visita';
+    }
     MapAdapter.selectProperty(id);
     paintCampaignContext();
 
@@ -949,10 +1017,25 @@ async function onCreatePoint(event) {
         Object.assign(body, collectSalePayload());
         if (body.customer_name && !body.contact_name) body.contact_name = body.customer_name;
         if (body.customer_phone && !body.contact_phone) body.contact_phone = body.customer_phone;
+        if (body.install_street) {
+            body.street = body.install_street;
+        }
+        if (body.install_number) {
+            body.number = body.install_number;
+        }
+        if (body.install_neighborhood && !body.sector_name) {
+            body.neighborhood = body.install_neighborhood;
+        }
     }
 
     const submitBtn = $('create-point-submit');
-    if (submitBtn) submitBtn.disabled = true;
+    const originalLabel = submitBtn?.textContent;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        if (status === 'installation_requested') {
+            submitBtn.textContent = 'Confirmando…';
+        }
+    }
     setCreateError('');
 
     try {
@@ -976,17 +1059,24 @@ async function onCreatePoint(event) {
             MapAdapter.setCenter(lat, lng, 17);
         }
 
-        if (created.data?.commission_awarded) {
+        if (status === 'installation_requested') {
+            handleSaleSuccess(created.data);
+        } else if (created.data?.commission_awarded) {
             showReward(created.data.commission_awarded);
         }
         if (status === 'return_later') {
             loadAgenda().catch(() => {});
         }
         loadMarkers().catch(() => {});
+        if (submitBtn) {
+            submitBtn.textContent = originalLabel || 'Salvar ponto';
+        }
     } catch (error) {
-        setCreateError(error.message || OFFLINE_MUTATION);
-    } finally {
-        if (submitBtn) submitBtn.disabled = false;
+        setCreateError(humanApiError(error, status === 'installation_requested' ? SALE_NETWORK_ERROR : OFFLINE_MUTATION));
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalLabel || (status === 'installation_requested' ? 'Confirmar venda' : 'Salvar ponto');
+        }
     }
 }
 
@@ -1051,7 +1141,7 @@ async function submitVisit() {
         }
     }
 
-    const coords = await resolveVisitCoordinates(id);
+    const coords = await resolveVisitCoordinates(id, { allowGps: status !== 'installation_requested' });
     const body = {
         status,
         campaign_id: campaignId,
@@ -1069,6 +1159,10 @@ async function submitVisit() {
 
     if (submitBtn) {
         submitBtn.disabled = true;
+        if (status === 'installation_requested') {
+            submitBtn.dataset.label = submitBtn.textContent;
+            submitBtn.textContent = 'Confirmando…';
+        }
     }
 
     try {
@@ -1098,7 +1192,9 @@ async function submitVisit() {
             MapAdapter.selectProperty(id);
         }
 
-        if (payload.data?.commission_awarded) {
+        if (status === 'installation_requested') {
+            handleSaleSuccess(payload.data);
+        } else if (payload.data?.commission_awarded) {
             showReward(payload.data.commission_awarded);
         }
 
@@ -1108,10 +1204,12 @@ async function submitVisit() {
 
         loadMarkers().catch(() => {});
     } catch (error) {
-        setVisitError(error.message || OFFLINE_MUTATION);
-    } finally {
+        setVisitError(humanApiError(error, status === 'installation_requested' ? SALE_NETWORK_ERROR : OFFLINE_MUTATION));
         if (submitBtn) {
             submitBtn.disabled = false;
+            if (submitBtn.dataset.label) {
+                submitBtn.textContent = submitBtn.dataset.label;
+            }
         }
     }
 }
@@ -1142,6 +1240,69 @@ function hideReward() {
     const overlay = $('reward-overlay');
     if (overlay) {
         overlay.hidden = true;
+    }
+}
+
+function paintHandoffButtons(handoff) {
+    const enabled = Boolean(handoff?.whatsapp_enabled && handoff?.whatsapp_url);
+    ['sale-success-whatsapp', 'handoff-whatsapp', 'point-handoff-whatsapp'].forEach((id) => {
+        const el = $(id);
+        if (el) {
+            el.hidden = !enabled;
+        }
+    });
+}
+
+function handleSaleSuccess(data) {
+    currentHandoff = data?.office_handoff || null;
+    const awarded = data?.commission_awarded;
+    if (awarded?.play_reward || awarded?.awarded) {
+        playCommissionAudio();
+    }
+    const label = $('sale-success-label');
+    if (label) {
+        label.textContent = currentHandoff?.sale_label || `Venda Expandor #${data?.sale_id || ''}`;
+    }
+    const commission = $('sale-success-commission');
+    if (commission) {
+        const amount = currentHandoff?.commission_label
+            || (awarded?.amount != null ? formatCurrency(awarded.amount) : '—');
+        commission.textContent = `Comissão: ${amount}`;
+    }
+    const status = $('sale-success-status');
+    if (status) {
+        const raw = currentHandoff?.commission_status || awarded?.status || 'pending';
+        status.textContent = `Status: ${commissionStatusLabel(raw)}`;
+        status.classList.toggle('badge--pending', String(raw).toLowerCase() !== 'paid');
+    }
+    paintHandoffButtons(currentHandoff);
+    show('sale-success-sheet', true);
+    loadResults().catch(() => {});
+    loadCommissions().catch(() => {});
+    loadClients().catch(() => {});
+}
+
+function hideSaleSuccess() {
+    show('sale-success-sheet', false);
+}
+
+async function renderPointHandoff(point) {
+    const block = $('point-handoff-block');
+    if (!block) {
+        return;
+    }
+    const saleId = point?.last_sale_id;
+    if (!saleId) {
+        block.hidden = true;
+        return;
+    }
+    try {
+        const payload = await mobileApi.saleHandoff(saleId);
+        currentHandoff = payload.data || null;
+        block.hidden = !currentHandoff?.message;
+        paintHandoffButtons(currentHandoff);
+    } catch {
+        block.hidden = true;
     }
 }
 
@@ -1395,6 +1556,16 @@ function bindApp() {
     });
     $('adjust-cancel')?.addEventListener('click', () => cancelAdjustPosition());
     $('reward-close')?.addEventListener('click', hideReward);
+    $('sale-success-close')?.addEventListener('click', hideSaleSuccess);
+    $('sale-success-copy')?.addEventListener('click', () => copyHandoffMessage(currentHandoff, mobileApi));
+    $('sale-success-view')?.addEventListener('click', () => showHandoffText(currentHandoff));
+    $('sale-success-whatsapp')?.addEventListener('click', () => openOfficeWhatsApp(currentHandoff, mobileApi));
+    $('handoff-copy')?.addEventListener('click', () => copyHandoffMessage(currentHandoff, mobileApi));
+    $('handoff-whatsapp')?.addEventListener('click', () => openOfficeWhatsApp(currentHandoff, mobileApi));
+    $('handoff-close')?.addEventListener('click', hideHandoffText);
+    $('point-handoff-copy')?.addEventListener('click', () => copyHandoffMessage(currentHandoff, mobileApi));
+    $('point-handoff-view')?.addEventListener('click', () => showHandoffText(currentHandoff));
+    $('point-handoff-whatsapp')?.addEventListener('click', () => openOfficeWhatsApp(currentHandoff, mobileApi));
 
     $('profile-btn')?.addEventListener('click', () => show('account-sheet', true));
     $('account-close')?.addEventListener('click', () => show('account-sheet', false));

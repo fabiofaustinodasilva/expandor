@@ -51,7 +51,8 @@ class ExpVendedorMobileFlowWiringTest extends TestCase
         $this->assertStringContainsString('Como foi a abordagem?', $prepare);
         $this->assertStringContainsString('visit-campaign-label', $prepare);
         $this->assertStringContainsString('visit-return-block', $prepare);
-        $this->assertStringContainsString('id="sale-block"', $prepare);
+        $this->assertStringContainsString('saleFormMarkup', $prepare);
+        $this->assertStringContainsString('${p}sale-block', $prepare);
         $this->assertStringContainsString('sale-cart-lines', $prepare);
 
         foreach (['interested', 'return_later', 'installation_requested', 'not_home', 'no_interest'] as $status) {
