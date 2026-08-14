@@ -11,6 +11,7 @@ use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Sales\Properties\Services\PropertyService;
 use App\Domains\Sales\Residents\Models\Resident;
 use App\Domains\Sales\Residents\Services\ResidentService;
+use App\Domains\Sales\Territory\Models\Sector;
 use App\Domains\Security\Services\SecurityService;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Domains\Visits\Models\Visit;
@@ -93,10 +94,11 @@ class RegisterFirstApproachAction
 
         return DB::transaction(function () use ($data, $actor, $campaign, $visitStatus) {
             $accuracyNote = $this->gpsAccuracyNote($data['gps_accuracy'] ?? null);
+            [$cityId, $sectorId] = $this->resolveTerritoryForCampaign($campaign, $data);
 
             $address = $this->properties->createAddress([
-                'city_id' => $data['city_id'],
-                'sector_id' => $data['sector_id'] ?? null,
+                'city_id' => $cityId,
+                'sector_id' => $sectorId,
                 'street' => $data['street'],
                 'number' => $data['number'] ?? null,
                 'neighborhood' => $data['neighborhood'] ?? null,
@@ -210,5 +212,36 @@ class RegisterFirstApproachAction
         }
 
         return $note;
+    }
+
+    /**
+     * Territory of the active campaign is the source of truth for the pin.
+     * Request city/sector may come from a leftover filter or the first <option>.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: int, 1: int|null}
+     */
+    protected function resolveTerritoryForCampaign(Campaign $campaign, array $data): array
+    {
+        $cityId = (int) $campaign->city_id;
+        $requestedSector = isset($data['sector_id']) && $data['sector_id'] !== '' && $data['sector_id'] !== null
+            ? (int) $data['sector_id']
+            : null;
+
+        $campaign->loadMissing('sectors');
+        $allowed = $campaign->sectors
+            ->filter(fn (Sector $sector) => (int) $sector->city_id === $cityId)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($requestedSector !== null && ($allowed->isEmpty() || $allowed->contains($requestedSector))) {
+            $sector = Sector::query()->find($requestedSector);
+            if ($sector !== null && (int) $sector->city_id === $cityId && (int) $sector->company_id === (int) $campaign->company_id) {
+                return [$cityId, $requestedSector];
+            }
+        }
+
+        return [$cityId, null];
     }
 }

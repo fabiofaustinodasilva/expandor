@@ -150,15 +150,20 @@ class MapRepository
 
         $sectorIds = $campaign->sectors->pluck('id')->map(fn ($id) => (int) $id)->all();
 
-        $query->whereHas('address', function (Builder $addressQuery) use ($campaign, $sectorIds): void {
-            $addressQuery->where('city_id', $campaign->city_id);
+        $query->where(function (Builder $outer) use ($campaign, $sectorIds): void {
+            $outer->whereHas('address', function (Builder $addressQuery) use ($campaign, $sectorIds): void {
+                $addressQuery->where('city_id', $campaign->city_id);
 
-            if ($sectorIds !== []) {
-                $addressQuery->where(function (Builder $sectorQuery) use ($sectorIds): void {
-                    $sectorQuery->whereIn('sector_id', $sectorIds)
-                        ->orWhereNull('sector_id');
-                });
-            }
+                if ($sectorIds !== []) {
+                    $addressQuery->where(function (Builder $sectorQuery) use ($sectorIds): void {
+                        $sectorQuery->whereIn('sector_id', $sectorIds)
+                            ->orWhereNull('sector_id');
+                    });
+                }
+            })->orWhereHas(
+                'visits',
+                fn (Builder $visitQuery) => $visitQuery->where('campaign_id', $campaign->id)
+            );
         });
     }
 
