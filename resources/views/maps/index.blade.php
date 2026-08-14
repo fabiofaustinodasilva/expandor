@@ -53,7 +53,7 @@
     @endif
     data-map-provider-fallback-url="{{ $mapProviderFallbackUrl }}"
 >
-    <header class="absolute top-0 inset-x-0 z-30 pointer-events-none p-3 pt-[4.25rem] md:p-4 md:pt-4 lg:pr-[316px] map-toolbar">
+    <header class="absolute top-0 inset-x-0 pointer-events-none p-3 pt-[4.25rem] md:p-4 md:pt-4 lg:pr-[360px] map-toolbar">
         <div class="pointer-events-auto flex flex-col gap-2">
             <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                 <div id="map-search-wrap" class="relative flex-1 min-w-0 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl flex items-center gap-2 px-3 h-12 md:h-14">
@@ -402,7 +402,7 @@
     </aside>
 
     {{-- Drawer comercial / campo --}}
-    <aside id="marker-drawer" class="absolute right-0 top-0 bottom-0 z-40 w-[360px] max-w-[100vw] transition-transform duration-300 bg-slate-950 border-l border-slate-700 flex flex-col" aria-hidden="true">
+    <aside id="marker-drawer" class="absolute right-0 top-0 bottom-0 w-[360px] max-w-[100vw] transition-transform duration-300 bg-slate-950 border-l border-slate-700 flex flex-col" aria-hidden="true">
         <div class="p-4 border-b border-slate-800 flex items-start justify-between gap-3">
             <div class="min-w-0">
                 <div class="text-xs text-slate-400 uppercase tracking-wide">Ponto</div>
@@ -499,7 +499,7 @@
             <button type="button" id="adjust-banner-cancel" class="h-10 px-3 rounded-xl border border-slate-600 text-sm shrink-0">Cancelar</button>
         </div>
     </div>
-    <div id="drawer-backdrop" class="absolute inset-0 z-30 bg-black/40 opacity-0 pointer-events-none transition-opacity lg:hidden"></div>
+    <div id="drawer-backdrop" class="absolute inset-0 bg-black/40 opacity-0 pointer-events-none transition-opacity lg:hidden"></div>
 
     {{-- Sprint 8.2.7/8.2.8: sem modal intermediário — clique no mapa abre o formulário direto --}}
 
@@ -904,6 +904,30 @@
     body.map-fullscreen .op-main { height: 100vh; }
     @media (max-width: 900px) { body.map-fullscreen .op-main { height: calc(100dvh - 74px); } }
     .leaflet-container { background: #0b1220; font: inherit; }
+    /*
+      Map stacking (inside #map-page):
+      0   tiles / map
+      20  bottom-left controls (GPS, Apresentar)
+      30  toolbar / search / Hoje
+      45  drawer backdrop (mobile)
+      70  property detail drawer  — above search, below sheets/modals
+      100 visit/point sheets
+      110 sale handoff
+      120 commission reward
+    */
+    .map-toolbar {
+        z-index: 30;
+    }
+    #map-bottom-left-controls {
+        z-index: 20;
+    }
+    #drawer-backdrop {
+        z-index: 45;
+    }
+    #map-page:has(#marker-drawer.open) .map-toolbar,
+    #map-page:has(#marker-drawer.open) #map-bottom-left-controls {
+        z-index: 20;
+    }
     /* House pins must remain clickable above basemap overlays (GoogleMutant / canvas). */
     .leaflet-pane.leaflet-marker-pane {
         z-index: 660 !important;
@@ -1122,7 +1146,7 @@
            independently of `transform`. Keep closed/open motion on transform only. */
         translate: none;
         transform: translateX(100%);
-        z-index: 60;
+        z-index: 70;
         pointer-events: auto;
     }
     #marker-drawer.open {
@@ -1131,6 +1155,7 @@
         visibility: visible;
         opacity: 1;
         pointer-events: auto;
+        z-index: 70;
     }
     #drawer-backdrop.open { opacity: 1; pointer-events: auto; }
 

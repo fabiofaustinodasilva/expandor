@@ -21,6 +21,14 @@ class MapDrawerVisibilityHotfixTest extends TestCase
         $this->assertStringContainsString('transform: translateX(100%);', $blade);
         $this->assertStringContainsString('#marker-drawer.open {', $blade);
         $this->assertStringContainsString('transform: translateX(0);', $blade);
+        $this->assertStringContainsString('z-index: 70;', $blade);
+        $this->assertStringContainsString('.map-toolbar', $blade);
+        $this->assertStringContainsString('#map-page:has(#marker-drawer.open) .map-toolbar', $blade);
+        $this->assertDoesNotMatchRegularExpression(
+            '/#map-page:has\(#marker-drawer\.open\) \.map-toolbar[^}]*z-index:\s*(?:[3-9]\d|[1-9]\d{2,})/',
+            $blade,
+            'Open-drawer toolbar must stay below drawer z-index 70',
+        );
 
         $this->assertStringContainsString('#map-page #marker-drawer.open', $css);
         $this->assertStringContainsString('translate: none !important;', $css);
