@@ -22,6 +22,7 @@ import {
     collectSalePayload,
     resetSaleForm,
     addCartLine,
+    seedCartWithProduct,
     setSalePrefix,
     prefillSaleForm,
 } from './sale-cart.js';
@@ -691,6 +692,31 @@ function openCreateSheet(lat, lng, label, source = 'unknown') {
     show('point-sheet', false);
     show('create-sheet', true);
     paintIcons($('create-sheet'));
+}
+
+async function openCreateFromPresentation(productId) {
+    PresentationScreen.close();
+    let lat = null;
+    let lng = null;
+    try {
+        const position = await LocationService.getCurrentPosition({ timeout: 8000, maximumAge: 15000 });
+        lat = position.latitude;
+        lng = position.longitude;
+        if (lat != null && lng != null) {
+            MapAdapter.setCenter(lat, lng, Math.max(MapAdapter.map?.getZoom?.() || 15, 17));
+        }
+    } catch {
+        const center = MapAdapter.map?.getCenter?.();
+        if (center) {
+            lat = center.lat;
+            lng = center.lng;
+        }
+    }
+    openCreateSheet(lat, lng, null, 'present-contract');
+    selectCreateOutcome('installation_requested');
+    if (!seedCartWithProduct(productId)) {
+        toast('Produto indisponível para contratação.', 'error');
+    }
 }
 
 function paintCampaignContext() {
@@ -1789,6 +1815,9 @@ function bindApp() {
     $('map-present-products')?.addEventListener('click', () => {
         PresentationScreen.open().catch((error) => toast(error.message, 'error'));
     });
+    PresentationScreen.onContract = (productId) => {
+        openCreateFromPresentation(productId).catch((error) => toast(error.message, 'error'));
+    };
     $('menu-account')?.addEventListener('click', () => show('account-sheet', true));
     $('menu-about')?.addEventListener('click', () => show('about-sheet', true));
     $('about-close')?.addEventListener('click', () => show('about-sheet', false));

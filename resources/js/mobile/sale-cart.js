@@ -356,6 +356,29 @@ export function addCartLine(focus = true) {
     renderCartLines();
 }
 
+export function seedCartWithProduct(productId) {
+    const pid = Number(productId);
+    const product = productById(pid);
+    if (!pid || !product || product.available === false) {
+        return false;
+    }
+
+    const root = $(`${activePrefix}sale-cart-lines`);
+    if (!root) {
+        return false;
+    }
+
+    root.innerHTML = '';
+    addCartLine(false);
+    const select = root.querySelector('.sale-cart-product');
+    if (select) {
+        select.value = String(product.id);
+    }
+    renderCartLines();
+
+    return true;
+}
+
 export function collectCartItems() {
     const root = $(`${activePrefix}sale-cart-lines`);
     if (!root) {
@@ -478,6 +501,7 @@ if (typeof window !== 'undefined') {
         setSalePrefix,
         renderCartLines,
         addCartLine,
+        seedCartWithProduct,
         collectCartItems,
         validateSaleForm,
         collectSalePayload,

@@ -89,10 +89,11 @@ if (!apiBase) {
 
 let connectSrc = "'self'";
 let imgSrc = ["'self'", 'data:', 'blob:', ...MAP_TILE_CSP_HOSTS].join(' ');
+let apiOrigin = '';
 try {
-    const origin = new URL(apiBase).origin;
-    connectSrc = `'self' ${origin} ${MAP_TILE_CSP_HOSTS.join(' ')}`;
-    imgSrc += ` ${origin}`;
+    apiOrigin = new URL(apiBase).origin;
+    connectSrc = `'self' ${apiOrigin} ${MAP_TILE_CSP_HOSTS.join(' ')}`;
+    imgSrc += ` ${apiOrigin}`;
 } catch {
     throw new Error(`Invalid CAP_API_URL/APP_URL for Capacitor shell: ${apiBase}`);
 }
@@ -106,7 +107,8 @@ const csp = [
     `img-src ${imgSrc}`,
     `connect-src ${connectSrc}`,
     "font-src 'self' data:",
-    "media-src 'self'",
+    `media-src 'self' blob: ${apiOrigin}`,
+    "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com",
     "object-src 'none'",
     "base-uri 'self'",
     // frame-ancestors is ignored on <meta> CSP (browser warning). Keep framing controls
@@ -549,11 +551,35 @@ const html = `<!DOCTYPE html>
         </div>
 
         <div class="presentation-pane" id="pane-presentation" hidden>
-            <header class="presentation-pane__header">
-                <h2 class="pane-title" style="margin:0">Apresentar produtos</h2>
-                <button class="btn btn-ghost" id="presentation-close" type="button">Fechar</button>
-            </header>
-            <div class="presentation-pane__body" id="presentation-list"></div>
+            <div class="deck-shell" id="presentation-deck">
+                <div class="deck-chrome">
+                    <div class="deck-chrome-left">
+                        <button class="deck-back" id="presentation-close" type="button">Voltar ao mapa</button>
+                        <button type="button" class="deck-details" id="deck-details" aria-haspopup="dialog" aria-controls="deck-details-sheet">Detalhes</button>
+                    </div>
+                    <button type="button" class="deck-contract" id="deck-contract">Contratar</button>
+                </div>
+                <div class="deck-counter" id="deck-counter" aria-live="polite">0 / 0</div>
+                <div class="deck-viewport" id="deck-viewport">
+                    <div class="deck-track" id="deck-track"></div>
+                </div>
+                <div class="deck-nav" aria-label="Navegação da apresentação">
+                    <button type="button" id="deck-prev" aria-label="Produto anterior">←</button>
+                    <button type="button" id="deck-next" aria-label="Próximo produto">→</button>
+                </div>
+                <div class="deck-sheet" id="deck-details-sheet" aria-hidden="true">
+                    <button type="button" class="deck-sheet-backdrop" id="deck-details-backdrop" aria-label="Fechar detalhes"></button>
+                    <div class="deck-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="deck-details-title">
+                        <div class="deck-sheet-handle" aria-hidden="true"></div>
+                        <div class="deck-sheet-top">
+                            <h2 id="deck-details-title">Detalhes</h2>
+                            <button type="button" class="deck-sheet-close" id="deck-details-close">Fechar</button>
+                        </div>
+                        <p class="deck-sheet-meta" id="deck-details-category"></p>
+                        <div id="deck-details-body"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="sheet" id="sale-success-sheet" hidden>

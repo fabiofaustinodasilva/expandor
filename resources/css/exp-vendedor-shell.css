@@ -705,53 +705,355 @@ body.seller-app-mode {
 
 #reward-overlay[hidden] { display: none !important; }
 
+#screen-app.presentation-open .app-header,
+#screen-app.presentation-open .bottom-nav {
+    display: none !important;
+}
+
 .presentation-pane {
     position: fixed;
     inset: 0;
     z-index: 850;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
+    background: #000;
+    display: block;
 }
 
 .presentation-pane[hidden] { display: none !important; }
 
-.presentation-pane__header {
+.deck-shell {
+    position: relative;
+    height: 100dvh;
+    width: 100%;
+    overflow: hidden;
+    background: #000;
+    color: #F8FAFC;
+}
+
+.deck-chrome {
+    position: absolute;
+    z-index: 5;
+    left: 0;
+    right: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: calc(0.55rem + env(safe-area-inset-top, 0px)) 0.85rem 0.55rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg-elevated);
+    gap: 0.5rem;
+    padding: calc(0.55rem + env(safe-area-inset-top, 0px)) 0.65rem 0.35rem;
+    pointer-events: none;
 }
 
-.presentation-pane__body {
-    flex: 1;
-    overflow: auto;
-    padding: 0.85rem;
+.deck-chrome > * { pointer-events: auto; }
+
+.deck-chrome-left {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
-.product-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+.deck-back,
+.deck-details,
+.deck-contract {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 0.85rem;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(23, 26, 34, 0.82);
+    color: #F8FAFC;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.86rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    white-space: nowrap;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.deck-contract {
+    font-weight: 700;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.deck-contract[aria-disabled="true"],
+.deck-details:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.deck-counter {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: calc(0.7rem + env(safe-area-inset-top, 0px));
+    z-index: 4;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #E2E8F0;
+    background: rgba(15, 17, 23, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 999px;
+    padding: 0.28rem 0.65rem;
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+}
+
+.deck-viewport {
+    position: absolute;
+    inset: 0;
     overflow: hidden;
-    margin-bottom: 0.75rem;
+    touch-action: pan-y;
 }
 
-.product-card__img {
+.deck-track {
+    display: flex;
+    height: 100%;
     width: 100%;
-    height: 140px;
-    object-fit: cover;
-    background: #1A2438;
+    transition: transform 0.28s ease;
+    will-change: transform;
 }
 
-.product-card__body { padding: 0.85rem; }
+.deck-slide {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background: #000;
+}
 
-.product-card__price {
-    margin: 0.35rem 0 0;
-    color: var(--exp-orange);
-    font-weight: 800;
+.deck-media {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #000;
+}
+
+.deck-media img,
+.deck-media video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+}
+
+.deck-media iframe {
+    width: 100%;
+    height: min(70dvh, 100%);
+    border: 0;
+    background: #000;
+}
+
+.deck-media-empty {
+    color: #94A3B8;
+    font-size: 0.95rem;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.deck-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    padding: 3.5rem 0.9rem calc(4.25rem + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.35) 55%, transparent 100%);
+    pointer-events: none;
+}
+
+.deck-category {
+    margin: 0 0 0.2rem;
+    color: #CBD5E1;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.deck-name {
+    margin: 0;
+    font-size: clamp(1.15rem, 4.6vw, 1.55rem);
+    line-height: 1.2;
+    font-weight: 750;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.45);
+}
+
+.deck-nav {
+    position: absolute;
+    z-index: 5;
+    left: 0.55rem;
+    right: 0.55rem;
+    bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    gap: 0.45rem;
+    justify-content: space-between;
+}
+
+.deck-nav button {
+    min-height: 40px;
+    min-width: 40px;
+    padding: 0 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(15, 17, 23, 0.55);
+    color: #E2E8F0;
+    font-weight: 600;
+    font-size: 0.8rem;
+    backdrop-filter: blur(8px);
+}
+
+.deck-nav button:disabled {
+    opacity: 0.28;
+}
+
+.deck-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: #94A3B8;
+    padding: 1.5rem;
+    z-index: 2;
+}
+
+.deck-sheet {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.deck-sheet.is-open { display: flex; }
+
+.deck-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.deck-sheet-panel {
+    position: relative;
+    z-index: 1;
+    max-height: min(68dvh, 34rem);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0;
+    padding: 0.55rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+    border-radius: 1.15rem 1.15rem 0 0;
+    background: #171A22;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-bottom: 0;
+    color: #F8FAFC;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.deck-sheet-handle {
+    width: 2.5rem;
+    height: 0.28rem;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.45);
+    margin: 0.15rem auto 0.75rem;
+}
+
+.deck-sheet-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.deck-sheet-top h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.25;
+}
+
+.deck-sheet-close {
+    flex: 0 0 auto;
+    min-height: 44px;
+    min-width: 44px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(15, 17, 23, 0.65);
+    color: #E2E8F0;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.deck-sheet-meta {
+    margin: 0 0 0.85rem;
+    color: #94A3B8;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.deck-sheet-section { margin: 0 0 0.9rem; }
+
+.deck-sheet-section h3 {
+    margin: 0 0 0.35rem;
+    font-size: 0.82rem;
+    color: #CBD5E1;
+    font-weight: 700;
+}
+
+.deck-sheet-section p,
+.deck-sheet-section li {
+    margin: 0;
+    color: #E2E8F0;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.deck-sheet-section ul {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.deck-sheet-section li {
+    margin-bottom: 0.3rem;
+    white-space: normal;
+}
+
+.deck-sheet-price {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0.45rem 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    background: rgba(15, 17, 23, 0.7);
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.deck-shell.is-details-open .deck-viewport {
+    pointer-events: none;
+}
+
+@media (max-width: 430px) {
+    .deck-back, .deck-details, .deck-contract { padding: 0 0.7rem; font-size: 0.8rem; }
+}
+
+@media (max-width: 360px) {
+    .deck-back, .deck-details, .deck-contract { padding: 0 0.55rem; font-size: 0.75rem; }
+    .deck-name { font-size: 1.05rem; }
 }
 
 #net-banner, #app-toast {

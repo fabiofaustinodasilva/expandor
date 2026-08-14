@@ -593,19 +593,29 @@ class MobileSellerOpsService
     {
         return $this->catalog->activeCatalogForSeller($q)
             ->filter(fn ($product) => $product->isSellable())
-            ->map(fn ($product) => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'description' => $product->description,
-                'price' => $product->price,
-                'stock_control' => $product->stock_control,
-                'stock_quantity' => $product->stock_quantity,
-                'commission_type' => $product->commissionType()->value,
-                'commission_amount' => $product->commission_amount,
-                'commission_percentage' => $product->commission_percentage,
-                'image' => $product->image_thumb ?: $product->image,
-                'available' => true,
-            ])
+            ->map(function ($product) {
+                $video = $product->embeddableVideoUrl();
+
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'category' => $product->categoryLabel(),
+                    'description' => (string) ($product->description ?? ''),
+                    'benefits' => $product->benefitList(),
+                    'price' => $product->price,
+                    'stock_control' => $product->stock_control,
+                    'stock_quantity' => $product->stock_quantity,
+                    'commission_type' => $product->commissionType()->value,
+                    'commission_amount' => $product->commission_amount,
+                    'commission_percentage' => $product->commission_percentage,
+                    'image' => $product->imageOriginalUrl() ?: $product->imageUrl(),
+                    'video' => $video,
+                    'video_embed' => $video !== null
+                        && (str_contains($video, 'youtube.com/embed')
+                            || str_contains($video, 'player.vimeo.com')),
+                    'available' => true,
+                ];
+            })
             ->values()
             ->all();
     }
