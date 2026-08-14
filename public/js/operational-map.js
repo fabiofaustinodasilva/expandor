@@ -978,6 +978,7 @@
             hasOpenClass: drawer.classList.contains('open'),
             ariaHidden: drawer.getAttribute('aria-hidden'),
         });
+        logDrawerDebug();
         if (window.lucide) window.lucide.createIcons();
         highlightSelectedMarker();
 
@@ -1099,6 +1100,10 @@
             if (adjustBtn) {
                 adjustBtn.disabled = !data.can_adjust;
                 adjustBtn.classList.toggle('opacity-40', !data.can_adjust);
+                const more = adjustBtn.closest('details.drawer-more-actions');
+                if (more && data.can_adjust) {
+                    more.open = true;
+                }
             }
 
             selectedMarker = { ...selectedMarker, ...data, color: selectedMarker.color };
@@ -1113,6 +1118,79 @@
         drawer.classList.remove('open');
         drawer.setAttribute('aria-hidden', 'true');
         drawerBackdrop.classList.remove('open');
+    }
+
+    function collectDrawerDebug(el) {
+        const node = el || drawer;
+        if (!node) {
+            return { found: false };
+        }
+        const rect = node.getBoundingClientRect();
+        const style = window.getComputedStyle(node);
+        const parents = [];
+        let ancestor = node.parentElement;
+        let depth = 0;
+        while (ancestor && depth < 12) {
+            const cs = window.getComputedStyle(ancestor);
+            const interesting = cs.overflow !== 'visible'
+                || cs.overflowX !== 'visible'
+                || cs.transform !== 'none'
+                || cs.translate !== 'none'
+                || cs.contain !== 'none'
+                || cs.clipPath !== 'none'
+                || Number(cs.zIndex) > 0;
+            if (interesting) {
+                parents.push({
+                    id: ancestor.id || null,
+                    className: String(ancestor.className || '').slice(0, 120),
+                    overflow: cs.overflow,
+                    overflowX: cs.overflowX,
+                    transform: cs.transform,
+                    translate: cs.translate,
+                    contain: cs.contain,
+                    clipPath: cs.clipPath,
+                    position: cs.position,
+                    zIndex: cs.zIndex,
+                    isolation: cs.isolation,
+                });
+            }
+            ancestor = ancestor.parentElement;
+            depth += 1;
+        }
+        return {
+            found: true,
+            className: node.className,
+            ariaHidden: node.getAttribute('aria-hidden'),
+            rect: {
+                x: rect.x,
+                y: rect.y,
+                width: rect.width,
+                height: rect.height,
+                top: rect.top,
+                right: rect.right,
+                bottom: rect.bottom,
+                left: rect.left,
+            },
+            display: style.display,
+            visibility: style.visibility,
+            opacity: style.opacity,
+            position: style.position,
+            zIndex: style.zIndex,
+            transform: style.transform,
+            translate: style.translate,
+            pointerEvents: style.pointerEvents,
+            overflow: style.overflow,
+            inViewport: rect.width > 0 && rect.height > 0
+                && rect.right > 0 && rect.bottom > 0
+                && rect.left < window.innerWidth && rect.top < window.innerHeight,
+            parents,
+        };
+    }
+
+    function logDrawerDebug() {
+        const info = collectDrawerDebug(drawer);
+        try { console.info('[DrawerDebug]', info); } catch (_) { /* optional */ }
+        return info;
     }
 
     const SALE_CUSTOMER_IDS = {
@@ -3703,6 +3781,16 @@
             return info;
         };
         window.__mapInspectProperty = window.__mapDebugProperty;
+        window.__mapDebugDrawer = function mapDebugDrawer() {
+            const info = logDrawerDebug();
+            const adjustBtn = document.getElementById('action-adjust');
+            info.adjust = {
+                found: !!adjustBtn,
+                disabled: !!adjustBtn?.disabled,
+                text: adjustBtn?.textContent?.trim() || null,
+            };
+            return info;
+        };
         window.__mapOpenProperty = function mapOpenProperty(propertyId) {
             const id = Number(propertyId);
             const entry = layerByPropertyId.get(id);

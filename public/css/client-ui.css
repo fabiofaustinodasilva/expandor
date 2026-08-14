@@ -1383,11 +1383,15 @@ html.client-nav-lock body {
         border-radius: 1.25rem 1.25rem 0 0;
         border-left: 0 !important;
         border-top: 1px solid rgb(51 65 85);
+        translate: none;
         transform: translateY(110%);
     }
     #map-page #marker-drawer.open,
     #map-page #metrics-panel.open {
+        translate: none !important;
         transform: translateY(0) !important;
+        visibility: visible;
+        opacity: 1;
     }
     #map-page #metrics-panel {
         z-index: 35;

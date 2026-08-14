@@ -402,7 +402,7 @@
     </aside>
 
     {{-- Drawer comercial / campo --}}
-    <aside id="marker-drawer" class="absolute right-0 top-0 bottom-0 z-40 w-[360px] max-w-[100vw] translate-x-full transition-transform duration-300 bg-slate-950 border-l border-slate-700 flex flex-col" aria-hidden="true">
+    <aside id="marker-drawer" class="absolute right-0 top-0 bottom-0 z-40 w-[360px] max-w-[100vw] transition-transform duration-300 bg-slate-950 border-l border-slate-700 flex flex-col" aria-hidden="true">
         <div class="p-4 border-b border-slate-800 flex items-start justify-between gap-3">
             <div class="min-w-0">
                 <div class="text-xs text-slate-400 uppercase tracking-wide">Ponto</div>
@@ -1101,6 +1101,21 @@
     .basemap-btn.is-active { border-color: #38bdf8; color: #e0f2fe; background: rgba(14,165,233,.15); }
     .leaflet-region-select { stroke: #38bdf8; stroke-width: 2; stroke-dasharray: 6 4; fill: rgba(56,189,248,.12); }
     #metrics-panel.open, #marker-drawer.open { transform: translateX(0); }
+    #marker-drawer {
+        /* Tailwind v4 `translate-x-*` sets the `translate` property, which composes
+           independently of `transform`. Keep closed/open motion on transform only. */
+        translate: none;
+        transform: translateX(100%);
+        z-index: 60;
+        pointer-events: auto;
+    }
+    #marker-drawer.open {
+        translate: none;
+        transform: translateX(0);
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+    }
     #drawer-backdrop.open { opacity: 1; pointer-events: auto; }
 
     /* Sprint 8.2.26 — Map Operation Sheet: altura flex correta + CTA acessível */
@@ -1458,6 +1473,13 @@
             border-radius: 1.25rem 1.25rem 0 0;
             border-left: 0;
             border-top: 1px solid rgb(51 65 85);
+            translate: none;
+        }
+        body.field-seller #marker-drawer:not(.open) {
+            transform: translateY(110%);
+        }
+        body.field-seller #marker-drawer.open {
+            transform: translateY(0);
         }
         body.field-seller #map-bottom-left-controls { bottom: 5.5rem; }
         #point-outcome-group {
@@ -1555,5 +1577,5 @@
 <script src="{{ asset('js/map-provider.js') }}?v=6"></script>
 <script src="{{ asset('js/map-saved-property-layer.js') }}?v=1"></script>
 <script src="{{ asset('js/field-offline-queue.js') }}?v=3"></script>
-<script src="{{ asset('js/operational-map.js') }}?v=60"></script>
+<script src="{{ asset('js/operational-map.js') }}?v=61"></script>
 @endpush
