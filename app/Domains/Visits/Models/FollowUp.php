@@ -59,12 +59,19 @@ class FollowUp extends Model
 
     /**
      * Pending follow-ups whose visit still points at an operational (non-deleted) property.
+     * Nested visit.property must stay split: Visit + Property both use TenantScope and Property uses SoftDeletes.
      */
     public function scopeOperationalPending(Builder $query): Builder
     {
         return $query
-            ->where('status', FollowUpStatus::PENDING)
-            ->whereHas('visit.property');
+            ->where('follow_ups.status', FollowUpStatus::PENDING)
+            ->whereHas('visit', function (Builder $visitQuery): void {
+                $visitQuery
+                    ->whereNotNull('visits.property_id')
+                    ->whereHas('property', function (Builder $propertyQuery): void {
+                        $propertyQuery->whereNull('properties.deleted_at');
+                    });
+            });
     }
 
     public function hasScheduledTime(): bool

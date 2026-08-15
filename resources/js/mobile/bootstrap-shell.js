@@ -996,12 +996,12 @@ function closeVisitSheet() {
 
 async function loadAgenda() {
     try {
-        const payload = await mobileApi.agenda({ scope: 'today' });
+        const payload = await mobileApi.agenda({ scope: 'all' });
         renderList(
             'agenda-list',
             payload.data || [],
-            'Agenda livre hoje',
-            'Nenhum retorno agendado para hoje. Use o mapa para visitar novos imóveis.',
+            'Agenda livre',
+            'Nenhum retorno pendente. Use o mapa para visitar novos imóveis.',
             (item) => `
             <article class="card">
                 <div class="card__row">

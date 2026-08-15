@@ -124,7 +124,7 @@ class ExpVendedorDeletedPropertyAgendaSyncTest extends TestCase
         $adapter = (string) file_get_contents(resource_path('js/mobile/map-adapter.js'));
 
         $this->assertStringContainsString('async function loadAgenda()', $shell);
-        $this->assertStringContainsString("mobileApi.agenda({ scope: 'today' })", $shell);
+        $this->assertStringContainsString("mobileApi.agenda({ scope: 'all' })", $shell);
         $this->assertStringContainsString("nav-agenda", $shell);
         $this->assertStringContainsString('refreshOperational', $shell);
         $this->assertStringContainsString('visibilitychange', $shell);
