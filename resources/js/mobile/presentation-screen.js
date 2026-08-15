@@ -86,10 +86,45 @@ function resolveMediaUrl(url) {
     return origin + publicPath;
 }
 
+function isThumbMediaPath(value) {
+    return /\/thumbs\//.test(String(value || ''));
+}
+
+function originalUrlFromThumb(value) {
+    const resolved = resolveMediaUrl(value);
+    if (!resolved || !isThumbMediaPath(resolved)) {
+        return '';
+    }
+
+    return resolved.replace(/\/thumbs\/([^/?#]+)(\?.*)?$/, '/$1$2');
+}
+
+function deckImageUrls(item) {
+    const originalRaw = item.image_original
+        || (!isThumbMediaPath(item.image) ? item.image : '');
+    const thumbRaw = item.image_thumb
+        || (isThumbMediaPath(item.image) ? item.image : '');
+    let original = resolveMediaUrl(originalRaw);
+    const thumb = resolveMediaUrl(thumbRaw);
+    if (!original && thumb) {
+        original = originalUrlFromThumb(thumbRaw) || originalUrlFromThumb(thumb);
+        if (original === thumb) {
+            original = '';
+        }
+    }
+
+    return {
+        original: original || '',
+        thumb: thumb || '',
+        resolved: original || thumb || '',
+    };
+}
+
 function logDeckImage(level, extra) {
     const payload = {
         product_id: extra.product_id ?? null,
-        raw: extra.raw ?? null,
+        original: extra.original ?? null,
+        thumb: extra.thumb ?? null,
         resolved: extra.resolved ?? null,
     };
     if (level === 'warn') {
@@ -98,6 +133,14 @@ function logDeckImage(level, extra) {
         return;
     }
     console.info('[EXP ProductDeck] image', payload);
+}
+
+function preloadDeckImage(url) {
+    if (!url || typeof Image === 'undefined') {
+        return;
+    }
+    const img = new Image();
+    img.src = url;
 }
 
 function mediaHtml(item) {
@@ -109,25 +152,39 @@ function mediaHtml(item) {
         const src = escapeHtml(resolveMediaUrl(item.video) || item.video);
         return `<div class="deck-media"><video controls playsinline preload="metadata" muted><source src="${src}"></video></div>`;
     }
-    if (item.image) {
-        const resolved = resolveMediaUrl(item.image);
-        logDeckImage('info', { product_id: item.id, raw: item.image, resolved });
-        if (!resolved) {
-            return `<div class="deck-media"><div class="deck-media-empty" data-deck-fallback="1">${name}</div></div>`;
-        }
 
-        return `<div class="deck-media"><img src="${escapeHtml(resolved)}" alt="${name}" data-product-id="${escapeHtml(item.id)}" data-raw-src="${escapeHtml(item.image)}"></div>`;
+    const urls = deckImageUrls(item);
+    logDeckImage('info', { product_id: item.id, original: urls.original, thumb: urls.thumb, resolved: urls.resolved });
+    if (!urls.resolved) {
+        return `<div class="deck-media"><div class="deck-media-empty" data-deck-fallback="1">${name}</div></div>`;
     }
 
-    return `<div class="deck-media"><div class="deck-media-empty">${name}</div></div>`;
+    return `<div class="deck-media"><img src="${escapeHtml(urls.resolved)}" alt="${name}" data-product-id="${escapeHtml(item.id)}" data-original-src="${escapeHtml(urls.original)}" data-thumb-src="${escapeHtml(urls.thumb)}"></div>`;
 }
 
 function bindDeckImages(root) {
     root?.querySelectorAll('.deck-media img')?.forEach((img) => {
         img.addEventListener('error', () => {
-            const productId = img.getAttribute('data-product-id');
-            const raw = img.getAttribute('data-raw-src');
-            logDeckImage('warn', { product_id: productId, raw, resolved: img.getAttribute('src') });
+            const original = img.getAttribute('data-original-src') || '';
+            const thumb = img.getAttribute('data-thumb-src') || '';
+            const current = img.getAttribute('src') || '';
+            if (thumb && current !== thumb && original && current === original) {
+                img.src = thumb;
+                logDeckImage('warn', {
+                    product_id: img.getAttribute('data-product-id'),
+                    original,
+                    thumb,
+                    resolved: thumb,
+                });
+
+                return;
+            }
+            logDeckImage('warn', {
+                product_id: img.getAttribute('data-product-id'),
+                original,
+                thumb,
+                resolved: current,
+            });
             const fallback = document.createElement('div');
             fallback.className = 'deck-media-empty';
             fallback.dataset.deckFallback = 'error';
@@ -321,6 +378,10 @@ export const PresentationScreen = {
             }
         }
         this.syncChrome();
+        const next = this.products[this.index + 1];
+        if (next) {
+            preloadDeckImage(deckImageUrls(next).resolved);
+        }
     },
 
     syncChrome() {
@@ -439,4 +500,5 @@ if (typeof window !== 'undefined') {
     window.ExpandorPresentationScreen = PresentationScreen;
     window.ExpandorPresentationScreen.resolveMediaUrl = resolveMediaUrl;
     window.ExpandorPresentationScreen.publicStoragePath = publicStoragePath;
+    window.ExpandorPresentationScreen.deckImageUrls = deckImageUrls;
 }

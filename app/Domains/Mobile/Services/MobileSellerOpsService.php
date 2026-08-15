@@ -608,7 +608,9 @@ class MobileSellerOpsService
                     'commission_type' => $product->commissionType()->value,
                     'commission_amount' => $product->commission_amount,
                     'commission_percentage' => $product->commission_percentage,
-                    'image' => $product->imageOriginalPublicUrl(),
+                    'image' => $product->imagePresentPublicUrl(),
+                    'image_original' => $product->imageOriginalPublicUrl(),
+                    'image_thumb' => $product->imageThumbPublicUrl(),
                     'video' => $video,
                     'video_embed' => $video !== null
                         && (str_contains($video, 'youtube.com/embed')

@@ -46,7 +46,10 @@ class ExpVendedorPresentationDeckTest extends TestCase
         $this->assertStringContainsString('goTo', $js);
         $this->assertStringContainsString('openDetails', $js);
         $this->assertStringContainsString('contractCurrent', $js);
-        $this->assertStringContainsString('function publicStoragePath', $js);
+        $this->assertStringContainsString('deckImageUrls', $js);
+        $this->assertStringContainsString('image_original', $js);
+        $this->assertStringContainsString('originalUrlFromThumb', $js);
+        $this->assertStringContainsString('preloadDeckImage', $js);
         $this->assertStringContainsString('/storage/${path}', $js);
         $this->assertStringNotContainsString('return `${origin}/${raw}`', $js);
         $this->assertStringContainsString('EXPANDOR_WEB_ORIGIN', $js);
@@ -118,9 +121,11 @@ class ExpVendedorPresentationDeckTest extends TestCase
         $this->assertTrue($row['video_embed']);
         $this->assertStringContainsString('youtube.com/embed/abcdefghijk', (string) $row['video']);
         $this->assertArrayHasKey('image', $row);
-        $this->assertArrayHasKey('price', $row);
-        $this->assertIsNumeric($row['price']);
+        $this->assertArrayHasKey('image_original', $row);
+        $this->assertArrayHasKey('image_thumb', $row);
         $this->assertNull($row['image']);
+        $this->assertNull($row['image_original']);
+        $this->assertNull($row['image_thumb']);
     }
 
     public function test_products_api_returns_absolute_storage_image_from_app_url(): void
@@ -186,7 +191,16 @@ class ExpVendedorPresentationDeckTest extends TestCase
             'https://expandor.unicanetwork.com.br/storage/'.$path,
             $row['image']
         );
+        $this->assertSame(
+            'https://expandor.unicanetwork.com.br/storage/'.$path,
+            $row['image_original']
+        );
+        $this->assertSame(
+            'https://expandor.unicanetwork.com.br/storage/companies/'.$company->id.'/products/thumbs/comercial.webp',
+            $row['image_thumb']
+        );
         $this->assertStringNotContainsString('/thumbs/', (string) $row['image']);
+        $this->assertStringNotContainsString('/thumbs/', (string) $row['image_original']);
     }
 
     public function test_media_urls_absolutize_against_app_url_not_webview(): void
@@ -265,5 +279,56 @@ class ExpVendedorPresentationDeckTest extends TestCase
             'https://expandor.unicanetwork.com.br/storage/companies/3/products/thumbs/test.webp',
             $row['image']
         );
+        $this->assertNull($row['image_original']);
+        $this->assertSame(
+            'https://expandor.unicanetwork.com.br/storage/companies/3/products/thumbs/test.webp',
+            $row['image_thumb']
+        );
+    }
+
+    public function test_products_api_original_only_does_not_invent_thumb(): void
+    {
+        config(['app.url' => 'https://expandor.unicanetwork.com.br']);
+        $company = $this->makeCompanyWithPlan('Empresa Só Original');
+        $seller = $this->makeUser($company, Role::SELLER, [
+            'email' => 'seller-only-original@exp.test',
+            'password' => 'password',
+        ]);
+        Product::factory()->create([
+            'company_id' => $company->id,
+            'name' => 'Plano só original',
+            'status' => Product::STATUS_ACTIVE,
+            'image' => 'companies/3/products/full.webp',
+            'image_thumb' => null,
+        ]);
+
+        $device = '22222222-2222-4222-8222-000000000045';
+        $token = $this->postJson('/api/mobile/v1/login', [
+            'email' => $seller->email,
+            'password' => 'password',
+            'device_id' => $device,
+            'device_name' => 'Android',
+            'platform' => 'android',
+            'app_version' => '8.2.34',
+        ])->assertOk()->json('data.token');
+
+        $this->app['auth']->forgetGuards();
+        $this->flushSession();
+
+        $row = collect($this->withHeaders([
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+            'X-Device-Id' => $device,
+            'X-App-Version' => '8.2.34',
+        ])->getJson('/api/mobile/v1/products')->assertOk()->json('data'))
+            ->firstWhere('name', 'Plano só original');
+
+        $this->assertSame(
+            'https://expandor.unicanetwork.com.br/storage/companies/3/products/full.webp',
+            $row['image_original']
+        );
+        $this->assertSame($row['image_original'], $row['image']);
+        $this->assertNull($row['image_thumb']);
+        $this->assertStringNotContainsString('/thumbs/', (string) $row['image']);
     }
 }
