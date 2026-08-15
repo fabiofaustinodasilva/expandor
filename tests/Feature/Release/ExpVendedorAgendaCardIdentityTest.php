@@ -162,7 +162,7 @@ class ExpVendedorAgendaCardIdentityTest extends TestCase
         $this->assertStringContainsString('seller_name', $shell);
         $this->assertStringContainsString('Atendido por:', $shell);
         $this->assertStringContainsString('${seller ?', $shell);
-        $agendaFn = explode('async function loadClients', explode('async function loadAgenda', $shell)[1] ?? '')[0] ?? '';
+        $agendaFn = explode('async function loadClients', explode('function agendaCardHtml', $shell)[1] ?? '')[0] ?? '';
         $this->assertStringContainsString('data-complete-follow-up', $agendaFn);
         $this->assertStringContainsString('data-open-point', $agendaFn);
         $this->assertStringNotContainsString('cpf', strtolower($agendaFn));

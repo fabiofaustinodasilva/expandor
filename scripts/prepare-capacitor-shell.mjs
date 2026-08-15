@@ -263,7 +263,10 @@ const html = `<!DOCTYPE html>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
         </header>
-        <div id="net-banner" hidden>Sem conexão</div>
+        <div id="net-banner" hidden>
+            <span>Sem conexão. Sua sessão permanece salva.</span>
+            <button type="button" class="btn btn-ghost" id="net-retry">Tentar novamente</button>
+        </div>
         <div id="app-toast" class="banner" hidden></div>
 
         <main class="app-main">
@@ -288,7 +291,7 @@ const html = `<!DOCTYPE html>
                     <button class="map-fab map-fab--layers" id="map-layers-btn" type="button" aria-label="Camadas">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
                     </button>
-                    <button class="map-fab map-fab--gps" id="gps-btn" type="button">
+                    <button class="map-fab map-fab--gps" id="gps-btn" type="button" aria-label="Meu Local">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                         Meu Local
                     </button>
@@ -319,10 +322,12 @@ const html = `<!DOCTYPE html>
             <section class="pane" id="pane-more" hidden>
                 <h2 class="pane-title">Mais</h2>
                 <ul class="menu-list">
+                    <li class="menu-group">Trabalho</li>
                     <li><button class="menu-list__item" id="menu-products" type="button">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
                         Apresentar produtos
                     </button></li>
+                    <li class="menu-group">Conta</li>
                     <li><button class="menu-list__item" id="menu-account" type="button">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         Minha conta
@@ -331,6 +336,7 @@ const html = `<!DOCTYPE html>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                         Sobre o Expandor
                     </button></li>
+                    <li class="menu-group">Sessão</li>
                     <li><button class="menu-list__item menu-list__item--danger" id="logout-button" type="button">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
                         Sair
@@ -479,6 +485,7 @@ const html = `<!DOCTYPE html>
                         <button type="button" class="btn btn-ghost btn-block" id="create-adjust-map" style="margin-top:0.65rem">Ajustar posição no mapa</button>
                     </div>
 
+                    <p class="sheet__section-title">CLIENTE</p>
                     <label class="field-label" for="point-contact">Nome / responsável</label>
                     <input class="field-input" id="point-contact" placeholder="Quem atendeu" autocomplete="name">
                     <label class="field-label" for="point-phone">Telefone / WhatsApp</label>
@@ -493,7 +500,8 @@ const html = `<!DOCTYPE html>
                         <p class="banner" id="create-campaign-warning" hidden data-kind="error"></p>
                     </div>
 
-                    <p class="field-label" style="margin-top:0.85rem">Situação / interesse</p>
+                    <p class="sheet__section-title" style="margin-top:0.85rem">RESULTADO DO ATENDIMENTO</p>
+                    <p class="field-label">Situação / interesse</p>
                     <div id="create-outcome-list" class="outcome-grid" role="listbox" aria-label="Situação / interesse"></div>
 
                     

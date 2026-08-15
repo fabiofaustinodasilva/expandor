@@ -589,12 +589,17 @@ async function openPoint(item) {
     }
     const point = payload.data || {};
     lastOpenedPoint = point;
-    $('point-title').textContent = point.resident_name || point.name || `Imóvel #${id}`;
-    $('point-meta').textContent = [
-        point.status_label || propertyStatusLabel(point.status),
-        point.address,
-        point.resident_phone,
-    ].filter(Boolean).join(' · ');
+    const status = point.status_label || propertyStatusLabel(point.status);
+    $('point-title').textContent = point.address || point.resident_name || point.name || `Imóvel #${id}`;
+    const meta = $('point-meta');
+    if (meta) {
+        meta.innerHTML = [
+            status ? `<span class="badge badge--approved">${escapeHtml(status)}</span>` : '',
+            point.resident_name ? `<span class="card__title" style="display:block;margin-top:0.4rem">${escapeHtml(point.resident_name)}</span>` : '',
+            point.resident_phone ? `<span class="card__meta" style="display:block">${escapeHtml(point.resident_phone)}</span>` : '',
+            point.last_visit_at ? `<span class="card__meta" style="display:block">Último atendimento: ${escapeHtml(point.last_visit_at)}</span>` : '',
+        ].filter(Boolean).join('');
+    }
     $('point-id').value = id;
     MapAdapter.selectProperty(id);
     adjustPropertyCanAdjust = point.can_adjust !== false;
@@ -1007,22 +1012,43 @@ function agendaContactLabel(item) {
     return 'Cliente sem nome';
 }
 
-async function loadAgenda() {
-    try {
-        const payload = await mobileApi.agenda({ scope: 'all' });
-        renderList(
-            'agenda-list',
-            payload.data || [],
-            'Agenda livre',
-            'Nenhum retorno pendente. Use o mapa para visitar novos imóveis.',
-            (item) => {
-                const seller = String(item.seller_name || '').trim();
+function agendaUrgency(iso) {
+    if (!iso) {
+        return 'upcoming';
+    }
+    const when = new Date(iso);
+    if (Number.isNaN(when.getTime())) {
+        return 'upcoming';
+    }
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const day = new Date(when);
+    day.setHours(0, 0, 0, 0);
+    const diff = Math.round((day.getTime() - start.getTime()) / 86400000);
+    if (diff < 0) {
+        return 'overdue';
+    }
+    if (diff === 0) {
+        return 'today';
+    }
+    if (diff === 1) {
+        return 'tomorrow';
+    }
 
-                return `
-            <article class="card">
+    return 'upcoming';
+}
+
+function agendaCardHtml(item) {
+    const seller = String(item.seller_name || '').trim();
+    const urgency = agendaUrgency(item.scheduled_at);
+    const badge = urgency === 'overdue' ? 'Atrasado' : 'Agendado';
+    const badgeClass = 'badge--pending';
+
+    return `
+            <article class="card card--${urgency}">
                 <div class="card__row">
                     <p class="card__title">${escapeHtml(agendaContactLabel(item))}</p>
-                    <span class="badge badge--pending">Agendado</span>
+                    <span class="badge ${badgeClass}">${badge}</span>
                 </div>
                 ${item.campaign ? `<p class="card__meta">${escapeHtml(item.campaign)}</p>` : ''}
                 <p class="card__meta">${escapeHtml(item.scheduled_label || 'Retorno')}</p>
@@ -1035,8 +1061,38 @@ async function loadAgenda() {
                 </div>
             </article>
         `;
-            },
-        );
+}
+
+async function loadAgenda() {
+    try {
+        const payload = await mobileApi.agenda({ scope: 'all' });
+        const items = payload.data || [];
+        const el = $('agenda-list');
+        if (!el) {
+            return;
+        }
+        if (!items.length) {
+            el.innerHTML = emptyState('Nenhum retorno pendente.', 'Use o mapa para visitar novos imóveis.');
+
+            return;
+        }
+        const groups = [
+            { key: 'overdue', title: 'Atrasados' },
+            { key: 'today', title: 'Hoje' },
+            { key: 'tomorrow', title: 'Amanhã' },
+            { key: 'upcoming', title: 'Próximos' },
+        ];
+        const buckets = { overdue: [], today: [], tomorrow: [], upcoming: [] };
+        items.forEach((item) => {
+            buckets[agendaUrgency(item.scheduled_at)].push(item);
+        });
+        el.innerHTML = groups.map((group) => {
+            if (!buckets[group.key].length) {
+                return '';
+            }
+
+            return `<p class="list-section">${group.title}</p>${buckets[group.key].map(agendaCardHtml).join('')}`;
+        }).join('');
     } catch (error) {
         if (isNetworkRefreshError(error)) {
             toast('Não foi possível atualizar a Agenda.');
@@ -1061,8 +1117,11 @@ async function loadClients(q = '') {
 
             return `
                 <article class="card">
-                    <p class="card__title">${escapeHtml(item.resident_name || item.name || `Imóvel #${item.id}`)}</p>
-                    <p class="card__meta">${escapeHtml(status)}</p>
+                    <div class="card__row">
+                        <p class="card__title">${escapeHtml(item.resident_name || item.name || `Imóvel #${item.id}`)}</p>
+                        <span class="badge badge--approved">${escapeHtml(status)}</span>
+                    </div>
+                    ${item.phone || item.resident_phone ? `<p class="card__meta">${escapeHtml(item.phone || item.resident_phone)}</p>` : ''}
                     <p class="card__meta">${escapeHtml(item.address || 'Endereço não informado')}</p>
                     <div class="sheet-actions" style="margin-top:0.65rem">
                         ${hasMap ? `<button type="button" class="btn btn-ghost" data-map-point="${item.property_id || item.id}" data-lat="${item.latitude}" data-lng="${item.longitude}">Ver no mapa</button>` : ''}
@@ -1102,6 +1161,10 @@ async function loadResults() {
 
     el.innerHTML = `
         <div class="stat-grid">
+            <article class="stat-card stat-card--hero">
+                <p class="stat-card__label">Vendas (30 dias)</p>
+                <p class="stat-card__value">${commissions.sales_count ?? '—'}</p>
+            </article>
             <article class="stat-card">
                 <p class="stat-card__label">Visitas hoje</p>
                 <p class="stat-card__value">${data.visits_today ?? '—'}</p>
@@ -1110,16 +1173,7 @@ async function loadResults() {
                 <p class="stat-card__label">Retornos</p>
                 <p class="stat-card__value">${data.pending_follow_ups ?? '—'}</p>
             </article>
-            <article class="stat-card">
-                <p class="stat-card__label">Vendas (30 dias)</p>
-                <p class="stat-card__value">${commissions.sales_count ?? '—'}</p>
-            </article>
-            <article class="stat-card">
-                <p class="stat-card__label">Conversão</p>
-                <p class="stat-card__value">—</p>
-                <p class="card__meta">Indisponível na API mobile</p>
-            </article>
-            <article class="stat-card" style="grid-column:1/-1">
+            <article class="stat-card stat-card--hero">
                 <p class="stat-card__label">Comissão (30 dias)</p>
                 <p class="stat-card__value">${formatCurrency(commissions.total_amount)}</p>
                 <p class="card__meta">Pago: ${formatCurrency(commissions.paid_amount)} · Pendente: ${formatCurrency(commissions.pending_amount)}</p>
@@ -1153,7 +1207,7 @@ async function loadCommissions() {
                     <p class="card__title">${escapeHtml(item.product || 'Comissão')}</p>
                     <span class="badge ${commissionBadgeClass(item.status)}">${escapeHtml(commissionStatusLabel(item.status))}</span>
                 </div>
-                <p class="card__meta">Valor: ${formatCurrency(item.commission_amount)}</p>
+                <p class="commission-amount">${formatCurrency(item.commission_amount)}</p>
                 ${item.earned_at ? `<p class="card__meta">Data da venda: ${escapeHtml(item.earned_at)}</p>` : ''}
             </article>
         `,
@@ -1175,12 +1229,16 @@ function syncLayerButtons() {
 
 async function onGps() {
     toast('');
+    const btn = $('gps-btn');
+    btn?.classList.add('is-loading');
     try {
         const position = await LocationService.getCurrentPosition();
         MapAdapter.recenterGps(position);
         await loadMarkers();
     } catch (error) {
         toast(error.message || GPS_FAIL, 'error');
+    } finally {
+        btn?.classList.remove('is-loading');
     }
 }
 
@@ -1343,7 +1401,7 @@ async function onCreatePoint(event) {
         const created = await mobileApi.firstApproach(body);
         const pointId = created.data?.property_id || created.data?.id;
         debugFlow('pointCreated', { propertyId: pointId || null, firstApproach: true, status });
-        toast(status === 'installation_requested' ? 'Venda registrada.' : 'Ponto salvo.', 'status');
+        toast(status === 'installation_requested' ? 'Venda registrada.' : 'Ponto salvo.', 'success');
         show('create-sheet', false);
 
         const propertyStatus = propertyStatusForVisit(status) || created.data?.status;
@@ -2147,6 +2205,18 @@ async function startup() {
         MobileAuthService.openForgotPassword();
     });
     $('logout-button')?.addEventListener('click', onLogout);
+    $('net-retry')?.addEventListener('click', () => {
+        if (navigator.onLine === false) {
+            toast('Ainda sem conexão.', 'error');
+
+            return;
+        }
+        setNet(true);
+        refreshOperational().catch((error) => toast(error.message, 'error'));
+        if (activePane === 'map') {
+            loadMarkers().catch((error) => toast(error.message, 'error'));
+        }
+    });
     $('account-logout')?.addEventListener('click', onLogout);
     $('restore-retry')?.addEventListener('click', () => {
         restoreSession().catch(() => {});

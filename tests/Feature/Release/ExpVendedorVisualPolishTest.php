@@ -52,6 +52,29 @@ class ExpVendedorVisualPolishTest extends TestCase
         $this->assertStringContainsString('setBasemap', (string) file_get_contents(base_path('resources/js/mobile/map-adapter.js')));
     }
 
+    public function test_field_polish_keeps_scope_all_and_web_admin_isolation(): void
+    {
+        $css = (string) file_get_contents(base_path('resources/css/exp-vendedor-shell.css'));
+        $bootstrap = (string) file_get_contents(base_path('resources/js/mobile/bootstrap-shell.js'));
+        $prepare = (string) file_get_contents(base_path('scripts/prepare-capacitor-shell.mjs'));
+
+        $this->assertStringContainsString('body:not(.client-ui)', $css);
+        $this->assertStringContainsString('--touch: 48px', $css);
+        $this->assertStringContainsString('due-day-chip.is-selected', $css);
+        $this->assertStringContainsString('stat-card--hero', $css);
+        $this->assertStringContainsString("mobileApi.agenda({ scope: 'all' })", $bootstrap);
+        $this->assertStringContainsString('function agendaUrgency', $bootstrap);
+        $this->assertStringContainsString('list-section', $bootstrap);
+        $this->assertStringContainsString('data-complete-follow-up', $bootstrap);
+        $this->assertStringContainsString('commission-amount', $bootstrap);
+        $this->assertStringContainsString('is-loading', $bootstrap);
+        $this->assertStringContainsString('id="net-retry"', $prepare);
+        $this->assertStringContainsString('menu-group', $prepare);
+        $this->assertStringContainsString('aria-label="Meu Local"', $prepare);
+        $this->assertStringNotContainsString('127.0.0.1', $prepare);
+        $this->assertStringNotContainsString('localhost', $prepare);
+    }
+
     public function test_built_shell_when_present(): void
     {
         $shellIndex = public_path('capacitor-shell/index.html');
