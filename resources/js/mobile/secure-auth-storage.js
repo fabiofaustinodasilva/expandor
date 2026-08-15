@@ -1,11 +1,14 @@
+import { Preferences } from '@capacitor/preferences';
+
 /**
  * SecureAuthStorage — token and install UUID stay out of browser web storage.
- * Native: Capacitor Preferences (SharedPreferences / UserDefaults).
- * Keychain/Keystore plugin can replace the driver without changing callers.
+ * Native: Capacitor Preferences (Android SharedPreferences / iOS UserDefaults).
+ * No Keystore plugin in this APK — token is not in logs or localStorage.
  */
 
 const TOKEN_KEY = 'expandor.auth.token';
 const DEVICE_KEY = 'expandor.auth.device_id';
+const SESSION_VERSION_KEY = 'expandor.auth.session_version';
 const memory = new Map();
 
 function randomUuid() {
@@ -23,6 +26,10 @@ function randomUuid() {
 }
 
 function nativePlugin(name) {
+    if (name === 'Preferences') {
+        return globalThis.Capacitor?.Plugins?.Preferences ?? Preferences;
+    }
+
     return globalThis.Capacitor?.Plugins?.[name] ?? null;
 }
 
@@ -139,6 +146,21 @@ export const SecureAuthStorage = {
 
     async clearAuth() {
         await this.removeToken();
+        await forget(SESSION_VERSION_KEY);
+    },
+
+    async getSessionVersion() {
+        return read(SESSION_VERSION_KEY);
+    },
+
+    async setSessionVersion(version) {
+        if (version == null || version === '') {
+            await forget(SESSION_VERSION_KEY);
+
+            return;
+        }
+
+        await write(SESSION_VERSION_KEY, String(version));
     },
 };
 

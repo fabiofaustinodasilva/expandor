@@ -142,6 +142,9 @@ export const MobileAuthService = {
         }
 
         await SecureAuthStorage.setToken(extracted.token);
+        if (extracted.data.session?.version != null) {
+            await SecureAuthStorage.setSessionVersion(extracted.data.session.version);
+        }
         this.currentUser = extracted.data;
         this.lastAuthMessage = null;
 
@@ -159,7 +162,7 @@ export const MobileAuthService = {
         const response = await apiFetch('/api/mobile/v1/me');
         const payload = await readJson(response);
 
-        if (response.status === 401) {
+        if (response.status === 401 || response.status === 403) {
             await this.handleUnauthorized(payload);
 
             return null;
@@ -179,6 +182,9 @@ export const MobileAuthService = {
 
         this.currentUser = payload.data;
         this.lastAuthMessage = null;
+        if (payload.data.session?.version != null) {
+            await SecureAuthStorage.setSessionVersion(payload.data.session.version);
+        }
 
         return payload.data;
     },
@@ -206,9 +212,13 @@ export const MobileAuthService = {
         this.handlingUnauthorized = true;
         try {
             const code = payload.code || 'unauthenticated';
-            this.lastAuthMessage = code === 'session_replaced'
-                ? (payload.message || SESSION_REPLACED_MESSAGE)
-                : null;
+            if (code === 'session_replaced') {
+                this.lastAuthMessage = payload.message || SESSION_REPLACED_MESSAGE;
+            } else if (code === 'account_inactive' || code === 'company_inactive') {
+                this.lastAuthMessage = payload.message || 'Esta conta não está disponível. Fale com o escritório.';
+            } else {
+                this.lastAuthMessage = 'Sua sessão expirou. Entre novamente.';
+            }
             await this.clearLocalAuth();
             window.dispatchEvent(new CustomEvent('expandor:auth-cleared', {
                 detail: { code, message: this.lastAuthMessage },

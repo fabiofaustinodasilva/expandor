@@ -3,6 +3,7 @@ import { mobileApi } from './mobile-api.js';
 import { LocationService } from './location-service.js';
 import { MapAdapter } from './map-adapter.js';
 import { PresentationScreen } from './presentation-screen.js';
+import { SecureAuthStorage } from './secure-auth-storage.js';
 import {
     VISIT_OUTCOMES,
     propertyStatusForVisit,
@@ -1600,6 +1601,7 @@ function focusMapPoint(lat, lng) {
 }
 
 async function enterApp(data) {
+    hideRestore();
     paintUser(data);
     document.body.classList.add('seller-app-mode');
     show('screen-login', false);
@@ -1630,7 +1632,49 @@ async function enterApp(data) {
     }
 }
 
+function showRestore(statusText = 'Entrando...') {
+    const gate = $('screen-restore');
+    if (gate) {
+        gate.hidden = false;
+    }
+    const status = $('restore-status');
+    if (status) {
+        status.textContent = statusText;
+    }
+    const err = $('restore-error');
+    if (err) {
+        err.hidden = true;
+        err.textContent = '';
+    }
+    const retry = $('restore-retry');
+    if (retry) {
+        retry.hidden = true;
+    }
+}
+
+function hideRestore() {
+    const gate = $('screen-restore');
+    if (gate) {
+        gate.hidden = true;
+    }
+}
+
+function showRestoreNetworkError() {
+    showRestore('Sem conexão. Tente novamente.');
+    const err = $('restore-error');
+    if (err) {
+        err.hidden = false;
+        err.textContent = 'Sem conexão. Tente novamente.';
+        err.dataset.kind = 'error';
+    }
+    const retry = $('restore-retry');
+    if (retry) {
+        retry.hidden = false;
+    }
+}
+
 function showLogin(message) {
+    hideRestore();
     document.body.classList.remove('seller-app-mode');
     show('screen-app', false);
     show('screen-login', true);
@@ -1907,6 +1951,36 @@ function bindApp() {
     setNet(navigator.onLine !== false);
 }
 
+async function restoreSession() {
+    showRestore('Entrando...');
+    show('screen-login', false);
+
+    const storedToken = await SecureAuthStorage.getToken();
+    if (!storedToken) {
+        showLogin();
+
+        return;
+    }
+
+    try {
+        const user = await MobileAuthService.getCurrentUser();
+        if (user) {
+            await enterApp(user);
+            hideRestore();
+
+            return;
+        }
+        showLogin(MobileAuthService.lastAuthMessage || 'Sua sessão expirou. Entre novamente.');
+    } catch (error) {
+        if (error.code === 'network_offline') {
+            showRestoreNetworkError();
+
+            return;
+        }
+        showLogin(error.message || MobileAuthService.lastAuthMessage || '');
+    }
+}
+
 async function startup() {
     const loginForm = $('expandor-login-form');
     if (!loginForm) {
@@ -1920,26 +1994,15 @@ async function startup() {
     });
     $('logout-button')?.addEventListener('click', onLogout);
     $('account-logout')?.addEventListener('click', onLogout);
+    $('restore-retry')?.addEventListener('click', () => {
+        restoreSession().catch(() => {});
+    });
     window.addEventListener('expandor:auth-cleared', (event) => {
         showLogin(event.detail?.message || '');
     });
     bindApp();
     paintIcons();
-
-    try {
-        const user = await MobileAuthService.getCurrentUser();
-        if (user) {
-            await enterApp(user);
-
-            return;
-        }
-    } catch (error) {
-        if (error.code === 'network_offline') {
-            setBanner('Sem conexão. Conecte-se para entrar. O modo offline ainda não está disponível.', 'error');
-        }
-    }
-
-    showLogin(MobileAuthService.lastAuthMessage);
+    await restoreSession();
 }
 
 if (document.readyState === 'loading') {

@@ -225,7 +225,15 @@ const html = `<!DOCTYPE html>
     <link rel="stylesheet" href="./vendor/seller-app.css?v=${shellVersion}">
 </head>
 <body data-shell-version="${shellVersion}" data-shell-built-at="${buildStamp}">
-    <div class="login-card" id="screen-login">
+    <div class="restore-gate" id="screen-restore">
+        <img class="login-brand__logo" src="./vendor/exp-vendedor-logo.png" alt="EXP Vendedor" width="120" height="120" decoding="async">
+        <p class="login-brand__welcome">EXP Vendedor</p>
+        <p class="restore-gate__status" id="restore-status">Entrando...</p>
+        <div id="restore-error" class="banner" hidden></div>
+        <button class="btn btn-primary btn-block" id="restore-retry" type="button" hidden>Tentar novamente</button>
+    </div>
+
+    <div class="login-card" id="screen-login" hidden>
         <header class="login-brand">
             <img class="login-brand__logo" src="./vendor/exp-vendedor-logo.png" alt="EXP Vendedor" width="120" height="120" decoding="async">
             <p class="login-brand__welcome">Bem-vindo ao Expandor</p>

@@ -27,7 +27,7 @@ async function json(path, options = {}) {
         payload = {};
     }
 
-    if (response.status === 401) {
+    if (response.status === 401 || response.status === 403) {
         await MobileAuthService.handleUnauthorized(payload);
     }
 

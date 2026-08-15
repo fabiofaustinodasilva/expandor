@@ -60,6 +60,37 @@ body.seller-app-mode {
 .muted { color: var(--muted); font-size: 0.88rem; }
 
 /* Login */
+.restore-gate {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    padding: 1.5rem;
+    background: var(--bg);
+    text-align: center;
+}
+
+.restore-gate[hidden] { display: none !important; }
+
+.restore-gate .login-brand__logo {
+    margin-bottom: 0.25rem;
+}
+
+.restore-gate__status {
+    margin: 0;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.restore-gate .btn {
+    max-width: 16rem;
+    margin-top: 0.5rem;
+}
+
 .login-card {
     width: min(420px, 100%);
     background: linear-gradient(180deg, var(--exp-blue-dark) 0%, var(--bg-elevated) 42%);
