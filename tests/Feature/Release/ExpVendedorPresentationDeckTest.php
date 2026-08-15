@@ -49,7 +49,14 @@ class ExpVendedorPresentationDeckTest extends TestCase
         $this->assertStringContainsString('deckImageUrls', $js);
         $this->assertStringContainsString('image_original', $js);
         $this->assertStringContainsString('originalUrlFromThumb', $js);
-        $this->assertStringContainsString('preloadDeckImage', $js);
+        $this->assertStringContainsString('preloadAround', $js);
+        $this->assertStringContainsString('mediaCache', $js);
+        $this->assertStringContainsString('[EXP ProductDeck] preload', $js);
+        $this->assertStringContainsString('[EXP ProductDeck] cache-hit', $js);
+        $this->assertStringContainsString('[EXP ProductDeck] image-ready', $js);
+        $this->assertStringContainsString('initialDeckSrc', $js);
+        $this->assertStringContainsString('[-1, 0, 1]', $js);
+        $this->assertStringNotContainsString('preloadDeckImage', $js);
         $this->assertStringContainsString('/storage/${path}', $js);
         $this->assertStringNotContainsString('return `${origin}/${raw}`', $js);
         $this->assertStringContainsString('EXPANDOR_WEB_ORIGIN', $js);
@@ -72,7 +79,8 @@ class ExpVendedorPresentationDeckTest extends TestCase
         $this->assertStringContainsString("selectCreateOutcome('installation_requested')", $bootstrap);
         $this->assertStringContainsString('seedCartWithProduct', $bootstrap);
         $this->assertStringContainsString('export function seedCartWithProduct', $cart);
-        $this->assertStringNotContainsString('MapAdapter.init(', $js);
+        $this->assertSame(1, substr_count($js, 'mobileApi.products()'));
+        $this->assertStringContainsString('async load()', $js);
     }
 
     public function test_products_api_includes_presentation_catalog_fields(): void

@@ -123,9 +123,9 @@ function deckImageUrls(item) {
 function logDeckImage(level, extra) {
     const payload = {
         product_id: extra.product_id ?? null,
-        original: extra.original ?? null,
+        original: extra.original ?? extra.url ?? null,
         thumb: extra.thumb ?? null,
-        resolved: extra.resolved ?? null,
+        resolved: extra.resolved ?? extra.url ?? null,
     };
     if (level === 'warn') {
         console.warn('[EXP ProductDeck] image', payload);
@@ -135,12 +135,76 @@ function logDeckImage(level, extra) {
     console.info('[EXP ProductDeck] image', payload);
 }
 
-function preloadDeckImage(url) {
-    if (!url || typeof Image === 'undefined') {
+const mediaCache = {
+    states: new Map(),
+
+    isLoaded(url) {
+        return Boolean(url) && this.states.get(url)?.status === 'loaded';
+    },
+
+    isLoading(url) {
+        return Boolean(url) && this.states.get(url)?.status === 'loading';
+    },
+
+    preload(url) {
+        if (!url || typeof Image === 'undefined') {
+            return Promise.resolve(false);
+        }
+
+        const existing = this.states.get(url);
+        if (existing?.status === 'loaded') {
+            console.info('[EXP ProductDeck] cache-hit', { url });
+
+            return Promise.resolve(true);
+        }
+        if (existing?.status === 'loading' && existing.promise) {
+            return existing.promise;
+        }
+
+        let settle;
+        const promise = new Promise((resolve) => {
+            settle = resolve;
+        });
+        const entry = { status: 'loading', promise, image: null };
+        this.states.set(url, entry);
+        console.info('[EXP ProductDeck] preload', { url });
+
+        const img = new Image();
+        img.onload = () => {
+            entry.status = 'loaded';
+            entry.image = img;
+            console.info('[EXP ProductDeck] image-ready', { url });
+            settle(true);
+        };
+        img.onerror = () => {
+            entry.status = 'failed';
+            settle(false);
+        };
+        img.src = url;
+
+        return promise;
+    },
+};
+
+function initialDeckSrc(urls) {
+    if (urls.original && mediaCache.isLoaded(urls.original)) {
+        return urls.original;
+    }
+
+    return urls.thumb || '';
+}
+
+function applyOriginalIfReady(img) {
+    if (!img) {
         return;
     }
-    const img = new Image();
-    img.src = url;
+    const original = img.getAttribute('data-original-src') || '';
+    if (!original || !mediaCache.isLoaded(original)) {
+        return;
+    }
+    if (img.getAttribute('src') !== original) {
+        img.src = original;
+    }
 }
 
 function mediaHtml(item) {
@@ -154,12 +218,20 @@ function mediaHtml(item) {
     }
 
     const urls = deckImageUrls(item);
-    logDeckImage('info', { product_id: item.id, original: urls.original, thumb: urls.thumb, resolved: urls.resolved });
-    if (!urls.resolved) {
+    const initial = initialDeckSrc(urls);
+    logDeckImage('info', {
+        product_id: item.id,
+        original: urls.original,
+        thumb: urls.thumb,
+        resolved: urls.original || urls.thumb,
+    });
+    if (!urls.original && !urls.thumb) {
         return `<div class="deck-media"><div class="deck-media-empty" data-deck-fallback="1">${name}</div></div>`;
     }
 
-    return `<div class="deck-media"><img src="${escapeHtml(urls.resolved)}" alt="${name}" data-product-id="${escapeHtml(item.id)}" data-original-src="${escapeHtml(urls.original)}" data-thumb-src="${escapeHtml(urls.thumb)}"></div>`;
+    const srcAttr = initial ? ` src="${escapeHtml(initial)}"` : '';
+
+    return `<div class="deck-media"><img${srcAttr} alt="${name}" data-product-id="${escapeHtml(item.id)}" data-original-src="${escapeHtml(urls.original)}" data-thumb-src="${escapeHtml(urls.thumb)}"></div>`;
 }
 
 function bindDeckImages(root) {
@@ -168,7 +240,13 @@ function bindDeckImages(root) {
             const original = img.getAttribute('data-original-src') || '';
             const thumb = img.getAttribute('data-thumb-src') || '';
             const current = img.getAttribute('src') || '';
-            if (thumb && current !== thumb && original && current === original) {
+            if (original && current === original) {
+                const entry = mediaCache.states.get(original);
+                if (entry) {
+                    entry.status = 'failed';
+                }
+            }
+            if (thumb && current !== thumb) {
                 img.src = thumb;
                 logDeckImage('warn', {
                     product_id: img.getAttribute('data-product-id'),
@@ -192,6 +270,10 @@ function bindDeckImages(root) {
             img.replaceWith(fallback);
         });
     });
+}
+
+function slideImageEl(productId) {
+    return document.querySelector(`.deck-slide[data-product-id="${productId}"] .deck-media img`);
 }
 
 export const PresentationScreen = {
@@ -378,10 +460,26 @@ export const PresentationScreen = {
             }
         }
         this.syncChrome();
-        const next = this.products[this.index + 1];
-        if (next) {
-            preloadDeckImage(deckImageUrls(next).resolved);
-        }
+        this.preloadAround(this.index);
+    },
+
+    preloadAround(index) {
+        [-1, 0, 1].forEach((delta) => {
+            const item = this.products[index + delta];
+            if (!item) {
+                return;
+            }
+            const urls = deckImageUrls(item);
+            if (!urls.original) {
+                return;
+            }
+            mediaCache.preload(urls.original).then((ok) => {
+                if (!ok) {
+                    return;
+                }
+                applyOriginalIfReady(slideImageEl(item.id));
+            });
+        });
     },
 
     syncChrome() {
@@ -501,4 +599,5 @@ if (typeof window !== 'undefined') {
     window.ExpandorPresentationScreen.resolveMediaUrl = resolveMediaUrl;
     window.ExpandorPresentationScreen.publicStoragePath = publicStoragePath;
     window.ExpandorPresentationScreen.deckImageUrls = deckImageUrls;
+    window.ExpandorPresentationScreen.mediaCache = mediaCache;
 }
