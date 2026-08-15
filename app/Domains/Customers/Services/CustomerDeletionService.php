@@ -5,6 +5,7 @@ namespace App\Domains\Customers\Services;
 use App\Domains\Company\Models\User;
 use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Security\Services\SecurityService;
+use App\Domains\Visits\Actions\CancelPendingFollowUpsForPropertyAction;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -17,6 +18,7 @@ class CustomerDeletionService
 
     public function __construct(
         protected SecurityService $security,
+        protected CancelPendingFollowUpsForPropertyAction $cancelPendingFollowUps,
     ) {}
 
     public function hasBlockingHistory(Property $property): bool
@@ -42,6 +44,8 @@ class CustomerDeletionService
             'address_id' => $property->address_id,
             'created_by' => $property->created_by,
         ];
+
+        $this->cancelPendingFollowUps->execute($property);
 
         $property->forceFill([
             'deleted_by' => $actor->id,

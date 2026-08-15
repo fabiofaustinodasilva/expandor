@@ -97,7 +97,7 @@ class SalesAppRepository
     {
         return FollowUp::query()
             ->where('user_id', $seller->id)
-            ->where('status', FollowUpStatus::PENDING)
+            ->operationalPending()
             ->with([
                 'visit.property.address:id,street,number,neighborhood',
                 'visit.campaign:id,name',
@@ -122,7 +122,7 @@ class SalesAppRepository
                 ->count(),
             'pending_follow_ups' => FollowUp::query()
                 ->where('user_id', $seller->id)
-                ->where('status', FollowUpStatus::PENDING)
+                ->operationalPending()
                 ->count(),
         ];
     }

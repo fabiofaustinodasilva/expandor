@@ -86,7 +86,7 @@ class AnalyticsRepository
     public function countPendingFollowUps(AnalyticsFiltersDTO $filters): int
     {
         return FollowUp::query()
-            ->where('status', FollowUpStatus::PENDING)
+            ->operationalPending()
             ->when(
                 $filters->user_id,
                 fn (Builder $q) => $q->where('user_id', $filters->user_id)

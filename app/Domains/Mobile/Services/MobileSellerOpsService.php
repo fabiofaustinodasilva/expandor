@@ -34,7 +34,6 @@ use App\Domains\Security\Services\SecurityService;
 use App\Domains\Visits\Actions\CompleteFollowUpAction;
 use App\Domains\Visits\Actions\RegisterFirstApproachAction;
 use App\Domains\Visits\Actions\RegisterVisitAction;
-use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Enums\VisitStatus;
 use App\Domains\Visits\Models\FollowUp;
 use App\Domains\Visits\Models\Visit;
@@ -519,7 +518,7 @@ class MobileSellerOpsService
     {
         $query = FollowUp::query()
             ->where('user_id', $user->id)
-            ->where('status', FollowUpStatus::PENDING)
+            ->operationalPending()
             ->with([
                 'visit.property.address:id,street,number,neighborhood',
                 'visit.campaign:id,name',

@@ -8,6 +8,7 @@ use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Support\FollowUpSchedule;
 use App\Tenancy\Concerns\BelongsToTenant;
 use Database\Factories\FollowUpFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -54,6 +55,16 @@ class FollowUp extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Pending follow-ups whose visit still points at an operational (non-deleted) property.
+     */
+    public function scopeOperationalPending(Builder $query): Builder
+    {
+        return $query
+            ->where('status', FollowUpStatus::PENDING)
+            ->whereHas('visit.property');
     }
 
     public function hasScheduledTime(): bool

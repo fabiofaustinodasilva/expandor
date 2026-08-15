@@ -315,6 +315,25 @@ class VisitService
         ]);
     }
 
+    /**
+     * Remove pending returns from the operational agenda when a property leaves the map.
+     * Does not delete follow-up, visit, sale, or commission rows.
+     */
+    public function cancelPendingFollowUpsForProperty(Property $property): int
+    {
+        $visitIds = Visit::query()->where('property_id', $property->id)->pluck('id');
+        if ($visitIds->isEmpty()) {
+            return 0;
+        }
+
+        return FollowUp::query()
+            ->whereIn('visit_id', $visitIds)
+            ->where('status', FollowUpStatus::PENDING)
+            ->update([
+                'status' => FollowUpStatus::CANCELLED,
+            ]);
+    }
+
     public function completeFollowUp(FollowUp $followUp, ?string $notes = null): FollowUp
     {
         if ($followUp->status !== FollowUpStatus::PENDING) {

@@ -53,6 +53,8 @@ let adjustUiMode = null; // null | 'create' | 'existing'
 let adjustPropertyCanAdjust = false;
 let lastOpenedPoint = null;
 let currentHandoff = null;
+let activePane = 'map';
+let resumeRefreshBound = false;
 
 function debugMap(step, detail = {}) {
     try {
@@ -289,6 +291,7 @@ function setNet(online) {
 }
 
 function setPane(name) {
+    activePane = name;
     ['map', 'agenda', 'clients', 'results', 'commissions', 'more'].forEach((key) => {
         show(`pane-${key}`, key === name);
         const btn = $(`nav-${key}`);
@@ -302,6 +305,50 @@ function setPane(name) {
             window.L && MapAdapter.refreshLayout?.();
         });
     }
+}
+
+function isNetworkRefreshError(error) {
+    return error?.code === 'network_offline' || error?.status == null;
+}
+
+async function refreshOperational(pane = activePane) {
+    if (!document.body.classList.contains('seller-app-mode')) {
+        return;
+    }
+
+    const tasks = [];
+    if (pane === 'agenda') {
+        tasks.push(loadAgenda());
+    } else if (pane === 'clients') {
+        tasks.push(loadClients($('clients-q')?.value || ''));
+    } else if (pane === 'results') {
+        tasks.push(loadResults());
+    } else if (pane === 'commissions') {
+        tasks.push(loadCommissions());
+    }
+
+    if (MapAdapter.map) {
+        tasks.push(loadMarkers());
+    }
+
+    await Promise.allSettled(tasks);
+}
+
+function bindResumeRefresh() {
+    if (resumeRefreshBound) {
+        return;
+    }
+    resumeRefreshBound = true;
+    window.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            refreshOperational().catch(() => {});
+        }
+    });
+    window.Capacitor?.Plugins?.App?.addListener?.('appStateChange', (state) => {
+        if (state?.isActive) {
+            refreshOperational().catch(() => {});
+        }
+    });
 }
 
 function paintUser(data) {
@@ -461,7 +508,20 @@ async function loadMarkers() {
     const seq = ++markersRequestSeq;
     const bbox = MapAdapter.boundsQuery();
     debugMap('markersRequest', { seq, ...mapBoundsLog() });
-    const payload = await mobileApi.markers(bbox);
+    let payload;
+    try {
+        payload = await mobileApi.markers(bbox);
+    } catch (error) {
+        if (seq !== markersRequestSeq) {
+            return;
+        }
+        if (isNetworkRefreshError(error)) {
+            toast('Não foi possível atualizar o mapa.');
+
+            return;
+        }
+        throw error;
+    }
     if (seq !== markersRequestSeq) {
         debugMap('markersResponse', { seq, stale: true, count: null });
 
@@ -496,16 +556,37 @@ function bindMapMarkerReloads() {
     MapAdapter.map.on('zoomend', scheduleLoadMarkers);
 }
 
+function handleUnavailablePoint(propertyId) {
+    toast('Este ponto não está mais disponível.');
+    show('point-sheet', false);
+    show('visit-sheet', false);
+    loadAgenda().catch(() => {});
+    loadMarkers().catch(() => {});
+    loadClients($('clients-q')?.value || '').catch(() => {});
+}
+
 async function openPoint(item) {
     const id = item?.property_id || item?.id;
     if (!id) {
-        return;
+        handleUnavailablePoint(id);
+
+        return false;
     }
     if (MapAdapter.adjustState) {
-        return;
+        return false;
     }
 
-    const payload = await mobileApi.point(id);
+    let payload;
+    try {
+        payload = await mobileApi.point(id);
+    } catch (error) {
+        if (error.status === 404) {
+            handleUnavailablePoint(id);
+
+            return false;
+        }
+        throw error;
+    }
     const point = payload.data || {};
     lastOpenedPoint = point;
     $('point-title').textContent = point.resident_name || point.name || `Imóvel #${id}`;
@@ -535,6 +616,8 @@ async function openPoint(item) {
     show('point-sheet', true);
     paintIcons($('point-sheet'));
     renderPointHandoff(point);
+
+    return true;
 }
 
 function openAdjustSheet(metaText) {
@@ -912,13 +995,14 @@ function closeVisitSheet() {
 }
 
 async function loadAgenda() {
-    const payload = await mobileApi.agenda({ scope: 'today' });
-    renderList(
-        'agenda-list',
-        payload.data || [],
-        'Agenda livre hoje',
-        'Nenhum retorno agendado para hoje. Use o mapa para visitar novos imóveis.',
-        (item) => `
+    try {
+        const payload = await mobileApi.agenda({ scope: 'today' });
+        renderList(
+            'agenda-list',
+            payload.data || [],
+            'Agenda livre hoje',
+            'Nenhum retorno agendado para hoje. Use o mapa para visitar novos imóveis.',
+            (item) => `
             <article class="card">
                 <div class="card__row">
                     <p class="card__title">${escapeHtml(item.scheduled_label || 'Retorno')}</p>
@@ -933,12 +1017,21 @@ async function loadAgenda() {
                 </div>
             </article>
         `,
-    );
+        );
+    } catch (error) {
+        if (isNetworkRefreshError(error)) {
+            toast('Não foi possível atualizar a Agenda.');
+
+            return;
+        }
+        throw error;
+    }
 }
 
 async function loadClients(q = '') {
-    const payload = await mobileApi.points({ q, per_page: 24 });
-    renderList(
+    try {
+        const payload = await mobileApi.points({ q, per_page: 24 });
+        renderList(
         'clients-list',
         payload.data || [],
         'Nenhum cliente encontrado',
@@ -959,10 +1052,28 @@ async function loadClients(q = '') {
                 </article>`;
         },
     );
+    } catch (error) {
+        if (isNetworkRefreshError(error)) {
+            toast('Não foi possível atualizar os clientes.');
+
+            return;
+        }
+        throw error;
+    }
 }
 
 async function loadResults() {
-    const payload = await mobileApi.results();
+    let payload;
+    try {
+        payload = await mobileApi.results();
+    } catch (error) {
+        if (isNetworkRefreshError(error)) {
+            toast('Não foi possível atualizar o resultado.');
+
+            return;
+        }
+        throw error;
+    }
     const data = payload.data || {};
     const commissions = data.commissions || {};
     const el = $('results-list');
@@ -1000,7 +1111,17 @@ async function loadResults() {
 }
 
 async function loadCommissions() {
-    const payload = await mobileApi.commissions();
+    let payload;
+    try {
+        payload = await mobileApi.commissions();
+    } catch (error) {
+        if (isNetworkRefreshError(error)) {
+            toast('Não foi possível atualizar as comissões.');
+
+            return;
+        }
+        throw error;
+    }
     const items = payload.data?.items || [];
     renderList(
         'commissions-list',
@@ -1627,6 +1748,7 @@ async function enterApp(data) {
         renderVisitOutcomes();
         await prepareInitialMap();
         paintIcons();
+        bindResumeRefresh();
     } catch (error) {
         toast(error.message || 'Não foi possível carregar o app.', 'error');
     }
@@ -1732,7 +1854,10 @@ async function onLogout() {
 }
 
 function bindApp() {
-    $('nav-map')?.addEventListener('click', () => setPane('map'));
+    $('nav-map')?.addEventListener('click', () => {
+        setPane('map');
+        refreshOperational('map').catch((error) => toast(error.message, 'error'));
+    });
     $('nav-agenda')?.addEventListener('click', () => {
         setPane('agenda');
         loadAgenda().catch((error) => toast(error.message, 'error'));
@@ -1922,13 +2047,20 @@ function bindApp() {
         const followBtn = event.target.closest?.('[data-complete-follow-up]');
         if (followBtn?.dataset.completeFollowUp) {
             const propertyId = followBtn.dataset.propertyId;
-            if (propertyId) {
-                setPane('map');
-                openVisitSheet(propertyId, {
-                    followUpId: followBtn.dataset.completeFollowUp,
-                    subtitle: 'Como foi a abordagem?',
-                });
+            if (!propertyId) {
+                handleUnavailablePoint(propertyId);
+
+                return;
             }
+            setPane('map');
+            openPoint({ id: propertyId }).then((ok) => {
+                if (ok) {
+                    openVisitSheet(propertyId, {
+                        followUpId: followBtn.dataset.completeFollowUp,
+                        subtitle: 'Como foi a abordagem?',
+                    });
+                }
+            }).catch((error) => toast(error.message, 'error'));
 
             return;
         }
@@ -1946,7 +2078,10 @@ function bindApp() {
         }
     });
 
-    window.addEventListener('online', () => setNet(true));
+    window.addEventListener('online', () => {
+        setNet(true);
+        refreshOperational().catch(() => {});
+    });
     window.addEventListener('offline', () => setNet(false));
     setNet(navigator.onLine !== false);
 }

@@ -91,7 +91,7 @@ class PointOpsController extends Controller
         $user = $request->user();
         $property = $this->ops->findPoint($user, $point);
         if ($property === null) {
-            return MobileAuthResponse::error('Ponto não encontrado.', 'not_found', 404);
+            return MobileAuthResponse::error('Este ponto não está mais disponível.', 'not_found', 404);
         }
 
         $this->authorize('view', $property);
@@ -105,7 +105,7 @@ class PointOpsController extends Controller
         $user = $request->user();
         $property = $this->ops->findPoint($user, $point);
         if ($property === null) {
-            return MobileAuthResponse::error('Ponto não encontrado.', 'not_found', 404);
+            return MobileAuthResponse::error('Este ponto não está mais disponível.', 'not_found', 404);
         }
 
         try {

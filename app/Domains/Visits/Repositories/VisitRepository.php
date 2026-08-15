@@ -37,7 +37,7 @@ class VisitRepository
     public function paginatePendingFollowUps(?User $viewer = null, int $perPage = 15, ?string $dayFilter = null): LengthAwarePaginator
     {
         $query = FollowUp::query()
-            ->where('status', FollowUpStatus::PENDING)
+            ->operationalPending()
             ->with([
                 'visit.property.address:id,street,number,neighborhood,city_id',
                 'visit.property.residents',
@@ -63,7 +63,7 @@ class VisitRepository
     public function countPendingFollowUpsForToday(User $viewer): int
     {
         $query = FollowUp::query()
-            ->where('status', FollowUpStatus::PENDING)
+            ->operationalPending()
             ->whereDate('scheduled_at', AppTime::today());
 
         if ($this->scopesAgendaToOwnFollowUps($viewer)) {

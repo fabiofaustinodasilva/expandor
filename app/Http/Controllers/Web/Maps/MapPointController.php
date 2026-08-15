@@ -12,6 +12,7 @@ use App\Domains\Sales\Properties\Services\PropertyService;
 use App\Domains\Sales\Residents\Models\Resident;
 use App\Domains\Sales\Residents\Services\ResidentService;
 use App\Domains\Security\Services\SecurityService;
+use App\Domains\Visits\Actions\CancelPendingFollowUpsForPropertyAction;
 use App\Domains\Visits\Enums\FollowUpStatus;
 use App\Domains\Visits\Models\FollowUp;
 use App\Domains\Visits\Support\FollowUpSchedule;
@@ -31,6 +32,7 @@ class MapPointController extends Controller
         protected ResidentService $residents,
         protected SecurityService $security,
         protected FieldOpsPolicyResolver $fieldOps,
+        protected CancelPendingFollowUpsForPropertyAction $cancelPendingFollowUps,
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -452,12 +454,14 @@ class MapPointController extends Controller
             'address_id' => $property->address_id,
         ];
 
-        $property->forceFill([
-            'deleted_by' => $request->user()?->id,
-            'deletion_reason' => $data['reason'] ?? null,
-        ])->save();
-
-        $property->delete();
+        DB::transaction(function () use ($property, $data, $request): void {
+            $this->cancelPendingFollowUps->execute($property);
+            $property->forceFill([
+                'deleted_by' => $request->user()?->id,
+                'deletion_reason' => $data['reason'] ?? null,
+            ])->save();
+            $property->delete();
+        });
 
         $this->security->recordAudit(
             action: 'point.deleted',
