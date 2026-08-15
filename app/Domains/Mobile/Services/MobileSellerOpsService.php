@@ -26,6 +26,7 @@ use App\Domains\Sales\Properties\Enums\PropertyType;
 use App\Domains\Sales\Properties\Models\Property;
 use App\Domains\Sales\Properties\Models\PropertyHistory;
 use App\Domains\Sales\Residents\Models\Resident;
+use App\Domains\Sales\Residents\Enums\ResidentStatus;
 use App\Domains\Sales\Residents\Services\ResidentService;
 use App\Domains\Sales\Properties\Services\PropertyService;
 use App\Domains\Sales\Territory\Repositories\TerritoryRepository;
@@ -521,7 +522,10 @@ class MobileSellerOpsService
             ->operationalPending()
             ->with([
                 'visit.property.address:id,street,number,neighborhood',
+                'visit.property.residents:id,property_id,name,phone,whatsapp,is_primary_contact,status',
                 'visit.campaign:id,name',
+                'visit.user:id,name',
+                'user:id,name',
             ])
             ->orderBy('scheduled_at');
 
@@ -542,7 +546,23 @@ class MobileSellerOpsService
      */
     public function presentFollowUp(FollowUp $followUp): array
     {
-        $property = $followUp->visit?->property;
+        $visit = $followUp->visit;
+        $property = $visit?->property;
+        $resident = $this->agendaContact($property);
+        $seller = $visit?->user ?? $followUp->user;
+        $contactName = trim((string) ($resident?->name ?? ''));
+        $contactPhone = trim((string) ($resident?->phone ?: $resident?->whatsapp ?: ''));
+        if ($contactName === '') {
+            $contactName = $contactPhone !== '' ? $contactPhone : 'Cliente sem nome';
+        }
+
+        $address = $property?->address;
+        $addressLabel = trim((string) ($address?->label() ?: ''));
+        if ($addressLabel === '') {
+            $addressLabel = trim(($address?->street ?? '').' '.($address?->number ?? ''));
+        }
+
+        $sellerName = trim((string) ($seller?->name ?? ''));
 
         return [
             'id' => $followUp->id,
@@ -552,9 +572,36 @@ class MobileSellerOpsService
             'status' => $followUp->status?->value ?? $followUp->status,
             'notes' => $followUp->notes,
             'property_id' => $property?->id,
-            'address' => trim(($property?->address?->street ?? '').' '.($property?->address?->number ?? '')),
-            'campaign' => $followUp->visit?->campaign?->name,
+            'contact_name' => $contactName,
+            'contact_phone' => $contactPhone !== '' ? $contactPhone : null,
+            'seller_id' => $seller?->id,
+            'seller_name' => $sellerName !== '' ? $sellerName : null,
+            'address' => $addressLabel,
+            'campaign' => $visit?->campaign?->name,
         ];
+    }
+
+    protected function agendaContact(?Property $property): ?Resident
+    {
+        if ($property === null) {
+            return null;
+        }
+
+        $residents = $property->relationLoaded('residents')
+            ? $property->residents
+            : $property->residents()->get();
+
+        $primary = $residents->first(
+            fn (Resident $resident) => $resident->is_primary_contact
+                && $resident->status === ResidentStatus::ACTIVE
+        );
+        if ($primary !== null) {
+            return $primary;
+        }
+
+        return $residents->first(
+            fn (Resident $resident) => $resident->status === ResidentStatus::ACTIVE
+        ) ?? $residents->first();
     }
 
     /**

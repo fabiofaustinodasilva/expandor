@@ -503,8 +503,14 @@ body.seller-app-mode {
 
 .card__title {
     margin: 0;
-    font-size: 0.98rem;
+    font-size: 1.05rem;
     font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.card__seller {
+    font-size: 0.78rem;
 }
 
 .card__meta {

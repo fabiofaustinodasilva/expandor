@@ -994,6 +994,19 @@ function closeVisitSheet() {
     setVisitError('');
 }
 
+function agendaContactLabel(item) {
+    const name = String(item?.contact_name || '').trim();
+    if (name) {
+        return name;
+    }
+    const phone = String(item?.contact_phone || '').trim();
+    if (phone) {
+        return phone;
+    }
+
+    return 'Cliente sem nome';
+}
+
 async function loadAgenda() {
     try {
         const payload = await mobileApi.agenda({ scope: 'all' });
@@ -1002,21 +1015,27 @@ async function loadAgenda() {
             payload.data || [],
             'Agenda livre',
             'Nenhum retorno pendente. Use o mapa para visitar novos imóveis.',
-            (item) => `
+            (item) => {
+                const seller = String(item.seller_name || '').trim();
+
+                return `
             <article class="card">
                 <div class="card__row">
-                    <p class="card__title">${escapeHtml(item.scheduled_label || 'Retorno')}</p>
+                    <p class="card__title">${escapeHtml(agendaContactLabel(item))}</p>
                     <span class="badge badge--pending">Agendado</span>
                 </div>
-                <p class="card__meta">${escapeHtml(item.address || 'Endereço não informado')}</p>
                 ${item.campaign ? `<p class="card__meta">${escapeHtml(item.campaign)}</p>` : ''}
+                <p class="card__meta">${escapeHtml(item.scheduled_label || 'Retorno')}</p>
+                <p class="card__meta">${escapeHtml(item.address || 'Endereço não informado')}</p>
+                ${seller ? `<p class="card__meta card__seller">Atendido por: ${escapeHtml(seller)}</p>` : ''}
                 ${item.notes ? `<p class="card__meta">${escapeHtml(item.notes)}</p>` : ''}
                 <div class="sheet-actions" style="margin-top:0.65rem">
                     <button type="button" class="btn btn-accent btn-block" data-complete-follow-up="${item.id}" data-property-id="${item.property_id || ''}">Registrar retorno</button>
                     <button type="button" class="btn btn-ghost btn-block" data-open-point="${item.property_id || ''}">Ver imóvel</button>
                 </div>
             </article>
-        `,
+        `;
+            },
         );
     } catch (error) {
         if (isNetworkRefreshError(error)) {
