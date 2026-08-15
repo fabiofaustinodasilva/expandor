@@ -2,10 +2,12 @@
  * Copies the seller IIFE vendor into public/capacitor-shell
  * with relative URLs (Capacitor WebView / file).
  */
+import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MAP_TILE_CSP_HOSTS } from './capacitor-map-csp-hosts.mjs';
+import { DEFAULT_APP_VERSION, resolveBakeUrls } from './exp-vendedor-release-config.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const vendor = join(root, 'public/vendor/expandor');
@@ -79,15 +81,21 @@ cpSync(iconPng, join(outDir, 'assets/exp-vendedor/exp-vendedor-icon.png'));
 cpSync(logoPng, join(outDir, 'vendor/exp-vendedor-logo.png'));
 cpSync(iconPng, join(outDir, 'vendor/exp-vendedor-icon.png'));
 
-const apiBase = String(process.env.CAP_API_URL || process.env.APP_URL || '').replace(/\/$/, '');
-if (!apiBase) {
-    throw new Error(
-        'CAP_API_URL (or APP_URL) is required to bake Expandor shell API base. '
-        + 'Example: CAP_API_URL=https://seu-dominio.com npm run build',
-    );
+let bake;
+try {
+    bake = resolveBakeUrls(process.env);
+} catch (error) {
+    throw new Error(error.message || String(error));
 }
 
-const webBase = String(process.env.CAP_WEB_ORIGIN || process.env.APP_URL || apiBase).replace(/\/$/, '');
+const apiBase = bake.api;
+const webBase = bake.web;
+if (!apiBase) {
+    throw new Error(
+        'CAP_API_URL (or APP_URL in development) is required to bake Expandor shell API base. '
+        + 'QA/release must set CAP_API_URL and CAP_WEB_ORIGIN and will not fall back to APP_URL.',
+    );
+}
 
 let connectSrc = "'self'";
 let imgSrc = ["'self'", 'data:', 'blob:', ...MAP_TILE_CSP_HOSTS].join(' ');
@@ -124,17 +132,29 @@ const csp = [
     // on HTTP responses when the shell is hosted; Capacitor WebView uses local assets.
 ].join('; ');
 
+const shellVersion = String(process.env.EXPANDOR_SHELL_VERSION || DEFAULT_APP_VERSION || '8.2.34').trim();
+const buildStamp = new Date().toISOString();
+const buildMode = bake.mode;
+let gitHash = 'unknown';
+try {
+    gitHash = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
+        cwd: root,
+        encoding: 'utf8',
+    }).trim() || 'unknown';
+} catch {
+    gitHash = 'unknown';
+}
+
 const runtimeConfig = [
     `window.EXPANDOR_API_BASE = ${JSON.stringify(apiBase)};`,
     `window.EXPANDOR_WEB_ORIGIN = ${JSON.stringify(webBase)};`,
-    'window.EXPANDOR_APP_VERSION = "8.2.34";',
+    `window.EXPANDOR_APP_VERSION = ${JSON.stringify(shellVersion)};`,
+    `window.EXPANDOR_BUILD_MODE = ${JSON.stringify(buildMode)};`,
+    `window.EXPANDOR_GIT_HASH = ${JSON.stringify(gitHash)};`,
     '',
 ].join('\n');
 
 writeFileSync(join(outDir, 'runtime-config.js'), runtimeConfig);
-
-const shellVersion = String(process.env.EXPANDOR_SHELL_VERSION || '8.2.34').trim();
-const buildStamp = new Date().toISOString();
 
 function saleFormMarkup(prefix) {
     const p = prefix;
@@ -220,11 +240,13 @@ const html = `<!DOCTYPE html>
     <meta name="theme-color" content="#0B1F3A">
     <meta name="exp-shell-version" content="${shellVersion}">
     <meta name="exp-shell-built-at" content="${buildStamp}">
+    <meta name="exp-shell-mode" content="${buildMode}">
+    <meta name="exp-shell-hash" content="${gitHash}">
     <meta http-equiv="Content-Security-Policy" content="${csp}">
     <title>EXP Vendedor</title>
     <link rel="stylesheet" href="./vendor/seller-app.css?v=${shellVersion}">
 </head>
-<body data-shell-version="${shellVersion}" data-shell-built-at="${buildStamp}">
+<body data-shell-version="${shellVersion}" data-shell-built-at="${buildStamp}" data-shell-mode="${buildMode}" data-shell-hash="${gitHash}">
     <div class="restore-gate" id="screen-restore">
         <img class="login-brand__logo" src="./vendor/exp-vendedor-logo.png" alt="EXP Vendedor" width="120" height="120" decoding="async">
         <p class="login-brand__welcome">EXP Vendedor</p>

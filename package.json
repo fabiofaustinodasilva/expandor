@@ -9,7 +9,10 @@
         "build:seller": "vite build --config vite.seller.config.js",
         "cap:sync": "npm run build && npx cap sync",
         "cap:android": "npx cap sync android",
-        "cap:open:android": "npx cap open android"
+        "cap:open:android": "npx cap open android",
+        "android:qa": "node scripts/android-qa.mjs",
+        "verify:exp-release": "node scripts/verify-exp-vendedor-release-config.mjs",
+        "verify:exp-release-self-test": "node scripts/exp-vendedor-release-config.mjs --self-test"
     },
     "dependencies": {
         "@capacitor/android": "^7.4.3",

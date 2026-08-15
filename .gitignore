@@ -120,3 +120,6 @@ yarn-error.log*
 # --- Toolchain local do projeto (não versionar) ---
 .tools/
 _laravel_tmp/
+
+# --- APKs de QA gerados localmente ---
+/dist/*.apk

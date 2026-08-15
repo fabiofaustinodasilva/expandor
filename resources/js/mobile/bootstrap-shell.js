@@ -381,15 +381,14 @@ function paintUser(data) {
     }
     const aboutVersion = $('about-version');
     if (aboutVersion) {
-        aboutVersion.textContent = `Versão ${appVersionLabel()}`;
+        aboutVersion.textContent = `EXP Vendedor · ${appVersionLabel()}`;
     }
     const aboutBuild = $('about-shell-build');
     if (aboutBuild) {
-        const version = document.body?.dataset?.shellVersion || appVersionLabel();
-        const builtAt = document.body?.dataset?.shellBuiltAt || '';
-        aboutBuild.textContent = builtAt
-            ? `Shell ${version} · ${builtAt}`
-            : `Shell ${version}`;
+        const mode = String(window.EXPANDOR_BUILD_MODE || document.body?.dataset?.shellMode || '').trim();
+        const hash = String(window.EXPANDOR_GIT_HASH || document.body?.dataset?.shellHash || '').trim();
+        const modeLabel = mode ? mode.toUpperCase() : '';
+        aboutBuild.textContent = [modeLabel, hash].filter(Boolean).join(' · ');
     }
 }
 
