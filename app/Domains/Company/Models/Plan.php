@@ -30,6 +30,7 @@ class Plan extends Model
         'trial_days',
         'max_users',
         'users_limit',
+        'max_sellers',
         'max_properties',
         'customers_limit',
         'max_campaigns',
@@ -43,6 +44,9 @@ class Plan extends Model
         'active',
         'display_order',
         'is_featured',
+        'is_public',
+        'is_legacy',
+        'allows_checkout',
     ];
 
     protected function casts(): array
@@ -57,6 +61,9 @@ class Plan extends Model
             'storage_limit' => 'integer',
             'display_order' => 'integer',
             'is_featured' => 'boolean',
+            'is_public' => 'boolean',
+            'is_legacy' => 'boolean',
+            'allows_checkout' => 'boolean',
             'active' => 'boolean',
             'features' => 'array',
         ];
@@ -116,5 +123,35 @@ class Plan extends Model
         }
 
         return $this->status === self::STATUS_ACTIVE;
+    }
+
+    public function isLegacyPlan(): bool
+    {
+        return (bool) $this->is_legacy;
+    }
+
+    public function isPubliclyListed(): bool
+    {
+        return (bool) $this->is_public && $this->isActivePlan();
+    }
+
+    public function allowsPublicCheckout(): bool
+    {
+        return $this->isActivePlan()
+            && (bool) $this->allows_checkout
+            && (float) $this->price > 0;
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<Plan>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<Plan>
+     */
+    public function scopeCheckoutable($query)
+    {
+        return $query
+            ->where('status', self::STATUS_ACTIVE)
+            ->where('allows_checkout', true)
+            ->where('is_public', true)
+            ->where('price', '>', 0);
     }
 }

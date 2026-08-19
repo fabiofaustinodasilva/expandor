@@ -53,7 +53,7 @@ class Sprint819SaasUniquenessIntegrityAuditTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->post(route('checkout.store'), $this->checkoutPayload($plan->id, [
             'company_name' => 'Nova Empresa Unica',
@@ -76,7 +76,7 @@ class Sprint819SaasUniquenessIntegrityAuditTest extends TestCase
             'name' => 'Admin Existente',
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $response = $this->from(route('checkout.create', ['plan_id' => $plan->id]))
             ->post(route('checkout.store'), $this->checkoutPayload($plan->id, [
@@ -116,7 +116,7 @@ class Sprint819SaasUniquenessIntegrityAuditTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
         $this->post(route('checkout.store'), $this->checkoutPayload($plan->id, [
             'buyer_email' => 'webhook@expandor.test',
             'buyer_document' => '12345678000199',
@@ -176,7 +176,7 @@ class Sprint819SaasUniquenessIntegrityAuditTest extends TestCase
             return Http::response(['error' => 'unexpected'], 404);
         });
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->post(route('checkout.store'), $this->checkoutPayload($plan->id, [
             'company_name' => 'Empresa Alpha',
@@ -244,7 +244,7 @@ class Sprint819SaasUniquenessIntegrityAuditTest extends TestCase
             'email' => 'doc@expandor.test',
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->from(route('checkout.create', ['plan_id' => $plan->id]))
             ->post(route('checkout.store'), $this->checkoutPayload($plan->id, [

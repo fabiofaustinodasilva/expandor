@@ -23,10 +23,14 @@ class PlanFactory extends Factory
             'description' => fake()->sentence(),
             'price' => 199.90,
             'max_users' => 25,
+            'max_sellers' => null,
             'max_properties' => 20000,
             'max_campaigns' => 50,
             'features' => ['maps' => true],
             'status' => Plan::STATUS_ACTIVE,
+            'is_public' => false,
+            'is_legacy' => false,
+            'allows_checkout' => false,
         ];
     }
 }

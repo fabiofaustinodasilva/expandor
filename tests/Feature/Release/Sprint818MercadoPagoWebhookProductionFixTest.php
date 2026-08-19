@@ -85,7 +85,7 @@ class Sprint818MercadoPagoWebhookProductionFixTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
         $this->post(route('checkout.store'), $this->payload($plan->id, [
             'buyer_email' => 'cardok@sprint818.test',
             'payment_method' => 'CREDIT_CARD',
@@ -246,7 +246,7 @@ class Sprint818MercadoPagoWebhookProductionFixTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
         $this->post(route('checkout.store'), $this->payload($plan->id, [
             'buyer_email' => $email,
             'payment_method' => 'PIX',

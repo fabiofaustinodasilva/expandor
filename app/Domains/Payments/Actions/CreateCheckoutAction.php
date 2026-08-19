@@ -33,15 +33,9 @@ class CreateCheckoutAction
     {
         $plan = $this->repository->findActivePlan((int) $data['plan_id']);
 
-        if ($plan === null) {
+        if ($plan === null || ! $plan->allowsPublicCheckout()) {
             throw ValidationException::withMessages([
-                'plan_id' => ['Plano inválido ou inativo.'],
-            ]);
-        }
-
-        if ((float) $plan->price <= 0) {
-            throw ValidationException::withMessages([
-                'plan_id' => ['O plano gratuito não requer checkout pago.'],
+                'plan_id' => ['Este plano não está disponível para contratação online. Agende uma demonstração.'],
             ]);
         }
 

@@ -129,7 +129,7 @@ class Sprint816FixPaymentProviderSelectionTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $result = app(CheckoutService::class)->start([
             'plan_id' => $plan->id,

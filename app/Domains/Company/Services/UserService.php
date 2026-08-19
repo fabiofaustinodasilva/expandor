@@ -4,7 +4,9 @@ namespace App\Domains\Company\Services;
 
 use App\Domains\Billing\Enums\UsageMetric;
 use App\Domains\Billing\Exceptions\PlanLimitExceededException;
+use App\Domains\Billing\Exceptions\SellerLimitExceededException;
 use App\Domains\Billing\Services\BillingService;
+use App\Domains\Billing\Services\SellerSeatService;
 use App\Domains\Company\Models\Company;
 use App\Domains\Company\Models\User;
 use App\Domains\Media\Enums\MediaCategory;
@@ -21,6 +23,7 @@ class UserService
 {
     public function __construct(
         protected BillingService $billing,
+        protected SellerSeatService $sellerSeats,
         protected SecurityService $security,
         protected MediaUploadService $media,
     ) {}
@@ -30,13 +33,8 @@ class UserService
      */
     public function create(array $data, Company $company, ?User $actor = null): User
     {
-        try {
-            $this->billing->assertWithinLimit(UsageMetric::USERS, 1, $company);
-        } catch (PlanLimitExceededException $exception) {
-            throw ValidationException::withMessages([
-                'email' => [$exception->getMessage()],
-            ]);
-        }
+        $this->assertUserSeat($company);
+        $this->assertSellerSeatForNewRole($company, (int) $data['role_id'], ($data['status'] ?? User::STATUS_ACTIVE) === User::STATUS_ACTIVE);
 
         $email = app(\App\Domains\Security\Services\RegistrationIntegrityService::class)
             ->normalizeEmail((string) $data['email']);
@@ -90,6 +88,14 @@ class UserService
 
         app(\App\Domains\Security\Services\RegistrationIntegrityService::class)
             ->assertEmailAvailable($email, 'email', $user->id);
+
+        $nextRoleId = (int) ($data['role_id'] ?? $user->role_id);
+        $nextStatus = (string) ($data['status'] ?? $user->status);
+        $this->assertSellerSeatWhenChanging(
+            $user,
+            $nextRoleId,
+            $nextStatus === User::STATUS_ACTIVE,
+        );
 
         $payload = [
             'role_id' => $data['role_id'],
@@ -159,6 +165,10 @@ class UserService
         $next = $user->status === User::STATUS_ACTIVE
             ? User::STATUS_INACTIVE
             : User::STATUS_ACTIVE;
+
+        if ($next === User::STATUS_ACTIVE) {
+            $this->assertSellerSeatWhenChanging($user, (int) $user->role_id, true);
+        }
 
         $user->update(['status' => $next]);
         $user->refresh();
@@ -294,6 +304,62 @@ class UserService
         }
 
         return false;
+    }
+
+    protected function assertUserSeat(Company $company): void
+    {
+        try {
+            $this->billing->assertWithinLimit(UsageMetric::USERS, 1, $company);
+        } catch (PlanLimitExceededException $exception) {
+            throw ValidationException::withMessages([
+                'email' => [$exception->getMessage()],
+            ]);
+        }
+    }
+
+    protected function assertSellerSeatForNewRole(Company $company, int $roleId, bool $willBeActive): void
+    {
+        if (! $willBeActive || ! $this->sellerSeats->roleIsSeller($roleId)) {
+            return;
+        }
+
+        $plan = $this->billing->currentPlan($company);
+        if ($plan === null) {
+            return;
+        }
+
+        try {
+            $this->sellerSeats->assertCanOccupySellerSeat($company, $plan, null, true);
+        } catch (SellerLimitExceededException $exception) {
+            throw ValidationException::withMessages([
+                'role_id' => [$exception->getMessage()],
+            ]);
+        }
+    }
+
+    protected function assertSellerSeatWhenChanging(User $user, int $nextRoleId, bool $willBeActive): void
+    {
+        if (! $willBeActive || ! $this->sellerSeats->roleIsSeller($nextRoleId)) {
+            return;
+        }
+
+        $company = $user->company ?? Company::query()->find($user->company_id);
+        if ($company === null) {
+            return;
+        }
+
+        $plan = $this->billing->currentPlan($company);
+        if ($plan === null) {
+            return;
+        }
+
+        try {
+            $this->sellerSeats->assertCanOccupySellerSeat($company, $plan, $user->fresh(['role']), true);
+        } catch (SellerLimitExceededException $exception) {
+            throw ValidationException::withMessages([
+                'role_id' => [$exception->getMessage()],
+            ]);
+        }
     }
 
     /**

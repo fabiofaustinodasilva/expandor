@@ -42,7 +42,7 @@ class PaymentsModuleTest extends TestCase
 
     public function test_checkout_is_created(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $result = app(CheckoutService::class)->start([
             'plan_id' => $plan->id,
@@ -69,7 +69,7 @@ class PaymentsModuleTest extends TestCase
 
     public function test_webhook_provisions_company_idempotently(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
         $checkout = app(CheckoutService::class)->start([
             'plan_id' => $plan->id,
             'company_name' => 'Empresa Provisionada',
@@ -140,7 +140,7 @@ class PaymentsModuleTest extends TestCase
 
     public function test_customer_payment_and_invoice_are_created(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
         $checkout = app(CheckoutService::class)->start([
             'plan_id' => $plan->id,
             'company_name' => 'Empresa Financeira',
@@ -195,11 +195,11 @@ class PaymentsModuleTest extends TestCase
             'status' => PaymentStatus::Paid->value,
         ]);
 
-        $enterprise = Plan::query()->where('slug', 'enterprise')->firstOrFail();
+        $scale = Plan::query()->where('slug', 'scale')->firstOrFail();
         $free = Plan::query()->where('slug', 'free')->firstOrFail();
 
-        $service->upgrade($subscription->fresh('plan'), $enterprise);
-        $this->assertSame($enterprise->id, $subscription->fresh()->plan_id);
+        $service->upgrade($subscription->fresh('plan'), $scale);
+        $this->assertSame($scale->id, $subscription->fresh()->plan_id);
 
         $service->downgrade($subscription->fresh('plan'), $free);
         $this->assertSame($free->id, $subscription->fresh()->plan_id);
@@ -262,9 +262,7 @@ class PaymentsModuleTest extends TestCase
     public function test_public_plans_page_and_invalid_webhook_token(): void
     {
         $this->get(route('plans.index'))
-            ->assertOk()
-            ->assertSee('Escolha seu plano')
-            ->assertSee('Professional');
+            ->assertRedirect(route('marketplace.plans'));
 
         $this->postJson('/webhooks/fake', [
             'id' => 'evt_bad',

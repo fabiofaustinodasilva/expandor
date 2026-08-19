@@ -23,8 +23,8 @@ class PaymentRepository
     public function findActivePlan(int $planId): ?Plan
     {
         return Plan::query()
+            ->checkoutable()
             ->where('id', $planId)
-            ->where('status', Plan::STATUS_ACTIVE)
             ->first();
     }
 
@@ -142,8 +142,7 @@ class PaymentRepository
     public function paginateClientPlans(int $perPage = 20): LengthAwarePaginator
     {
         return Plan::query()
-            ->where('status', Plan::STATUS_ACTIVE)
-            ->where('price', '>', 0)
+            ->checkoutable()
             ->orderBy('display_order')
             ->orderBy('price')
             ->paginate($perPage);

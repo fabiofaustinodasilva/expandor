@@ -36,11 +36,7 @@ class LoginPreparationSprint552Test extends TestCase
             ->assertSee('/cadastro', false);
 
         $this->get(route('signup.create'))
-            ->assertOk()
-            ->assertSee('data-trial-signup="1"', false)
-            ->assertSee('Criar minha conta grátis', false)
-            ->assertSee('Professional', false)
-            ->assertSee('name="company_name"', false);
+            ->assertRedirect(route('marketplace.home').'#demo');
     }
 
     public function test_authenticated_user_does_not_see_login_trial_button(): void
@@ -88,11 +84,7 @@ class LoginPreparationSprint552Test extends TestCase
             ->assertSee('btn-trial', false);
 
         $this->get(route('signup.create'))
-            ->assertOk()
-            ->assertSee('Expandor Pro', false)
-            ->assertSee('Criar minha conta grátis', false)
-            ->assertSee($payload->logoUrl, false)
-            ->assertSee('--accent:', false);
+            ->assertRedirect(route('marketplace.home').'#demo');
     }
 
     public function test_empty_slogan_does_not_break_login_preparation(): void
@@ -113,8 +105,7 @@ class LoginPreparationSprint552Test extends TestCase
             ->assertDontSee('data-platform-slogan="1"', false);
 
         $this->get(route('signup.create'))
-            ->assertOk()
-            ->assertSee('data-trial-signup="1"', false);
+            ->assertRedirect(route('marketplace.home').'#demo');
     }
 
     public function test_expandor_fallback_works_without_platform_brand(): void
@@ -129,8 +120,6 @@ class LoginPreparationSprint552Test extends TestCase
             ->assertSee('Começar agora', false);
 
         $this->get('/cadastro')
-            ->assertOk()
-            ->assertSee('Criar minha conta grátis', false)
-            ->assertSee('Expandor', false);
+            ->assertRedirect(route('marketplace.home').'#demo');
     }
 }

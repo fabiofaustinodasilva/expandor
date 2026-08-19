@@ -2,12 +2,9 @@
 
 namespace App\Http\Controllers\Web\Marketplace;
 
-use App\Domains\Company\Models\Plan;
 use App\Domains\Marketplace\Services\MarketplaceAnalyticsService;
 use App\Domains\Marketplace\Services\MarketplacePublicPageService;
 use App\Domains\Marketplace\Services\MarketplaceSettingsService;
-use App\Domains\Payments\Services\CheckoutService;
-use App\Domains\Platform\Support\PlanCatalog;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +13,6 @@ use Illuminate\View\View;
 class MarketplaceController extends Controller
 {
     public function __construct(
-        protected CheckoutService $checkout,
         protected MarketplacePublicPageService $landing,
         protected MarketplaceAnalyticsService $analytics,
         protected MarketplaceSettingsService $settings,
@@ -43,36 +39,11 @@ class MarketplaceController extends Controller
         ]);
     }
 
-    public function subscribe(Request $request): View|RedirectResponse
+    public function subscribe(Request $request): RedirectResponse
     {
-        $planId = (int) $request->query('plan_id', 0);
+        unset($request);
 
-        if ($planId > 0) {
-            $plan = Plan::query()
-                ->where('id', $planId)
-                ->where('status', Plan::STATUS_ACTIVE)
-                ->where('price', '>', 0)
-                ->first();
-
-            if ($plan !== null) {
-                $this->analytics->record(MarketplaceAnalyticsService::PLAN_CLICKED, $request, [
-                    'plan_id' => $plan->id,
-                ]);
-
-                return redirect()->route('checkout.create', ['plan_id' => $plan->id]);
-            }
-
-            return redirect()
-                ->route('marketplace.plans')
-                ->withErrors(['plan_id' => 'Plano inválido para assinatura.']);
-        }
-
-        $plans = $this->checkout->listPlans(50);
-
-        return view('marketplace.subscribe', [
-            'plans' => $plans,
-            'featureLabels' => PlanCatalog::featureLabels(),
-        ]);
+        return redirect()->to(route('marketplace.home').'#demo');
     }
 
     public function sitemap(): \Illuminate\Http\Response

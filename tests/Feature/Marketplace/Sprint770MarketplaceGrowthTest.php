@@ -106,16 +106,14 @@ class Sprint770MarketplaceGrowthTest extends TestCase
     {
         $this->get('/?utm_source=google&utm_campaign=crm-brasil')->assertOk();
 
-        $this->get(route('signup.create'))->assertOk();
+        $this->get(route('signup.create'))
+            ->assertRedirect(route('marketplace.home').'#demo');
 
-        $started = MarketplaceEvent::query()
-            ->where('event', MarketplaceAnalyticsService::SIGNUP_STARTED)
-            ->latest('id')
-            ->first();
-
-        $this->assertNotNull($started);
-        $this->assertSame('google', $started->utm_source);
-        $this->assertSame('crm-brasil', $started->utm_campaign);
+        $this->assertNull(
+            MarketplaceEvent::query()
+                ->where('event', MarketplaceAnalyticsService::SIGNUP_STARTED)
+                ->first()
+        );
     }
 
     public function test_analytics_calculates_conversion(): void

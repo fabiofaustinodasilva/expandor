@@ -1,6 +1,6 @@
 # Planos comerciais (site) vs billing
 
-Nesta sprint o site **não** altera `PlanSeeder`, subscriptions nem checkout.
+O catálogo oficial é o mesmo no site e no SaaS.
 
 ## O que o visitante vê
 
@@ -15,18 +15,22 @@ Mensagem: “Todo o poder do Expandor. Escolha pelo tamanho da sua equipe.”
 Os três planos pagos de display listam o mesmo conjunto de recursos reais.
 Nota: `*Plano Scale sujeito à política de uso justo.` (sem contrato jurídico nesta sprint).
 
-Fonte: `config/marketplace_defaults.php` → `commercial_plans`.
+Fonte de display: `config/marketplace_defaults.php` → `commercial_plans`.
+Fonte SaaS: `PlanSeeder` + `CommercialPlanCatalog` (`plans` table).
 
-## O que o backend ainda tem (não migrado)
+## Catálogo SaaS
 
-| Slug | Nome | Preço | Limite |
-|---|---|---|---|
-| `free` | Free | R$ 0 | 3 usuários |
-| `professional` | Professional | R$ 199,90 | 25 usuários (featured) |
-| `enterprise` | Enterprise | R$ 499,90 | ilimitado |
+| Slug | Nome | Preço | Vendedores | Checkout público |
+|---|---|---|---|---|
+| `start` | Start | R$ 349,00 | 2 | sim (máquina interna; CTA pública é demo) |
+| `pro` | Pro | R$ 449,00 | 5 | sim (máquina interna; CTA pública é demo) |
+| `scale` | Scale | R$ 649,00 | ilimitado (`max_sellers` null) | sim (máquina interna; CTA pública é demo) |
+| `enterprise` | Enterprise | sob consulta (`price` 0) | ilimitado | não |
+| `free` | Free | R$ 0 | legado interno | não |
+| `professional` | Professional | R$ 199,90 | legado (`max_users` 25) | não |
+| `enterprise-legacy` | Enterprise (legado) | R$ 499,90 | legado | não |
 
-Checkout `/assinar` e `Plan` no banco **continuam** nesses valores. `/cadastro` e trial técnico permanecem.
+`/assinar` e `/cadastro` públicos redirecionam para `#demo`.
+Checkout HTTP (`/checkout?plan_id=`) só aceita `start`, `pro` e `scale`. Pagamento de um novo gateway **não** entra nesta sprint.
 
-## Decisão pendente (sprint de billing)
-
-Alinhar slugs/preços/limites Start/Pro/Scale com o catálogo comercial, desativar display do Free sem apagar dados, e só então religar “Assinar” se o processo deixar de exigir demonstração.
+O limite comercial conta apenas vendedores (`role=seller`) ativos. Admin e Manager não ocupam vaga.

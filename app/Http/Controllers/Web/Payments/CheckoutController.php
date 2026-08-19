@@ -6,7 +6,6 @@ use App\Domains\Payments\Enums\BillingCycle;
 use App\Domains\Payments\Enums\CheckoutStatus;
 use App\Domains\Payments\Requests\StoreCheckoutRequest;
 use App\Domains\Payments\Services\CheckoutService;
-use App\Domains\Platform\Support\PlanCatalog;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -19,27 +18,22 @@ class CheckoutController extends Controller
         protected CheckoutService $checkout,
     ) {}
 
-    public function plans(): View
+    public function plans(): RedirectResponse
     {
-        return view('payments.plans', [
-            'plans' => $this->checkout->listPlans(50),
-            'featureLabels' => PlanCatalog::featureLabels(),
-        ]);
+        return redirect()->route('marketplace.plans');
     }
 
     public function create(Request $request): View|RedirectResponse
     {
         $planId = (int) $request->query('plan_id');
-        $plan = $this->checkout->listPlans(100)->getCollection()->firstWhere('id', $planId)
-            ?? \App\Domains\Company\Models\Plan::query()
-                ->where('id', $planId)
-                ->where('status', \App\Domains\Company\Models\Plan::STATUS_ACTIVE)
-                ->where('price', '>', 0)
-                ->first();
+        $plan = \App\Domains\Company\Models\Plan::query()
+            ->checkoutable()
+            ->where('id', $planId)
+            ->first();
 
         if ($plan === null) {
             return redirect()->route('marketplace.plans')->withErrors([
-                'plan_id' => 'Plano inválido.',
+                'plan_id' => 'Este plano não está disponível para contratação online. Agende uma demonstração.',
             ]);
         }
 

@@ -58,7 +58,7 @@ class Sprint817MercadoPagoHybridPixCardTest extends TestCase
             return Http::response(['error' => 'unexpected'], 404);
         });
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $response = $this->post(route('checkout.store'), $this->payload($plan->id, [
             'buyer_email' => 'pix@hybrid.test',
@@ -96,7 +96,7 @@ class Sprint817MercadoPagoHybridPixCardTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $response = $this->post(route('checkout.store'), $this->payload($plan->id, [
             'buyer_email' => 'card@hybrid.test',
@@ -148,7 +148,7 @@ class Sprint817MercadoPagoHybridPixCardTest extends TestCase
             return Http::response(['error' => 'unexpected'], 404);
         });
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->post(route('checkout.store'), $this->payload($plan->id, [
             'company_name' => 'Empresa PIX Aprovada',
@@ -205,7 +205,7 @@ class Sprint817MercadoPagoHybridPixCardTest extends TestCase
             return Http::response(['error' => 'unexpected'], 404);
         });
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->post(route('checkout.store'), $this->payload($plan->id, [
             'company_name' => 'Empresa Cartao Aprovada',

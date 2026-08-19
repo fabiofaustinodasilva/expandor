@@ -165,7 +165,7 @@ class ProvisioningIdempotencySprint720Test extends TestCase
 
     public function test_approved_checkout_creates_tenant_correctly(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
         $checkout = app(CheckoutService::class)->start([
             'plan_id' => $plan->id,
             'company_name' => 'Checkout Sprint 720',

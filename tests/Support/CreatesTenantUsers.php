@@ -23,6 +23,11 @@ trait CreatesTenantUsers
         $this->seed(FeatureFlagSeeder::class);
     }
 
+    protected function checkoutPlan(string $planSlug = 'pro'): Plan
+    {
+        return Plan::query()->where('slug', $planSlug)->firstOrFail();
+    }
+
     protected function makeCompanyWithPlan(string $name = 'Empresa Teste', string $planSlug = 'professional'): Company
     {
         $company = Company::factory()->create(['name' => $name]);

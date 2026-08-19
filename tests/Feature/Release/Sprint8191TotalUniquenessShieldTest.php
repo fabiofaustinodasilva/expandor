@@ -44,7 +44,7 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
             'email' => 'suporte@iffinternet.com.br',
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->from(route('checkout.create', ['plan_id' => $plan->id]))
             ->post(route('checkout.store'), $this->payload($plan->id, [
@@ -72,7 +72,7 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
 
         Http::fake(); // não deve chamar MP
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->from(route('checkout.create', ['plan_id' => $plan->id]))
             ->post(route('checkout.store'), $this->payload($plan->id, [
@@ -105,7 +105,7 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
         $this->post(route('checkout.store'), $this->payload($plan->id, [
             'buyer_email' => 'race@expandor.test',
             'buyer_document' => '99888777000155',
@@ -158,7 +158,7 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
         $this->post(route('checkout.store'), $this->payload($plan->id, [
             'buyer_email' => 'docrace@expandor.test',
             'buyer_document' => '55444333000122',
@@ -198,7 +198,7 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
         $existing = $this->makeCompanyWithPlan('Existente Admin');
         $this->makeUser($existing, Role::ADMINISTRATOR, ['email' => 'admin.dup@expandor.test']);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->actingAs($owner)
             ->post(route('platform.companies.store'), [
@@ -222,7 +222,7 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
         $owner = $this->makePlatformAdmin();
         Company::factory()->create(['document' => '66777888000144', 'name' => 'Doc Exist']);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->actingAs($owner)
             ->post(route('platform.companies.store'), [
@@ -246,7 +246,7 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
         $company = $this->makeCompanyWithPlan('Base');
         $this->makeUser($company, Role::ADMINISTRATOR, ['email' => 'bloqueado@expandor.test']);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         try {
             app(CheckoutService::class)->start([
@@ -285,7 +285,7 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->post(route('checkout.store'), $this->payload($plan->id, [
             'payment_method' => 'PIX',
@@ -309,7 +309,7 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $response = $this->post(route('checkout.store'), $this->payload($plan->id, [
             'payment_method' => 'CREDIT_CARD',
@@ -327,7 +327,7 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
     public function test_platform_admin_manual_create_succeeds_when_identity_is_free(): void
     {
         $owner = $this->makePlatformAdmin();
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->actingAs($owner)
             ->post(route('platform.companies.store'), [

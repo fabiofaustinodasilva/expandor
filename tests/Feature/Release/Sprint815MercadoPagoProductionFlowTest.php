@@ -49,7 +49,7 @@ class Sprint815MercadoPagoProductionFlowTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $response = $this->post(route('checkout.store'), $this->validCheckoutPayload($plan->id, [
             'buyer_email' => 'cliente@expandor.test',
@@ -83,7 +83,7 @@ class Sprint815MercadoPagoProductionFlowTest extends TestCase
 
     public function test_approved_webhook_fetches_payment_and_provisions_company(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         Http::fake(function (\Illuminate\Http\Client\Request $request) use ($plan) {
             if (str_contains($request->url(), '/checkout/preferences')) {
@@ -166,7 +166,7 @@ class Sprint815MercadoPagoProductionFlowTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->post(route('checkout.store'), $this->validCheckoutPayload($plan->id, [
             'company_name' => 'Empresa Rejeitada MP',
@@ -221,7 +221,7 @@ class Sprint815MercadoPagoProductionFlowTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->post(route('checkout.store'), $this->validCheckoutPayload($plan->id, [
             'buyer_email' => 'pending@expandor.test',
@@ -257,7 +257,7 @@ class Sprint815MercadoPagoProductionFlowTest extends TestCase
 
     public function test_hmac_signature_is_accepted(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         Http::fake([
             'api.mercadopago.com/checkout/preferences' => Http::response([
@@ -333,7 +333,7 @@ class Sprint815MercadoPagoProductionFlowTest extends TestCase
             ], 201),
         ]);
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->post(route('checkout.store'), $this->validCheckoutPayload($plan->id, [
             'buyer_name' => 'Cliente Sem Fake',

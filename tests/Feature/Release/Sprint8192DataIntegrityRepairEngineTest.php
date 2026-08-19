@@ -105,7 +105,7 @@ class Sprint8192DataIntegrityRepairEngineTest extends TestCase
     {
         $company = $this->makeCompanyWithPlan('Purge Target');
         $user = $this->makeUser($company, Role::ADMINISTRATOR, ['email' => 'purge.admin@expandor.test']);
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $checkout = CheckoutSession::query()->create([
             'uuid' => (string) Str::uuid(),
@@ -188,7 +188,7 @@ class Sprint8192DataIntegrityRepairEngineTest extends TestCase
 
     public function test_execute_cleans_orphan_records(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $orphanPaidCheckout = CheckoutSession::query()->create([
             'uuid' => (string) Str::uuid(),

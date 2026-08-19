@@ -40,20 +40,20 @@ class MarketplaceBillingSprint710Test extends TestCase
 
         $this->get(route('marketplace.plans'))
             ->assertOk()
-            ->assertSee('Professional');
+            ->assertSee('Start');
     }
 
     public function test_assinar_redirects_to_checkout_with_plan(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->get(route('marketplace.subscribe', ['plan_id' => $plan->id]))
-            ->assertRedirect(route('checkout.create', ['plan_id' => $plan->id]));
+            ->assertRedirect(route('marketplace.home').'#demo');
     }
 
     public function test_pix_checkout_goes_to_waiting_page(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $response = $this->post(route('checkout.store'), [
             'plan_id' => $plan->id,
@@ -92,7 +92,7 @@ class MarketplaceBillingSprint710Test extends TestCase
 
     public function test_card_checkout_and_webhook_provisions_with_password(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $result = app(CheckoutService::class)->start([
             'plan_id' => $plan->id,
@@ -153,7 +153,7 @@ class MarketplaceBillingSprint710Test extends TestCase
 
     public function test_fake_webhook_still_provisions_for_dev_compatibility(): void
     {
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
         $result = app(CheckoutService::class)->start([
             'plan_id' => $plan->id,
             'company_name' => 'Empresa MP Compat',
