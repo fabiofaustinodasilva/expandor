@@ -12,7 +12,9 @@
         "cap:open:android": "npx cap open android",
         "android:qa": "node scripts/android-qa.mjs",
         "verify:exp-release": "node scripts/verify-exp-vendedor-release-config.mjs",
-        "verify:exp-release-self-test": "node scripts/exp-vendedor-release-config.mjs --self-test"
+        "verify:exp-release-self-test": "node scripts/exp-vendedor-release-config.mjs --self-test",
+        "screenshots:commercial": "node docs/expandor-commercial-presentation/scripts/capture.mjs",
+        "marketplace:product-shots": "node scripts/prepare-marketplace-product-shots.mjs"
     },
     "dependencies": {
         "@capacitor/android": "^7.4.3",
@@ -31,6 +33,7 @@
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^2.0.0",
+        "playwright": "^1.62.1",
         "sharp": "^0.34.5",
         "tailwindcss": "^4.0.0",
         "vite": "^7.0.7"

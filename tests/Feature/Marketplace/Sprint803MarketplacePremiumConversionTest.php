@@ -31,19 +31,18 @@ class Sprint803MarketplacePremiumConversionTest extends TestCase
 
         $this->get(route('marketplace.home'))
             ->assertOk()
-            ->assertSee('Organize sua equipe de vendas porta a porta', false)
-            ->assertSee('Começar agora', false)
-            ->assertSee('Solicitar demonstração', false)
-            ->assertSee('Veja o Expandor em ação', false)
-            ->assertSee('Como funciona', false)
-            ->assertSee('Cadastre sua equipe', false)
+            ->assertSee('Transforme território em vendas', false)
+            ->assertSee('Agendar demonstração', false)
+            ->assertSee('Ver o Expandor em ação', false)
+            ->assertSee('O vendedor leva a operação na mão', false)
+            ->assertSee('Como a operação se conecta', false)
+            ->assertSee('Organize o território', false)
             ->assertSee('Vendedores sem acompanhamento', false)
             ->assertSee('Equipe organizada e visível', false)
-            ->assertSee('Empresas organizam suas equipes de campo com Expandor', false)
-            ->assertSee('/images/marketplace/screens/dashboard.svg', false)
-            ->assertSee('Expandor — Sistema para vendas porta a porta', false)
-            ->assertSee('Organize vendedores, visitas e clientes', false)
-            ->assertSee('data-mkp-carousel', false)
+            ->assertSee('Construído a partir da operação real de vendas em campo', false)
+            ->assertSee('/images/marketplace/product/hero-mapa', false)
+            ->assertSee('Inteligência comercial e vendas externas para provedores', false)
+            ->assertSee('data-mkp-field-ops', false)
             ->assertSee('mkp-menu-toggle', false);
     }
 
@@ -102,8 +101,9 @@ class Sprint803MarketplacePremiumConversionTest extends TestCase
     {
         $this->get(route('marketplace.plans'))
             ->assertOk()
-            ->assertSee('Compare os planos Expandor', false)
-            ->assertSee('Começar agora', false);
+            ->assertSee('Todo o poder do Expandor', false)
+            ->assertSee('Agendar demonstração', false)
+            ->assertDontSee('Começar agora', false);
     }
 
     public function test_admin_can_save_demo_video_and_conversion_content(): void

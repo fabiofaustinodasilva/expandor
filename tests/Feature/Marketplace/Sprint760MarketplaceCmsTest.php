@@ -148,7 +148,7 @@ class Sprint760MarketplaceCmsTest extends TestCase
 
         $this->get(route('marketplace.home'))
             ->assertOk()
-            ->assertDontSee('id="quem-somos"', false);
+            ->assertDontSee('id="mapa"', false);
 
         $this->actingAs($owner)
             ->post(route('platform.marketplace.sections.toggle', $about))

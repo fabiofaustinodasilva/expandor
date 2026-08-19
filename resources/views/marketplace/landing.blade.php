@@ -9,13 +9,13 @@
         $brandName = $brand ?? 'Expandor';
         $defaults = config('marketplace_defaults.settings', []);
         $uiDefaults = config('marketplace_defaults.ui', []);
-        $pageTitle = $settings->seo_title ?: ($settings->title ?: ($defaults['seo_title'] ?? ($brandName.' — Sistema para vendas porta a porta')));
-        $pageDescription = $settings->seo_description ?: ($settings->description ?: ($defaults['seo_description'] ?? 'Organize vendedores, visitas e clientes. Mais vendas, menos planilhas.'));
-        $pageKeywords = $settings->seo_keywords ?: ($defaults['seo_keywords'] ?? 'vendas porta a porta, equipe de vendas, visitas, campanhas');
+        $pageTitle = $settings->seo_title ?: ($settings->title ?: ($defaults['seo_title'] ?? ($brandName.' — Inteligência comercial para provedores')));
+        $pageDescription = $settings->seo_description ?: ($settings->description ?: ($defaults['seo_description'] ?? 'Plataforma de inteligência comercial e vendas externas para provedores de internet.'));
+        $pageKeywords = $settings->seo_keywords ?: ($defaults['seo_keywords'] ?? 'CRM para provedores, vendas externas para provedores, mapa comercial, porta a porta');
         $ogImage = $settings->mediaUrl($settings->og_image)
             ?: $settings->mediaUrl($settings->hero_image)
             ?: $settings->mediaUrl($settings->logo)
-            ?: asset($heroFallbackImage ?? '/images/marketplace/screens/dashboard.svg');
+            ?: asset($heroFallbackImage ?? '/images/marketplace/product/hero-mapa.png');
         $primary = $settings->primary_color ?: '#3B82F6';
         $secondary = $settings->secondary_color ?: '#0F172A';
         $background = $settings->background_color ?: '#0B1220';
@@ -23,7 +23,7 @@
         $navItems = $nav ?? [];
         $navActionItems = $navActions ?? [];
         $footerData = $footer ?? [];
-        $heroSecondaryCta = $heroSecondary ?? ['text' => ($uiDefaults['request_demo'] ?? 'Solicitar demonstração'), 'url' => '#demo'];
+        $heroSecondaryCta = $heroSecondary ?? ['text' => ($uiDefaults['see_in_action'] ?? 'Ver o Expandor em ação'), 'url' => '#produto'];
         $premiumData = $premium ?? [];
         $metricsData = $metrics ?? [];
         $uiCopy = $ui ?? ($premiumData['ui'] ?? $uiDefaults);
@@ -82,7 +82,7 @@
 
         *, *::before, *::after { box-sizing: border-box; }
 
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; overflow-x: clip; }
 
         body {
             margin: 0;
@@ -91,6 +91,7 @@
             color: var(--mkp-text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
+            overflow-x: clip;
         }
 
         a { color: inherit; text-decoration: none; }
@@ -286,14 +287,16 @@
             border: 1px solid var(--mkp-border);
             background: var(--mkp-surface);
             box-shadow: var(--mkp-shadow);
-            aspect-ratio: 16 / 10;
+            min-height: 0;
         }
 
         .mkp-hero-media img,
         .mkp-hero-media video {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            height: auto;
+            max-height: 560px;
+            object-fit: contain;
+            background: #070b14;
         }
 
         .mkp-hero-glow {
@@ -457,10 +460,7 @@
             transition: border-color 0.2s, transform 0.2s;
         }
 
-        .mkp-plan-featured {
-            border-color: color-mix(in srgb, var(--mkp-button) 55%, transparent);
-            box-shadow: 0 12px 40px rgba(245, 158, 11, 0.12);
-        }
+        .mkp-plan .mkp-btn { margin-top: auto; }
 
         .mkp-badge {
             display: inline-block;
@@ -734,6 +734,7 @@
                 transition: none !important;
                 animation: none !important;
             }
+            html { scroll-behavior: auto; }
         }
     </style>
     @include('marketplace.partials.premium-styles')
@@ -798,14 +799,20 @@
                     $heroTitle = $section->title ?: $settings->title;
                     $heroSubtitle = $section->subtitle ?: $settings->subtitle;
                     $heroDesc = $section->description ?: $settings->description;
-                    $heroImage = $section->imageUrl() ?: $settings->mediaUrl($settings->hero_image) ?: asset($heroFallbackImage ?? '/images/marketplace/hero-saas.svg');
+                    $heroImage = $section->imageUrl() ?: $settings->mediaUrl($settings->hero_image) ?: asset($heroFallbackImage ?? '/images/marketplace/product/hero-mapa.png');
                     $heroVideo = $section->videoUrl() ?: ($settings->hero_video ?: null);
+                    $heroShot = config('marketplace_defaults.sections.hero.image_shot', 'hero-mapa');
+                    $heroAlt = config('marketplace_defaults.sections.hero.image_alt', 'Mapa operacional do Expandor com oportunidades comerciais distribuídas no território');
+                    $heroUsesProductShot = $heroVideo === null && (str_contains((string) $heroImage, 'hero-mapa') || str_contains((string) $heroImage, 'dashboard.svg'));
+                    $heroPrimaryHref = $section->button_url ?: '#demo';
+                    $heroPrimaryEvent = str_starts_with($heroPrimaryHref, '#') ? 'marketplace.demo_clicked' : 'marketplace.signup_started';
                 @endphp
                 <section id="inicio" class="mkp-section mkp-hero mkp-fade" data-mkp-view="marketplace.hero_view">
                     <div class="mkp-container">
                         <div class="mkp-hero-grid">
                             <div class="mkp-hero-copy">
                                 <div class="mkp-hero-glow" aria-hidden="true"></div>
+                                <span class="mkp-eyebrow">{{ $brandName }}</span>
                                 @if($heroTitle)
                                     <h1 class="mkp-title">{!! nl2br(e($heroTitle)) !!}</h1>
                                 @endif
@@ -818,15 +825,15 @@
                                 <div class="mkp-hero-actions">
                                     @if($section->button_text)
                                         <a class="mkp-btn mkp-btn-primary"
-                                           href="{{ $section->button_url ?: route('signup.create') }}"
-                                           data-mkp-event="marketplace.signup_started">
+                                           href="{{ $heroPrimaryHref }}"
+                                           data-mkp-event="{{ $heroPrimaryEvent }}">
                                             {{ $section->button_text }}
                                         </a>
                                     @else
-                                        <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $uiCopy['start_free_trial'] ?? 'Começar agora' }}</a>
+                                        <a class="mkp-btn mkp-btn-primary" href="#demo" data-mkp-event="marketplace.demo_clicked">{{ $uiCopy['request_demo'] ?? 'Agendar demonstração' }}</a>
                                     @endif
-                                    <a class="mkp-btn mkp-btn-outline" href="{{ $heroSecondaryCta['url'] ?? '#demo' }}">
-                                        {{ $heroSecondaryCta['text'] ?? ($uiCopy['request_demo'] ?? 'Solicitar demonstração') }}
+                                    <a class="mkp-btn mkp-btn-outline" href="{{ $heroSecondaryCta['url'] ?? '#produto' }}">
+                                        {{ $heroSecondaryCta['text'] ?? ($uiCopy['see_in_action'] ?? 'Ver o Expandor em ação') }}
                                     </a>
                                     @if($settings->whatsappLink())
                                         <a class="mkp-btn mkp-btn-ghost" href="{{ $settings->whatsappLink() }}" target="_blank" rel="noopener" data-mkp-event="marketplace.whatsapp_clicked">WhatsApp</a>
@@ -835,9 +842,18 @@
                             </div>
                             <div class="mkp-hero-media">
                                 @if($heroVideo)
-                                    <video src="{{ $heroVideo }}" autoplay muted loop playsinline loading="lazy"></video>
+                                    <video src="{{ $heroVideo }}" autoplay muted loop playsinline></video>
+                                @elseif($heroUsesProductShot)
+                                    @include('marketplace.partials.product-shot', [
+                                        'shot' => $heroShot,
+                                        'alt' => $heroAlt,
+                                        'width' => 1600,
+                                        'height' => 1000,
+                                        'lazy' => false,
+                                        'priority' => true,
+                                    ])
                                 @else
-                                    <img src="{{ $heroImage }}" alt="{{ $brandName }}" loading="lazy">
+                                    <img src="{{ $heroImage }}" alt="{{ $heroAlt }}" width="1600" height="1000" fetchpriority="high" decoding="async">
                                 @endif
                             </div>
                         </div>
@@ -846,33 +862,16 @@
                 @break
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Showcase)
-                @php $showcaseItems = $premiumData['showcase'] ?? []; @endphp
                 <section id="produto" class="mkp-section mkp-fade">
                     <div class="mkp-container">
                         <div class="mkp-section-head">
                             @if($section->subtitle)<span class="mkp-eyebrow">{{ $section->subtitle }}</span>@endif
-                            <h2 class="mkp-title">{{ $section->title ?: 'Veja o Expandor funcionando' }}</h2>
+                            <h2 class="mkp-title">{{ $section->title ?: 'O vendedor leva a operação na mão.' }}</h2>
+                            @if($section->description)
+                                <p class="mkp-subtitle">{{ $section->description }}</p>
+                            @endif
                         </div>
-                        @if(!empty($showcaseItems))
-                            <div class="mkp-carousel" data-mkp-carousel>
-                                <div class="mkp-carousel-track" data-mkp-track>
-                                    @foreach($showcaseItems as $slide)
-                                        <div class="mkp-carousel-slide" data-mkp-slide>
-                                            <img src="{{ str_starts_with($slide['image'], 'http') || str_starts_with($slide['image'], '/') ? $slide['image'] : asset($slide['image']) }}"
-                                                 alt="{{ $slide['title'] ?? 'Expandor' }}" loading="lazy">
-                                            @if(!empty($slide['title']))
-                                                <div class="mkp-carousel-caption">{{ $slide['title'] }}</div>
-                                            @endif
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <div class="mkp-carousel-nav">
-                                    <button type="button" class="mkp-carousel-btn" data-mkp-prev aria-label="Anterior">‹</button>
-                                    <button type="button" class="mkp-carousel-btn" data-mkp-next aria-label="Próximo">›</button>
-                                </div>
-                                <div class="mkp-carousel-dots" data-mkp-dots></div>
-                            </div>
-                        @endif
+                        @include('marketplace.partials.field-ops')
                     </div>
                 </section>
                 @break
@@ -934,16 +933,12 @@
                 <section class="mkp-section mkp-section-alt mkp-fade">
                     <div class="mkp-container">
                         <div class="mkp-section-head">
-                            @if($section->subtitle)<span class="mkp-eyebrow">{{ $section->subtitle }}</span>@endif
                             <h2 class="mkp-title">{{ $premiumData['social_proof_title'] ?? $section->title }}</h2>
                         </div>
-                        <div class="mkp-metrics">
-                            @foreach($metricsData as $metric)
-                                <div class="mkp-metric mkp-fade">
-                                    <strong>{{ number_format((int) ($metric['value'] ?? 0), 0, ',', '.') }}</strong>
-                                    <span>{{ $metric['label'] ?? '' }}</span>
-                                </div>
-                            @endforeach
+                        <div class="mkp-proof">
+                            @if($section->subtitle)
+                                <p>{{ $section->subtitle }}</p>
+                            @endif
                         </div>
                         @if(!empty($premiumData['client_logos']))
                             <div class="mkp-logos">
@@ -999,7 +994,11 @@
                 @break
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::About)
-                <section id="quem-somos" class="mkp-section mkp-section-alt mkp-fade">
+                @php
+                    $mapBlock = $premiumData['map_memory'] ?? [];
+                    $saleBlock = $premiumData['sale_close'] ?? [];
+                @endphp
+                <section id="mapa" class="mkp-section mkp-section-alt mkp-fade">
                     <div class="mkp-container">
                         <div class="mkp-about-grid">
                             <div class="mkp-about-text">
@@ -1012,20 +1011,44 @@
                                 @if($section->description)
                                     <p>{{ $section->description }}</p>
                                 @endif
-                                @if($section->button_text)
-                                    <div style="margin-top:1.5rem;">
-                                        <a class="mkp-btn mkp-btn-primary" href="{{ $section->button_url ?: route('signup.create') }}">{{ $section->button_text }}</a>
-                                    </div>
-                                @endif
                             </div>
-                            @if($section->imageUrl())
-                                <div class="mkp-about-image">
-                                    <img src="{{ $section->imageUrl() }}" alt="{{ $section->title ?: $brandName }}" loading="lazy">
-                                </div>
-                            @endif
+                            <figure class="mkp-map-frame">
+                                @include('marketplace.partials.product-shot', [
+                                    'shot' => $mapBlock['shot'] ?? 'inteligencia-ponto',
+                                    'alt' => $mapBlock['alt'] ?? ($section->title ?: 'Memória comercial do território no Expandor'),
+                                    'width' => 1280,
+                                    'height' => 800,
+                                ])
+                            </figure>
                         </div>
                     </div>
                 </section>
+                @include('marketplace.partials.manager-ops')
+                @if(!empty($saleBlock))
+                    <section id="venda" class="mkp-section mkp-fade">
+                        <div class="mkp-container">
+                            <div class="mkp-sale-split">
+                                <div>
+                                    @if(!empty($saleBlock['subtitle']))
+                                        <span class="mkp-eyebrow">{{ $saleBlock['subtitle'] }}</span>
+                                    @endif
+                                    <h2 class="mkp-title">{{ $saleBlock['title'] ?? '' }}</h2>
+                                    @if(!empty($saleBlock['description']))
+                                        <p class="mkp-subtitle">{{ $saleBlock['description'] }}</p>
+                                    @endif
+                                </div>
+                                <figure class="mkp-sale-frame">
+                                    @include('marketplace.partials.product-shot', [
+                                        'shot' => $saleBlock['shot'] ?? 'exp-venda-realizada',
+                                        'alt' => $saleBlock['alt'] ?? 'Tela de venda realizada no EXP Vendedor',
+                                        'width' => 390,
+                                        'height' => 844,
+                                    ])
+                                </figure>
+                            </div>
+                        </div>
+                    </section>
+                @endif
                 @break
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Features)
@@ -1071,7 +1094,7 @@
                         return $url;
                     };
                     $sectionEmbed = $embedFromUrl($section->videoUrl());
-                    $thumb = $section->imageUrl() ?: asset($videoFallbackImage ?? '/images/marketplace/product-preview.svg');
+                    $thumb = $section->imageUrl() ?: asset($videoFallbackImage ?? '/images/marketplace/product/hero-mapa.png');
                 @endphp
                 <section id="demonstracao" class="mkp-section mkp-section-alt mkp-fade">
                     <div class="mkp-container">
@@ -1079,18 +1102,20 @@
                             @if($section->subtitle)
                                 <span class="mkp-eyebrow">{{ $section->subtitle }}</span>
                             @endif
-                            <h2 class="mkp-title">{{ $section->title ?: 'Vídeo demonstrativo' }}</h2>
+                            <h2 class="mkp-title">{{ $section->title ?: 'Da rua ao fechamento. Tudo conectado.' }}</h2>
                             @if($section->description)
                                 <p class="mkp-subtitle">{{ $section->description }}</p>
                             @endif
                         </div>
+
+                        @include('marketplace.partials.journey')
 
                         @if($demoEmbed)
                             <button type="button" class="mkp-video-thumb" data-mkp-demo-open
                                     data-src="{{ $demoEmbed }}"
                                     data-mp4="{{ $demoIsMp4 ? '1' : '0' }}"
                                     aria-label="Reproduzir demonstração">
-                                <img src="{{ $thumb }}" alt="Demonstração Expandor" loading="lazy">
+                                <img src="{{ $thumb }}" alt="Demonstração do Expandor em vídeo" loading="lazy">
                                 <div class="mkp-play"><span>▶</span></div>
                             </button>
                         @elseif($sectionEmbed)
@@ -1113,11 +1138,9 @@
                                     @endif
                                 @endforeach
                             </div>
-                        @else
-                            <div class="mkp-hero-media" style="max-width:860px;margin:0 auto;">
-                                <img src="{{ $thumb }}" alt="{{ $section->title ?: 'Demonstração' }}" loading="lazy">
-                            </div>
                         @endif
+
+                        @include('marketplace.partials.demo-cta-strip')
                     </div>
                 </section>
                 @break
@@ -1147,6 +1170,7 @@
                 @break
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Testimonials)
+                @if($testimonials->isNotEmpty())
                 <section id="clientes" class="mkp-section mkp-section-alt mkp-fade">
                     <div class="mkp-container">
                         <div class="mkp-section-head">
@@ -1182,73 +1206,25 @@
                         </div>
                     </div>
                 </section>
+                @endif
                 @break
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Plans)
-                @if($plans->isNotEmpty())
-                    <section id="planos" class="mkp-section mkp-fade" data-mkp-view="marketplace.plan_view">
-                        <div class="mkp-container">
-                            <div class="mkp-section-head">
-                                @if($section->subtitle)
-                                    <span class="mkp-eyebrow">{{ $section->subtitle }}</span>
-                                @endif
-                                <h2 class="mkp-title">{{ $section->title ?: 'Planos' }}</h2>
-                                @if($section->description)
-                                    <p class="mkp-subtitle">{{ $section->description }}</p>
-                                @endif
-                            </div>
-                            <div class="mkp-plans-grid">
-                                @foreach($plans as $plan)
-                                    @php
-                                        $planFeatures = collect($plan->featureMap())
-                                            ->filter(fn ($enabled) => $enabled)
-                                            ->keys()
-                                            ->map(fn ($key) => $featureLabels[$key] ?? $key)
-                                            ->values();
-                                    @endphp
-                                    <article class="mkp-plan {{ $plan->is_featured ? 'mkp-plan-featured' : '' }} mkp-fade">
-                                        @if($plan->is_featured)
-                                            <span class="mkp-badge">{{ $uiCopy['recommended'] ?? 'Recomendado' }}</span>
-                                        @endif
-                                        <h3 style="margin:0;">{{ $plan->name }}</h3>
-                                        <div class="mkp-plan-price">
-                                            @if((float) $plan->price <= 0)
-                                                {{ $uiCopy['free'] ?? 'Grátis' }}
-                                            @else
-                                                R$ {{ number_format((float) $plan->price, 2, ',', '.') }}
-                                                <small>{{ $uiCopy['per_month'] ?? '/mês' }}</small>
-                                            @endif
-                                        </div>
-                                        @if($plan->description)
-                                            <p class="mkp-plan-desc">{{ $plan->description }}</p>
-                                        @endif
-                                        @if($planFeatures->isNotEmpty())
-                                            <ul class="mkp-plan-features">
-                                                @foreach($planFeatures as $label)
-                                                    <li>{{ $label }}</li>
-                                                @endforeach
-                                            </ul>
-                                        @endif
-                                        @if((float) $plan->price > 0)
-                                            <a class="mkp-btn mkp-btn-primary"
-                                               href="{{ route('marketplace.subscribe', ['plan_id' => $plan->id]) }}"
-                                               data-mkp-event="marketplace.plan_clicked"
-                                               data-mkp-meta='@json(["plan_id" => $plan->id])'>
-                                                Assinar agora
-                                            </a>
-                                        @else
-                                            <a class="mkp-btn mkp-btn-outline"
-                                               href="{{ route('signup.create') }}"
-                                               data-mkp-event="marketplace.signup_started">
-                                                {{ $uiCopy['start_free_trial'] ?? 'Começar agora' }}
-                                            </a>
-                                        @endif
-                                    </article>
-                                @endforeach
-                            </div>
+                <section id="planos" class="mkp-section mkp-fade" data-mkp-view="marketplace.plan_view">
+                    <div class="mkp-container">
+                        <div class="mkp-section-head">
+                            @if($section->subtitle)
+                                <span class="mkp-eyebrow">{{ $section->subtitle }}</span>
+                            @endif
+                            <h2 class="mkp-title">{{ $section->title ?: 'Planos' }}</h2>
+                            @if($section->description)
+                                <p class="mkp-subtitle">{{ $section->description }}</p>
+                            @endif
                         </div>
-                    </section>
-                @endif
+                        @include('marketplace.partials.commercial-plans')
+                        @include('marketplace.partials.demo-cta-strip')
+                    </div>
+                </section>
                 @break
 
             @case(\App\Domains\Marketplace\Enums\MarketplaceSectionType::Faq)
@@ -1283,13 +1259,18 @@
                             @if($section->description)
                                 <p class="mkp-subtitle" style="margin-bottom:1.5rem;">{{ $section->description }}</p>
                             @endif
-                            <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;">
+                            <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;align-items:center;">
                                 @if($section->button_text)
-                                    <a class="mkp-btn mkp-btn-primary" href="{{ $section->button_url ?: route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $section->button_text }}</a>
+                                    <a class="mkp-btn mkp-btn-primary" href="{{ $section->button_url ?: '#demo' }}" data-mkp-event="marketplace.demo_clicked">{{ $section->button_text }}</a>
                                 @else
-                                    <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $uiCopy['start_free_trial'] ?? 'Começar agora' }}</a>
+                                    <a class="mkp-btn mkp-btn-primary" href="#demo" data-mkp-event="marketplace.demo_clicked">{{ $uiCopy['request_demo'] ?? 'Agendar demonstração' }}</a>
+                                @endif
+                                @if($settings->whatsappLink())
+                                    <a class="mkp-btn mkp-btn-outline" href="{{ $settings->whatsappLink() }}" target="_blank" rel="noopener" data-mkp-event="marketplace.whatsapp_clicked">WhatsApp</a>
                                 @endif
                                 <a class="mkp-btn mkp-btn-ghost" href="{{ route('login') }}">{{ $uiCopy['already_have_account'] ?? 'Já tenho conta' }}</a>
+                                {{-- QR Code — Agendar demonstração: inserir quando a URL/WhatsApp comercial definitivo estiver definido. Não gerar QR nesta sprint. --}}
+                                <div class="mkp-qr-slot" data-mkp-qr-placeholder aria-hidden="true"></div>
                             </div>
                         </div>
                     </div>

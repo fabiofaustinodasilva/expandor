@@ -148,7 +148,7 @@
         <div class="mkp-header-actions">
             <a class="mkp-btn mkp-btn-ghost" href="{{ route('marketplace.home') }}">← Início</a>
             <a href="#demo" class="mkp-btn mkp-btn-outline">{{ $ctaText }}</a>
-            <a class="mkp-btn mkp-btn-primary" href="{{ route('signup.create') }}" data-mkp-event="marketplace.signup_started">{{ $uiCopy['start_free_trial'] ?? 'Começar agora' }}</a>
+            <a class="mkp-btn mkp-btn-primary" href="{{ route('marketplace.home') }}#demo" data-mkp-event="marketplace.demo_clicked">{{ $uiCopy['request_demo'] ?? 'Agendar demonstração' }}</a>
         </div>
     </div>
 </header>

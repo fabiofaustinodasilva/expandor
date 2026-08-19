@@ -56,7 +56,8 @@ class Sprint812EnterpriseUxRefinementTest extends TestCase
     {
         $this->get(route('marketplace.home'))
             ->assertOk()
-            ->assertSee('Começar agora', false)
+            ->assertSee('Agendar demonstração', false)
+            ->assertDontSee('Começar agora', false)
             ->assertDontSee('Começar teste grátis', false)
             ->assertDontSee('Configuração do Marketplace', false)
             ->assertDontSee('Página pública pronta', false)

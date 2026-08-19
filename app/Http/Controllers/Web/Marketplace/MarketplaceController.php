@@ -34,17 +34,12 @@ class MarketplaceController extends Controller
 
     public function plans(): View
     {
-        $plans = Plan::query()
-            ->where('status', Plan::STATUS_ACTIVE)
-            ->orderByDesc('is_featured')
-            ->orderBy('display_order')
-            ->orderBy('price')
-            ->get();
+        $page = $this->landing->assemble();
 
         return view('marketplace.plans', [
-            'plans' => $plans,
-            'featureLabels' => PlanCatalog::featureLabels(),
-            'settings' => $this->settings->current(),
+            'premiumData' => $page['premium'],
+            'settings' => $page['settings'],
+            'uiCopy' => $page['ui'],
         ]);
     }
 

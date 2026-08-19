@@ -33,10 +33,33 @@
         root.querySelector('[data-mkp-next]')?.addEventListener('click', function () { go(index + 1); restart(); });
 
         function restart() {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
             clearInterval(timer);
             timer = setInterval(function () { go(index + 1); }, 4500);
         }
         restart();
+    });
+
+    document.querySelectorAll('[data-mkp-field-ops]').forEach(function (root) {
+        var tabs = root.querySelectorAll('[data-mkp-field-tab]');
+        function show(key) {
+            tabs.forEach(function (tab) {
+                var on = tab.getAttribute('data-mkp-field-tab') === key;
+                tab.classList.toggle('is-active', on);
+                tab.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            root.querySelectorAll('[data-mkp-field-panel], [data-mkp-field-copy]').forEach(function (el) {
+                var on = el.getAttribute('data-mkp-field-panel') === key || el.getAttribute('data-mkp-field-copy') === key;
+                el.classList.toggle('is-active', on);
+                if (on) el.removeAttribute('hidden');
+                else el.setAttribute('hidden', 'hidden');
+            });
+        }
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                show(tab.getAttribute('data-mkp-field-tab'));
+            });
+        });
     });
 
     var modal = document.getElementById('mkp-demo-modal');

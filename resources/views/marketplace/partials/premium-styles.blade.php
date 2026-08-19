@@ -3,7 +3,93 @@
     .mkp-carousel { position: relative; overflow: hidden; border-radius: var(--mkp-radius); border: 1px solid var(--mkp-border); background: var(--mkp-surface); }
     .mkp-carousel-track { display: flex; transition: transform 0.45s ease; }
     .mkp-carousel-slide { min-width: 100%; padding: 1rem; }
-    .mkp-carousel-slide img { width: 100%; border-radius: 0.75rem; aspect-ratio: 16/10; object-fit: cover; background: #0F172A; }
+    .mkp-carousel-slide img { width: 100%; border-radius: 0.75rem; aspect-ratio: 16/10; object-fit: contain; background: #0F172A; }
+
+    .mkp-field-ops { margin-top: 1.5rem; }
+    .mkp-field-ops-tabs {
+        display: flex; flex-wrap: wrap; gap: 0.45rem; justify-content: center; margin-bottom: 1.25rem;
+    }
+    .mkp-field-ops-tab {
+        border: 1px solid var(--mkp-border); background: transparent; color: var(--mkp-muted);
+        border-radius: 999px; padding: 0.45rem 0.9rem; cursor: pointer; font-weight: 700;
+        letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.72rem;
+    }
+    .mkp-field-ops-tab.is-active {
+        color: #111; background: var(--mkp-button); border-color: var(--mkp-button);
+    }
+    .mkp-field-ops-stage {
+        display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+        gap: 2rem; align-items: center;
+    }
+    .mkp-phone {
+        width: min(320px, 100%); margin: 0 auto; background: #070b14;
+        border-radius: 2rem; padding: 0.7rem; border: 1px solid var(--mkp-border);
+        box-shadow: var(--mkp-shadow);
+    }
+    .mkp-phone img {
+        width: 100%; height: auto; aspect-ratio: 9 / 19.5; object-fit: contain;
+        background: #000; border-radius: 1.45rem;
+    }
+    .mkp-field-ops-caption {
+        font-size: 1.2rem; font-weight: 650; margin: 0; max-width: 22rem;
+        color: var(--mkp-text);
+    }
+    .mkp-journey {
+        list-style: none; padding: 0; margin: 2rem 0 0; display: grid; gap: 1.5rem;
+    }
+    .mkp-journey-step {
+        display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+        gap: 1.25rem; align-items: center;
+        background: var(--mkp-surface); border: 1px solid var(--mkp-border);
+        border-radius: var(--mkp-radius); padding: 1rem 1.15rem;
+    }
+    .mkp-journey-step:nth-child(even) { grid-template-columns: minmax(0, 1fr) minmax(0, 220px); }
+    .mkp-journey-step:nth-child(even) .mkp-journey-meta { order: 2; }
+    .mkp-journey-meta h3 { margin: 0.5rem 0 0.35rem; }
+    .mkp-journey-meta p { margin: 0; color: var(--mkp-muted); }
+    .mkp-journey-shot {
+        margin: 0; border-radius: 1rem; overflow: hidden; background: #070b14;
+        border: 1px solid var(--mkp-border);
+    }
+    .mkp-journey-shot img { width: 100%; height: auto; max-height: 420px; object-fit: contain; background: #070b14; }
+    .mkp-manager-grid, .mkp-sale-grid {
+        display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem;
+    }
+    .mkp-product-frame, .mkp-map-frame {
+        margin: 0; border-radius: var(--mkp-radius); overflow: hidden;
+        border: 1px solid var(--mkp-border); background: #070b14; box-shadow: var(--mkp-shadow);
+    }
+    .mkp-product-frame img, .mkp-map-frame img, .mkp-sale-frame img {
+        width: 100%; height: auto; object-fit: contain; background: #070b14;
+    }
+    .mkp-sale-split {
+        display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+        gap: 2rem; align-items: center;
+    }
+    .mkp-sale-frame {
+        margin: 0; max-width: 360px; border-radius: 1.5rem; overflow: hidden;
+        border: 1px solid var(--mkp-border); background: #070b14; box-shadow: var(--mkp-shadow);
+    }
+    .mkp-sale-frame img { aspect-ratio: 9 / 19.5; object-fit: contain; }
+    .mkp-demo-strip {
+        margin-top: 2.5rem; padding: 1.5rem; border: 1px solid var(--mkp-border);
+        border-radius: var(--mkp-radius); text-align: center; background: var(--mkp-surface);
+    }
+    .mkp-demo-strip-title { font-size: 1.2rem; font-weight: 700; margin: 0.35rem 0 1rem; }
+    .mkp-plan-enterprise {
+        margin-top: 1.25rem; display: flex; justify-content: space-between; gap: 1rem;
+        align-items: center; flex-wrap: wrap;
+    }
+    .mkp-plan-note { margin: 1rem 0 0; color: var(--mkp-muted); font-size: 0.85rem; }
+    .mkp-proof { max-width: 40rem; margin: 0 auto; text-align: center; }
+    .mkp-proof p { color: var(--mkp-muted); font-size: 1.05rem; }
+    .mkp-qr-slot { display: none; }
+    .mkp-qr-slot[data-qr-src] {
+        display: grid; place-items: center; width: 148px; min-height: 148px;
+        border: 1px dashed var(--mkp-border); border-radius: 0.85rem; padding: 0.75rem;
+    }
+    .mkp-plans-grid-commercial { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
     .mkp-carousel-caption { margin-top: 0.75rem; text-align: center; color: var(--mkp-muted); font-weight: 600; }
     .mkp-carousel-nav { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
     .mkp-carousel-btn {
@@ -94,11 +180,24 @@
         color: #fff; width: 40px; height: 40px; border-radius: 999px; cursor: pointer; z-index: 2;
     }
 
+    @media (max-width: 1024px) {
+        .mkp-manager-grid { grid-template-columns: 1fr; }
+        .mkp-field-ops-stage { grid-template-columns: 1fr; }
+        .mkp-field-ops-copy { text-align: center; }
+        .mkp-field-ops-caption { margin-inline: auto; }
+    }
     @media (max-width: 768px) {
         .mkp-ba-grid { grid-template-columns: 1fr; }
         .mkp-steps { grid-template-columns: 1fr 1fr; }
         .mkp-metrics { grid-template-columns: 1fr 1fr; }
         .mkp-carousel-slide { padding: 0.65rem; }
+        .mkp-journey-step,
+        .mkp-journey-step:nth-child(even),
+        .mkp-sale-split { grid-template-columns: 1fr; }
+        .mkp-journey-step:nth-child(even) .mkp-journey-meta { order: 0; }
+        .mkp-phone { width: min(280px, 100%); }
+        .mkp-plans-grid-commercial { grid-template-columns: 1fr; }
+        .mkp-plan-enterprise { align-items: flex-start; }
     }
     @media (max-width: 480px) {
         .mkp-steps, .mkp-metrics { grid-template-columns: 1fr; }

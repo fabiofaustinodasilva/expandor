@@ -26,13 +26,12 @@ class Sprint810MarketplacePremiumCopywritingCmsTest extends TestCase
     {
         $html = $this->get(route('marketplace.home'))
             ->assertOk()
-            ->assertSee('Organize sua equipe de vendas porta a porta', false)
-            ->assertSee('Começar agora', false)
-            ->assertSee('Solicitar demonstração', false)
-            ->assertSee('Feito para quem vende porta a porta', false)
+            ->assertSee('Transforme território em vendas', false)
+            ->assertSee('Agendar demonstração', false)
+            ->assertSee('Feito para a operação comercial de provedores', false)
             ->assertSee('Energia solar', false)
-            ->assertSee('Mais vendas com a mesma equipe', false)
-            ->assertSee('Menos papel e planilhas', false)
+            ->assertSee('Mais controle', false)
+            ->assertSee('Território com memória', false)
             ->assertDontSee('Calculadora de ROI', false)
             ->getContent();
 

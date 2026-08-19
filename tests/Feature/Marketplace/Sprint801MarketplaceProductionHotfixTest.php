@@ -35,16 +35,15 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
 
         $this->get(route('marketplace.home'))
             ->assertOk()
-            ->assertSee('Organize sua equipe de vendas porta a porta', false)
-            ->assertSee('Começar agora', false)
-            ->assertSee('Solicitar demonstração', false)
-            ->assertSee('Mapa inteligente', false)
-            ->assertSee('Posso testar sem cartão?', false)
-            ->assertSee('Ana Ribeiro', false)
-            ->assertSee('Carla Souza', false)
+            ->assertSee('Transforme território em vendas', false)
+            ->assertSee('Agendar demonstração', false)
+            ->assertSee('Mapa operacional', false)
+            ->assertSee('O Expandor substitui meu ERP?', false)
+            ->assertDontSee('Ana Ribeiro', false)
+            ->assertDontSee('Carla Souza', false)
             ->assertSee('id="faq"', false)
-            ->assertSee('id="clientes"', false)
-            ->assertSee('/images/marketplace/screens/dashboard.svg', false);
+            ->assertDontSee('/images/marketplace/screens/dashboard.svg', false)
+            ->assertSee('/images/marketplace/product/hero-mapa', false);
     }
 
     public function test_default_hero_features_faq_and_testimonials_appear(): void
@@ -52,14 +51,14 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
         $page = app(MarketplacePublicPageService::class)->assemble();
 
         $this->assertNotEmpty($page['sections']);
-        $this->assertGreaterThanOrEqual(3, $page['testimonials']->count());
+        $this->assertSame(0, $page['testimonials']->count());
         $this->assertGreaterThanOrEqual(3, $page['faqs']->count());
 
         $hero = $page['sections']->first(
             fn ($section) => $section->type === MarketplaceSectionType::Hero
         );
         $this->assertNotNull($hero);
-        $this->assertStringContainsString('Organize sua equipe de vendas porta a porta', (string) $hero->title);
+        $this->assertStringContainsString('Transforme território em vendas', (string) $hero->title);
 
         $features = $page['sections']->first(
             fn ($section) => $section->type === MarketplaceSectionType::Features
@@ -126,10 +125,10 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
             ->get(route('platform.marketplace.preview'))
             ->assertOk()
             ->assertSee('Modo preview', false)
-            ->assertSee('Organize sua equipe de vendas porta a porta', false)
-            ->assertSee('Tudo que sua operação de campo precisa', false)
+            ->assertSee('Transforme território em vendas', false)
+            ->assertSee('Tudo que a operação de campo precisa', false)
             ->assertSee('Dúvidas frequentes', false)
-            ->assertSee('Carla Souza', false);
+            ->assertDontSee('Carla Souza', false);
     }
 
     public function test_restore_defaults_button_forces_seed(): void
@@ -156,6 +155,6 @@ class Sprint801MarketplaceProductionHotfixTest extends TestCase
             ->where('type', MarketplaceSectionType::Hero->value)
             ->first();
         $this->assertNotNull($hero);
-        $this->assertStringContainsString('Organize sua equipe de vendas porta a porta', (string) $hero->title);
+        $this->assertStringContainsString('Transforme território em vendas', (string) $hero->title);
     }
 }
