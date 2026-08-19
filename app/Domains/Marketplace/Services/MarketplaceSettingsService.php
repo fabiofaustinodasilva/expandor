@@ -38,6 +38,9 @@ class MarketplaceSettingsService
                 'title', 'subtitle', 'description',
                 'primary_color', 'secondary_color', 'background_color', 'button_color',
                 'whatsapp_number', 'whatsapp_message',
+                'commercial_alert_whatsapp', 'commercial_owner_name',
+                'commercial_alert_template', 'commercial_outreach_template',
+                'commercial_schedule_template',
                 'instagram_url', 'facebook_url', 'youtube_url', 'linkedin_url',
                 'tiktok_url', 'twitter_url',
                 'seo_title', 'seo_description', 'seo_keywords',
@@ -55,7 +58,7 @@ class MarketplaceSettingsService
             }
 
             foreach ([
-                'whatsapp_enabled', 'instagram_enabled', 'facebook_enabled',
+                'whatsapp_enabled', 'commercial_alert_enabled', 'instagram_enabled', 'facebook_enabled',
                 'youtube_enabled', 'linkedin_enabled', 'tiktok_enabled', 'twitter_enabled',
             ] as $flag) {
                 // prepareForValidation sempre envia os booleans; fallback false se ausente.

@@ -17,6 +17,7 @@ class CaptureMarketplaceAttribution
         if ($request->hasSession()) {
             $this->attribution->ensureSessionId($request);
             $this->attribution->captureUtm($request);
+            $this->attribution->captureLanding($request);
         }
 
         return $next($request);

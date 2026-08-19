@@ -44,6 +44,9 @@ class Sprint770MarketplaceGrowthTest extends TestCase
             'company_name' => 'NetFibra',
             'email' => 'maria@netfibra.test',
             'phone' => '11999998888',
+            'city' => 'Rio Verde',
+            'state' => 'GO',
+            'sellers_count' => 6,
             'segment' => 'provedor-internet',
             'employees' => '6-20',
             'source' => 'demo_form',
@@ -123,6 +126,10 @@ class Sprint770MarketplaceGrowthTest extends TestCase
             'name' => 'Lead Analytics',
             'email' => 'lead@analytics.test',
             'company_name' => 'ACME',
+            'phone' => '11988887777',
+            'city' => 'Goiânia',
+            'state' => 'GO',
+            'sellers_count' => 3,
         ])->assertRedirect();
 
         Cache::forget(GrowthAnalyticsService::CACHE_KEY);

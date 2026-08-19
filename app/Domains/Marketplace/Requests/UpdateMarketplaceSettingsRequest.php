@@ -27,6 +27,12 @@ class UpdateMarketplaceSettingsRequest extends FormRequest
             'whatsapp_enabled' => ['sometimes', 'boolean'],
             'whatsapp_number' => ['nullable', 'string', 'max:40'],
             'whatsapp_message' => ['nullable', 'string', 'max:255'],
+            'commercial_alert_enabled' => ['sometimes', 'boolean'],
+            'commercial_alert_whatsapp' => ['nullable', 'string', 'max:40'],
+            'commercial_owner_name' => ['nullable', 'string', 'max:80'],
+            'commercial_alert_template' => ['nullable', 'string', 'max:4000'],
+            'commercial_outreach_template' => ['nullable', 'string', 'max:2000'],
+            'commercial_schedule_template' => ['nullable', 'string', 'max:2000'],
             'instagram_enabled' => ['sometimes', 'boolean'],
             'instagram_url' => ['nullable', 'url', 'max:255'],
             'facebook_enabled' => ['sometimes', 'boolean'],
@@ -156,6 +162,7 @@ class UpdateMarketplaceSettingsRequest extends FormRequest
 
         $this->merge([
             'whatsapp_enabled' => $this->boolean('whatsapp_enabled'),
+            'commercial_alert_enabled' => $this->boolean('commercial_alert_enabled'),
             'instagram_enabled' => $this->boolean('instagram_enabled'),
             'facebook_enabled' => $this->boolean('facebook_enabled'),
             'youtube_enabled' => $this->boolean('youtube_enabled'),

@@ -103,50 +103,56 @@
         @if(session('success'))
             <div class="mkp-alert-success">{{ session('success') }}</div>
         @endif
+        @if($errors->any())
+            <div class="mkp-alert-success" style="background:color-mix(in srgb, #ef4444 18%, transparent);border-color:color-mix(in srgb, #ef4444 35%, transparent);color:#fecaca;">
+                {{ $errors->first() }}
+            </div>
+        @endif
 
-        <form method="POST" action="{{ route('marketplace.leads.store') }}" class="mkp-demo-card" style="max-width:720px;margin:0 auto;background:var(--mkp-surface);border:1px solid var(--mkp-border);border-radius:var(--mkp-radius);padding:2rem;">
+        <form method="POST" action="{{ route('marketplace.leads.store') }}" class="mkp-demo-card" style="position:relative;max-width:720px;margin:0 auto;background:var(--mkp-surface);border:1px solid var(--mkp-border);border-radius:var(--mkp-radius);padding:2rem;">
             @csrf
+            <div aria-hidden="true" style="position:absolute;left:-9999px;height:0;overflow:hidden;">
+                <label for="mkp-lead-website">Website</label>
+                <input id="mkp-lead-website" name="website" type="text" tabindex="-1" autocomplete="off">
+            </div>
             <div class="mkp-form-grid">
                 <div class="mkp-field">
                     <label for="mkp-lead-name">Nome</label>
                     <input id="mkp-lead-name" name="name" type="text" value="{{ old('name') }}" required>
                 </div>
                 <div class="mkp-field">
-                    <label for="mkp-lead-email">E-mail</label>
-                    <input id="mkp-lead-email" name="email" type="email" value="{{ old('email') }}" required>
+                    <label for="mkp-lead-phone">WhatsApp</label>
+                    <input id="mkp-lead-phone" name="phone" type="tel" inputmode="tel" value="{{ old('phone') }}" required placeholder="(64) 99999-9999">
                 </div>
                 <div class="mkp-field">
-                    <label for="mkp-lead-phone">Telefone / WhatsApp</label>
-                    <input id="mkp-lead-phone" name="phone" type="text" value="{{ old('phone') }}">
+                    <label for="mkp-lead-company">Nome do provedor</label>
+                    <input id="mkp-lead-company" name="company_name" type="text" value="{{ old('company_name') }}" required>
                 </div>
                 <div class="mkp-field">
-                    <label for="mkp-lead-company">Empresa</label>
-                    <input id="mkp-lead-company" name="company_name" type="text" value="{{ old('company_name') }}">
+                    <label for="mkp-lead-city">Cidade</label>
+                    <input id="mkp-lead-city" name="city" type="text" value="{{ old('city') }}" required>
                 </div>
                 <div class="mkp-field">
-                    <label for="mkp-lead-segment">Segmento</label>
-                    <select id="mkp-lead-segment" name="segment">
+                    <label for="mkp-lead-state">UF</label>
+                    <select id="mkp-lead-state" name="state" required>
                         <option value="">Selecione</option>
-                        @foreach(($formCopy['segments'] ?? []) as $segmentOption)
-                            <option value="{{ $segmentOption }}" @selected(old('segment') === $segmentOption)>{{ $segmentOption }}</option>
+                        @foreach(\App\Domains\Marketplace\Growth\Support\BrazilianStates::options() as $uf => $label)
+                            <option value="{{ $uf }}" @selected(old('state') === $uf)>{{ $uf }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="mkp-field">
-                    <label for="mkp-lead-employees">Tamanho da equipe</label>
-                    <select id="mkp-lead-employees" name="employees">
-                        <option value="">Selecione</option>
-                        <option value="1-5" @selected(old('employees') === '1-5')>1–5</option>
-                        <option value="6-20" @selected(old('employees') === '6-20')>6–20</option>
-                        <option value="21-50" @selected(old('employees') === '21-50')>21–50</option>
-                        <option value="51+" @selected(old('employees') === '51+')>51+</option>
-                    </select>
+                    <label for="mkp-lead-sellers">Vendedores externos</label>
+                    <input id="mkp-lead-sellers" name="sellers_count" type="number" min="1" max="999" value="{{ old('sellers_count') }}" required>
                 </div>
-            </div>
-
-            <div class="mkp-field" style="margin-top:1rem;">
-                <label for="mkp-lead-message">Mensagem (opcional)</label>
-                <textarea id="mkp-lead-message" name="notes" rows="3">{{ old('notes') }}</textarea>
+                <div class="mkp-field">
+                    <label for="mkp-lead-customers">Clientes aproximados (opcional)</label>
+                    <input id="mkp-lead-customers" name="customers_count" type="number" min="0" value="{{ old('customers_count') }}">
+                </div>
+                <div class="mkp-field">
+                    <label for="mkp-lead-email">E-mail (opcional)</label>
+                    <input id="mkp-lead-email" name="email" type="email" value="{{ old('email') }}">
+                </div>
             </div>
 
             <div style="margin-top:1.5rem;">

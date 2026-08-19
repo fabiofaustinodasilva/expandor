@@ -134,6 +134,7 @@ class WppConnectProvider implements WhatsAppProviderContract
     {
         return (string) ($this->credentials['token']
             ?? $this->credentials['api_token']
+            ?? $this->config['token']
             ?? '');
     }
 

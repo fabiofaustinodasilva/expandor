@@ -241,6 +241,8 @@ Route::middleware([
             Route::delete('/media/{medium}', [MarketplaceMediaController::class, 'destroy'])->name('media.destroy');
 
             Route::get('/leads', [MarketplaceLeadsController::class, 'index'])->name('leads.index');
+            Route::get('/leads/{lead}', [MarketplaceLeadsController::class, 'show'])->name('leads.show');
+            Route::get('/leads/{lead}/whatsapp', [MarketplaceLeadsController::class, 'openWhatsapp'])->name('leads.whatsapp');
             Route::put('/leads/{lead}', [MarketplaceLeadsController::class, 'updateStatus'])->name('leads.update');
             Route::get('/analytics', MarketplaceAnalyticsDashboardController::class)->name('analytics');
             Route::get('/segments', [MarketplaceSegmentsController::class, 'index'])->name('segments.index');
@@ -256,6 +258,9 @@ Route::middleware([
             Route::get('/intelligence', MarketplaceIntelligenceController::class)->name('intelligence');
             Route::get('/pipeline', [MarketplacePipelineController::class, 'index'])->name('pipeline.index');
             Route::put('/pipeline/{pipeline}', [MarketplacePipelineController::class, 'update'])->name('pipeline.update');
+            Route::post('/pipeline/{pipeline}/schedule', [MarketplacePipelineController::class, 'schedule'])->name('pipeline.schedule');
+            Route::get('/pipeline/{pipeline}/whatsapp', [MarketplacePipelineController::class, 'openWhatsapp'])->name('pipeline.whatsapp');
+            Route::post('/settings/commercial-alert-test', [MarketplaceSettingsController::class, 'sendCommercialAlertTest'])->name('settings.commercial-alert-test');
         });
     });
 

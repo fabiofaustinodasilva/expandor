@@ -43,6 +43,7 @@ use App\Domains\Onboarding\Services\SaasOnboardingService;
 use App\Domains\Marketplace\Growth\Events\MarketplaceGrowthEventRecorded;
 use App\Domains\Marketplace\Growth\Events\MarketplaceLeadCreated;
 use App\Domains\SaasGrowth\Listeners\SyncSaasTrialMilestones;
+use App\Domains\Marketplace\Growth\Listeners\DispatchCommercialLeadWhatsAppAlert;
 use App\Domains\Marketplace\Growth\Listeners\RecordLeadCreatedAnalytics;
 use App\Domains\Marketplace\Growth\Listeners\SyncTrialActivationFromOnboarding;
 use App\Domains\Marketplace\Policies\MarketplacePolicy;
@@ -176,6 +177,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(OnboardingCompleted::class, SyncTrialActivationFromOnboarding::class);
         Event::listen(MarketplaceLeadCreated::class, RecordLeadCreatedAnalytics::class);
         Event::listen(MarketplaceLeadCreated::class, BootstrapLeadRevenueOnCreated::class);
+        Event::listen(MarketplaceLeadCreated::class, DispatchCommercialLeadWhatsAppAlert::class);
         Event::listen(MarketplaceGrowthEventRecorded::class, RescoreLeadOnGrowthEvent::class);
         Event::listen(MarketplaceLeadScored::class, RecordLeadScoredAnalytics::class);
         Event::listen(MarketplaceLeadHotDetected::class, RecordHotLeadAnalytics::class);

@@ -22,6 +22,7 @@ return [
             'base_url' => env('WPPCONNECT_BASE_URL', 'http://localhost:21465'),
             'session' => env('WPPCONNECT_SESSION', 'geosales'),
             'timeout' => (int) env('WPPCONNECT_TIMEOUT', 15),
+            'token' => env('WPPCONNECT_TOKEN'),
             'endpoints' => [
                 'send_message' => '/api/{session}/send-message',
                 'send_file' => '/api/{session}/send-file',

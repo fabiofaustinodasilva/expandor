@@ -19,6 +19,7 @@ class MarketplaceLeadRepository
     public function paginate(int $perPage = 20): LengthAwarePaginator
     {
         return MarketplaceLead::query()
+            ->with(['score', 'pipeline'])
             ->orderByDesc('created_at')
             ->paginate($perPage);
     }

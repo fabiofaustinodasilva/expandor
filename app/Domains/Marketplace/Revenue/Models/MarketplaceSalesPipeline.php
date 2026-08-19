@@ -18,6 +18,9 @@ class MarketplaceSalesPipeline extends Model
         'assigned_user_id',
         'notes',
         'last_contact_at',
+        'demo_scheduled_at',
+        'next_action_at',
+        'next_action_label',
     ];
 
     protected function casts(): array
@@ -25,6 +28,8 @@ class MarketplaceSalesPipeline extends Model
         return [
             'stage' => PipelineStage::class,
             'last_contact_at' => 'datetime',
+            'demo_scheduled_at' => 'datetime',
+            'next_action_at' => 'datetime',
         ];
     }
 

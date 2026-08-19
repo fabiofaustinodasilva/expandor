@@ -159,6 +159,38 @@
                         <div class="header-meta">WhatsApp inativo — ative o botão e informe o número para exibir no site.</div>
                     @endif
                 </div>
+
+                <h2>Notificações comerciais</h2>
+                <input type="hidden" name="commercial_alert_enabled" value="0">
+                <div class="form-group">
+                    <label style="display:inline-flex; gap:.45rem; align-items:center;">
+                        <input type="checkbox" name="commercial_alert_enabled" value="1" @checked(old('commercial_alert_enabled', $settings->commercial_alert_enabled))>
+                        Avisar novo pedido de demonstração pelo WhatsApp
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label for="commercial_alert_whatsapp">WhatsApp para receber</label>
+                    <input class="form-control" id="commercial_alert_whatsapp" name="commercial_alert_whatsapp" maxlength="40"
+                           value="{{ old('commercial_alert_whatsapp', $settings->commercial_alert_whatsapp) }}" placeholder="(62) 99999-9999">
+                </div>
+                <div class="form-group">
+                    <label for="commercial_owner_name">Nome do responsável comercial</label>
+                    <input class="form-control" id="commercial_owner_name" name="commercial_owner_name" maxlength="80"
+                           value="{{ old('commercial_owner_name', $settings->commercial_owner_name) }}" placeholder="Ex.: Fábio">
+                    <div class="header-meta" style="margin-top:.35rem;">Usado na mensagem de um clique para o lead. Sem nome, o sistema usa “o time”.</div>
+                </div>
+                <div class="form-group">
+                    <label for="commercial_alert_template">Mensagem de alerta</label>
+                    <textarea class="form-control" id="commercial_alert_template" name="commercial_alert_template" rows="8">{{ old('commercial_alert_template', $settings->commercial_alert_template ?: \App\Domains\Marketplace\Growth\Support\CommercialMessageTemplates::defaultAlert()) }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="commercial_outreach_template">Mensagem para iniciar conversa com o lead</label>
+                    <textarea class="form-control" id="commercial_outreach_template" name="commercial_outreach_template" rows="5">{{ old('commercial_outreach_template', $settings->commercial_outreach_template ?: \App\Domains\Marketplace\Growth\Support\CommercialMessageTemplates::defaultOutreach()) }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="commercial_schedule_template">Mensagem após agendar demonstração</label>
+                    <textarea class="form-control" id="commercial_schedule_template" name="commercial_schedule_template" rows="3">{{ old('commercial_schedule_template', $settings->commercial_schedule_template ?: \App\Domains\Marketplace\Growth\Support\CommercialMessageTemplates::defaultSchedule()) }}</textarea>
+                </div>
             </div>
         </div>
 
@@ -391,6 +423,15 @@
                 <button class="btn btn-primary" type="submit">Salvar configuração</button>
                 <a class="btn btn-ghost" href="{{ route('platform.marketplace.mercadopago.edit') }}">Abrir Mercado Pago</a>
             </div>
+        </div>
+    </form>
+
+    <form method="POST" action="{{ route('platform.marketplace.settings.commercial-alert-test') }}" style="margin-top:1rem;">
+        @csrf
+        <div class="card">
+            <h2 style="margin-top:0;">Testar alerta comercial</h2>
+            <p class="header-meta">Salve as configurações antes. O teste usa o WhatsApp informado acima e o WppConnect já existente no servidor. Tokens não são exibidos aqui.</p>
+            <button class="btn btn-primary" type="submit">Enviar mensagem de teste</button>
         </div>
     </form>
 @endsection

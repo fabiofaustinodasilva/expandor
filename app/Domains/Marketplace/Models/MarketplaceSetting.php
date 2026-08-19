@@ -24,6 +24,12 @@ class MarketplaceSetting extends Model
         'whatsapp_enabled',
         'whatsapp_number',
         'whatsapp_message',
+        'commercial_alert_enabled',
+        'commercial_alert_whatsapp',
+        'commercial_owner_name',
+        'commercial_alert_template',
+        'commercial_outreach_template',
+        'commercial_schedule_template',
         'instagram_enabled',
         'instagram_url',
         'facebook_enabled',
@@ -46,6 +52,7 @@ class MarketplaceSetting extends Model
     {
         return [
             'whatsapp_enabled' => 'boolean',
+            'commercial_alert_enabled' => 'boolean',
             'instagram_enabled' => 'boolean',
             'facebook_enabled' => 'boolean',
             'youtube_enabled' => 'boolean',
