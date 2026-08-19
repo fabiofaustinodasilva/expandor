@@ -59,7 +59,10 @@
             @else
                 <p class="header-meta">Nenhuma demonstração agendada.</p>
             @endif
-            @if($lead->pipeline?->next_action_at)
+            @if($lead->pipeline?->next_action_at && (
+                ! $lead->pipeline->demo_scheduled_at
+                || ! $lead->pipeline->demo_scheduled_at->equalTo($lead->pipeline->next_action_at)
+            ))
                 <p>{{ $lead->pipeline->next_action_label }} {{ $lead->pipeline->next_action_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</p>
             @endif
             <p><strong>Estágio:</strong> {{ $lead->pipeline?->stage?->label() ?: '—' }}</p>

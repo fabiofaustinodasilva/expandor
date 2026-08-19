@@ -160,7 +160,7 @@
                     @endif
                 </div>
 
-                <h2>Notificações comerciais</h2>
+                <h2 id="notificacoes-comerciais">Notificações comerciais</h2>
                 <input type="hidden" name="commercial_alert_enabled" value="0">
                 <div class="form-group">
                     <label style="display:inline-flex; gap:.45rem; align-items:center;">
@@ -190,6 +190,10 @@
                 <div class="form-group">
                     <label for="commercial_schedule_template">Mensagem após agendar demonstração</label>
                     <textarea class="form-control" id="commercial_schedule_template" name="commercial_schedule_template" rows="3">{{ old('commercial_schedule_template', $settings->commercial_schedule_template ?: \App\Domains\Marketplace\Growth\Support\CommercialMessageTemplates::defaultSchedule()) }}</textarea>
+                </div>
+                <div class="form-group" style="margin-top:.5rem;">
+                    <button class="btn btn-primary" type="submit" form="commercial-alert-test">Enviar mensagem de teste</button>
+                    <div class="header-meta" style="margin-top:.45rem;">Salve as configurações antes. O teste usa o WhatsApp informado acima e o WppConnect do servidor. Tokens não são exibidos aqui.</div>
                 </div>
             </div>
         </div>
@@ -426,9 +430,9 @@
         </div>
     </form>
 
-    <form method="POST" action="{{ route('platform.marketplace.settings.commercial-alert-test') }}" style="margin-top:1rem;">
+    <form id="commercial-alert-test" method="POST" action="{{ route('platform.marketplace.settings.commercial-alert-test') }}" style="margin-top:1rem;">
         @csrf
-        <div class="card">
+        <div class="card" id="testar-alerta">
             <h2 style="margin-top:0;">Testar alerta comercial</h2>
             <p class="header-meta">Salve as configurações antes. O teste usa o WhatsApp informado acima e o WppConnect já existente no servidor. Tokens não são exibidos aqui.</p>
             <button class="btn btn-primary" type="submit">Enviar mensagem de teste</button>

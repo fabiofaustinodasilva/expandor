@@ -45,7 +45,9 @@ class CommercialFunnelMetricsService
             if ($lead?->created_at === null) {
                 continue;
             }
-            $contactDurations[] = Carbon::parse($row->last_contact_at)->diffInMinutes($lead->created_at);
+            $started = $lead->created_at;
+            $contactedAt = Carbon::parse($row->last_contact_at);
+            $contactDurations[] = max(0, (int) round($started->diffInMinutes($contactedAt, true)));
         }
 
         $avgMinutes = $contactDurations === [] ? null : (int) round(array_sum($contactDurations) / count($contactDurations));

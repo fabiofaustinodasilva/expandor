@@ -47,12 +47,16 @@ class MarketplaceGrowthController extends Controller
         CaptureMarketplaceLeadAction $action,
     ): RedirectResponse {
         if (filled($request->input('website'))) {
-            return back()->with('success', 'Recebemos seu pedido de demonstração. Em breve entraremos em contato.');
+            return redirect()
+                ->to(route('marketplace.home').'#demo')
+                ->with('success', 'Recebemos seu pedido de demonstração. Em breve entraremos em contato.');
         }
 
         $action->execute($request->validated(), $request);
 
-        return back()->with('success', 'Recebemos seu pedido de demonstração. Em breve entraremos em contato.');
+        return redirect()
+            ->to(route('marketplace.home').'#demo')
+            ->with('success', 'Recebemos seu pedido de demonstração. Em breve entraremos em contato.');
     }
 
     public function calculateRoi(

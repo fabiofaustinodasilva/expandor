@@ -61,4 +61,9 @@ class StoreMarketplaceLeadRequest extends FormRequest
             }
         });
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('marketplace.home').'#demo';
+    }
 }

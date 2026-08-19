@@ -54,7 +54,7 @@ class SprintCommercialFunnelWhatsAppAlertTest extends TestCase
     public function test_demo_form_creates_lead_with_city_and_sellers(): void
     {
         $this->post(route('marketplace.leads.store'), $this->demoPayload())
-            ->assertRedirect();
+            ->assertRedirect(route('marketplace.home').'#demo');
 
         $lead = MarketplaceLead::query()->where('company_name', 'NetVale Telecom')->first();
         $this->assertNotNull($lead);
@@ -175,6 +175,10 @@ class SprintCommercialFunnelWhatsAppAlertTest extends TestCase
         $this->actingAs($owner)
             ->get(route('platform.marketplace.pipeline.index'))
             ->assertSee('20/08/2026', false);
+
+        $metrics = app(\App\Domains\Marketplace\Revenue\Services\CommercialFunnelMetricsService::class)->snapshot();
+        $this->assertNotNull($metrics['avg_first_contact_minutes']);
+        $this->assertGreaterThanOrEqual(0, $metrics['avg_first_contact_minutes']);
     }
 
     public function test_whatsapp_button_records_timeline_and_opens_wa_me(): void

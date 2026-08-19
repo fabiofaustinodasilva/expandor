@@ -12,16 +12,19 @@
         .funnel-metric { padding:.85rem 1rem; }
         .funnel-metric strong { display:block; font-size:1.35rem; margin-top:.2rem; }
         .funnel-board { display:flex; gap:.75rem; overflow-x:auto; padding-bottom:.5rem; align-items:flex-start; }
-        .funnel-col { min-width:260px; width:260px; background:rgba(15,23,42,.04); border:1px solid var(--border, #e5e7eb); border-radius:12px; padding:.75rem; }
-        .funnel-col h2 { margin:0 0 .75rem; font-size:.92rem; display:flex; justify-content:space-between; gap:.5rem; }
-        .funnel-card { background:#fff; border:1px solid var(--border, #e5e7eb); border-radius:12px; padding:.85rem; margin-bottom:.75rem; display:flex; flex-direction:column; gap:.35rem; }
-        .funnel-card .meta { color:var(--muted, #64748b); font-size:.82rem; }
+        .funnel-col { min-width:260px; width:260px; background:var(--bg-soft, #1E2330); border:1px solid var(--border, #2A3142); border-radius:12px; padding:.75rem; }
+        .funnel-col h2 { margin:0 0 .75rem; font-size:.92rem; display:flex; justify-content:space-between; gap:.5rem; color:var(--text, #F3F5F9); }
+        .funnel-card { background:var(--bg-elevated, #171A22); border:1px solid var(--border, #2A3142); border-radius:12px; padding:.85rem; margin-bottom:.75rem; display:flex; flex-direction:column; gap:.35rem; color:var(--text, #F3F5F9); }
+        .funnel-card strong { color:var(--text, #F3F5F9); }
+        .funnel-card .meta { color:var(--muted, #9AA3B5); font-size:.82rem; }
+        .funnel-card .meta a { color:var(--accent, #F59E0B); text-decoration:underline; }
         .funnel-actions { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.5rem; }
         .funnel-actions .btn { padding:.35rem .6rem; font-size:.8rem; }
-        .funnel-stage { width:100%; margin-top:.4rem; }
+        .funnel-stage { width:100%; margin-top:.4rem; background:var(--bg-soft, #1E2330); color:var(--text, #F3F5F9); border-color:var(--border, #2A3142); }
         .funnel-wa { background:#25D366; border-color:#25D366; color:#fff; }
         .funnel-schedule-form { display:none; margin-top:.5rem; }
         .funnel-schedule-form.is-open { display:block; }
+        .funnel-schedule-form label { color:var(--muted, #9AA3B5); }
         @media (max-width: 800px) {
             .funnel-board { flex-direction:column; overflow:visible; }
             .funnel-col { width:100%; min-width:0; }

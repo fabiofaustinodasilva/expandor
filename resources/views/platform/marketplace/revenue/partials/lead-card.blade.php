@@ -24,7 +24,7 @@
             · Campanha: {{ $origin['campaign'] }}
         @endif
     </div>
-    <div class="meta">Há {{ $lead?->created_at?->diffForHumans(short: true) }}</div>
+    <div class="meta">{{ $lead?->created_at?->diffForHumans(short: true) }}</div>
     @if($item->demo_scheduled_at)
         <div class="meta"><strong>Demonstração</strong> {{ $item->demo_scheduled_at->timezone(config('app.timezone'))->format('d/m/Y \à\s H:i') }}</div>
     @elseif($item->next_action_at)
