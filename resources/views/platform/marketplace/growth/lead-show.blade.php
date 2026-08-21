@@ -28,11 +28,11 @@
     <div class="grid grid-2">
         <div class="card">
             <h2 style="margin-top:0;">Dados do provedor</h2>
+            <p><strong>Nome:</strong> {{ $lead->name }}</p>
             <p><strong>Provedor:</strong> {{ $lead->company_name ?: '—' }}</p>
             <p><strong>Cidade/UF:</strong> {{ $lead->cityState() }}</p>
             <p><strong>Vendedores:</strong> {{ $lead->sellers_count ?? '—' }}</p>
             <p><strong>Clientes:</strong> {{ $lead->customers_count !== null ? number_format((int) $lead->customers_count, 0, ',', '.') : '—' }}</p>
-            <p><strong>Segmento:</strong> {{ $lead->segment ?: '—' }}</p>
         </div>
         <div class="card">
             <h2 style="margin-top:0;">Contato</h2>
@@ -44,10 +44,11 @@
                 @endif
             </p>
             <p><strong>E-mail:</strong> {{ $lead->email ?: '—' }}</p>
+            <p><strong>Recebido em:</strong> {{ $lead->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?: '—' }}</p>
             <p><strong>Score:</strong> {{ $lead->score?->score ?? '—' }} {{ $lead->score?->temperature?->label() }}</p>
             <p><strong>Origem:</strong> {{ $origin['origin'] }}</p>
             <p><strong>Campanha:</strong> {{ $origin['campaign'] ?: '—' }}</p>
-            <p class="header-meta">Parâmetros técnicos ficam no histórico interno, não nesta capa.</p>
+            <p><strong>Estágio:</strong> {{ $lead->pipeline?->stage?->label() ?: '—' }}</p>
         </div>
     </div>
 

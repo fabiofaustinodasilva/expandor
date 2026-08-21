@@ -97,6 +97,11 @@ Route::middleware('marketplace.attribution')->group(function (): void {
     Route::post('/marketplace/leads', [MarketplaceGrowthController::class, 'storeLead'])
         ->middleware('throttle:20,1')
         ->name('marketplace.leads.store');
+    Route::get('/marketplace/demo/obrigado/{lead}', [MarketplaceGrowthController::class, 'demoThanks'])
+        ->middleware('signed')
+        ->name('marketplace.demo.thanks');
+    Route::get('/marketplace/demo/obrigado', [MarketplaceGrowthController::class, 'demoThanksGeneric'])
+        ->name('marketplace.demo.thanks.generic');
     Route::post('/marketplace/roi', [MarketplaceGrowthController::class, 'calculateRoi'])
         ->middleware('throttle:30,1')
         ->name('marketplace.roi.calculate');

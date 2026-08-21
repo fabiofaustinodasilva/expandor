@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Web\Marketplace;
 
 use App\Domains\Marketplace\Growth\Actions\CalculateMarketplaceRoiAction;
 use App\Domains\Marketplace\Growth\Actions\CaptureMarketplaceLeadAction;
+use App\Domains\Marketplace\Growth\Models\MarketplaceLead;
 use App\Domains\Marketplace\Growth\Requests\StoreMarketplaceLeadRequest;
+use App\Domains\Marketplace\Growth\Services\DemoVisitorWhatsAppService;
 use App\Domains\Marketplace\Growth\Services\MarketplaceCaseService;
 use App\Domains\Marketplace\Growth\Services\MarketplaceSegmentPageService;
 use App\Domains\Marketplace\Services\MarketplaceAnalyticsService;
@@ -14,6 +16,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 
 class MarketplaceGrowthController extends Controller
@@ -47,16 +50,44 @@ class MarketplaceGrowthController extends Controller
         CaptureMarketplaceLeadAction $action,
     ): RedirectResponse {
         if (filled($request->input('website'))) {
-            return redirect()
-                ->to(route('marketplace.home').'#demo')
-                ->with('success', 'Recebemos seu pedido de demonstração. Em breve entraremos em contato.');
+            return redirect()->route('marketplace.demo.thanks.generic');
         }
 
-        $action->execute($request->validated(), $request);
+        $lead = $action->execute($request->validated(), $request);
 
-        return redirect()
-            ->to(route('marketplace.home').'#demo')
-            ->with('success', 'Recebemos seu pedido de demonstração. Em breve entraremos em contato.');
+        return redirect()->to(
+            URL::temporarySignedRoute(
+                'marketplace.demo.thanks',
+                now()->addHours(6),
+                ['lead' => $lead->id],
+            )
+        );
+    }
+
+    public function demoThanks(
+        Request $request,
+        MarketplaceLead $lead,
+        MarketplacePublicPageService $landing,
+        MarketplaceSettingsService $settingsService,
+        DemoVisitorWhatsAppService $visitorWhatsApp,
+    ): View {
+        abort_unless($request->hasValidSignature(), 403);
+
+        $data = $landing->assemble();
+        $settings = $settingsService->current();
+
+        return view('marketplace.demo-thanks', array_merge($data, [
+            'lead' => $lead,
+            'whatsappUrl' => $visitorWhatsApp->conversationUrl($lead, $settings),
+        ]));
+    }
+
+    public function demoThanksGeneric(MarketplacePublicPageService $landing): View
+    {
+        return view('marketplace.demo-thanks', array_merge($landing->assemble(), [
+            'lead' => null,
+            'whatsappUrl' => null,
+        ]));
     }
 
     public function calculateRoi(

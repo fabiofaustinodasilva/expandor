@@ -117,12 +117,12 @@
             </div>
             <div class="mkp-form-grid">
                 <div class="mkp-field">
-                    <label for="mkp-lead-name">Nome</label>
-                    <input id="mkp-lead-name" name="name" type="text" value="{{ old('name') }}" required>
+                    <label for="mkp-lead-name">Nome completo</label>
+                    <input id="mkp-lead-name" name="name" type="text" value="{{ old('name') }}" required autocomplete="name">
                 </div>
                 <div class="mkp-field">
                     <label for="mkp-lead-phone">WhatsApp</label>
-                    <input id="mkp-lead-phone" name="phone" type="tel" inputmode="tel" value="{{ old('phone') }}" required placeholder="(64) 99999-9999">
+                    <input id="mkp-lead-phone" name="phone" type="tel" inputmode="tel" value="{{ old('phone') }}" required placeholder="(64) 99999-9999" autocomplete="tel">
                 </div>
                 <div class="mkp-field">
                     <label for="mkp-lead-company">Nome do provedor</label>
@@ -142,16 +142,16 @@
                     </select>
                 </div>
                 <div class="mkp-field">
-                    <label for="mkp-lead-sellers">Vendedores externos</label>
+                    <label for="mkp-lead-sellers">Quantidade de vendedores externos</label>
                     <input id="mkp-lead-sellers" name="sellers_count" type="number" min="1" max="999" value="{{ old('sellers_count') }}" required>
                 </div>
                 <div class="mkp-field">
-                    <label for="mkp-lead-customers">Clientes aproximados (opcional)</label>
-                    <input id="mkp-lead-customers" name="customers_count" type="number" min="0" value="{{ old('customers_count') }}">
+                    <label for="mkp-lead-customers">Quantidade aproximada de clientes</label>
+                    <input id="mkp-lead-customers" name="customers_count" type="number" min="0" value="{{ old('customers_count') }}" required>
                 </div>
                 <div class="mkp-field">
-                    <label for="mkp-lead-email">E-mail (opcional)</label>
-                    <input id="mkp-lead-email" name="email" type="email" value="{{ old('email') }}">
+                    <label for="mkp-lead-email">E-mail</label>
+                    <input id="mkp-lead-email" name="email" type="email" value="{{ old('email') }}" required autocomplete="email">
                 </div>
             </div>
 

@@ -23,12 +23,12 @@ class StoreMarketplaceLeadRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:120'],
             'company_name' => ['required', 'string', 'max:180'],
-            'email' => ['nullable', 'email', 'max:180'],
+            'email' => ['required', 'email', 'max:180'],
             'phone' => ['required', 'string', 'max:40'],
             'city' => ['required', 'string', 'max:120'],
             'state' => ['required', 'string', 'size:2', Rule::in(BrazilianStates::codes())],
             'sellers_count' => ['required', 'integer', 'min:1', 'max:999'],
-            'customers_count' => ['nullable', 'integer', 'min:0', 'max:10000000'],
+            'customers_count' => ['required', 'integer', 'min:0', 'max:10000000'],
             'segment' => ['nullable', 'string', 'max:120'],
             'employees' => ['nullable', 'string', 'max:40'],
             'source' => ['nullable', 'string', 'max:120'],
@@ -43,11 +43,14 @@ class StoreMarketplaceLeadRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'name.required' => 'Informe o nome completo.',
             'company_name.required' => 'Informe o nome do provedor.',
+            'email.required' => 'Informe o e-mail.',
             'phone.required' => 'Informe o WhatsApp.',
             'city.required' => 'Informe a cidade.',
             'state.required' => 'Informe o estado.',
             'sellers_count.required' => 'Informe a quantidade de vendedores externos.',
+            'customers_count.required' => 'Informe a quantidade aproximada de clientes.',
             'website.max' => 'Não foi possível enviar o formulário.',
         ];
     }

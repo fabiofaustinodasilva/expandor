@@ -27,12 +27,29 @@ TXT;
 
     public static function defaultOutreach(): string
     {
-        return 'Olá, {primeiro_nome}! Tudo bem? Aqui é {responsavel}, do Expandor. Vi que você solicitou uma demonstração do nosso sistema para operação comercial de provedores. Quero entender rapidamente como vocês trabalham hoje e te mostrar o Expandor funcionando na prática. Qual horário fica melhor para conversarmos?';
+        return 'Olá, {primeiro_nome}! Tudo bem? Aqui é {responsavel}, do Expandor. Vi que você solicitou uma demonstração do sistema. Qual horário fica melhor para conversarmos?';
     }
 
     public static function defaultSchedule(): string
     {
         return 'Olá, {primeiro_nome}! Nossa demonstração do Expandor ficou agendada para {data_demo} às {hora_demo}. Até lá!';
+    }
+
+    public static function visitorDemoRequest(MarketplaceLead $lead): string
+    {
+        $customers = $lead->customers_count !== null
+            ? number_format((int) $lead->customers_count, 0, ',', '.')
+            : '—';
+
+        return trim(implode("\n", [
+            'Olá! Acabei de solicitar uma demonstração do Expandor pelo site.',
+            'Meu nome é '.($lead->name ?: '—').'.',
+            'Provedor: '.($lead->company_name ?: '—'),
+            'Cidade: '.($lead->city ?: '—').'/'.($lead->state ?: '—'),
+            'Vendedores externos: '.($lead->sellers_count !== null ? (string) $lead->sellers_count : '—'),
+            'Clientes aproximados: '.$customers,
+            'Gostaria de conhecer o Expandor.',
+        ]));
     }
 
     public static function render(

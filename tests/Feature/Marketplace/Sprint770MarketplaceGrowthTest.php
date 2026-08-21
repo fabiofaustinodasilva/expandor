@@ -47,6 +47,7 @@ class Sprint770MarketplaceGrowthTest extends TestCase
             'city' => 'Rio Verde',
             'state' => 'GO',
             'sellers_count' => 6,
+            'customers_count' => 1200,
             'segment' => 'provedor-internet',
             'employees' => '6-20',
             'source' => 'demo_form',
@@ -130,6 +131,7 @@ class Sprint770MarketplaceGrowthTest extends TestCase
             'city' => 'Goiânia',
             'state' => 'GO',
             'sellers_count' => 3,
+            'customers_count' => 500,
         ])->assertRedirect();
 
         Cache::forget(GrowthAnalyticsService::CACHE_KEY);

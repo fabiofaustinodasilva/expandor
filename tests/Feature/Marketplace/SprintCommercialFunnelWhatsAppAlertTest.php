@@ -53,8 +53,9 @@ class SprintCommercialFunnelWhatsAppAlertTest extends TestCase
 
     public function test_demo_form_creates_lead_with_city_and_sellers(): void
     {
-        $this->post(route('marketplace.leads.store'), $this->demoPayload())
-            ->assertRedirect(route('marketplace.home').'#demo');
+        $response = $this->post(route('marketplace.leads.store'), $this->demoPayload());
+        $response->assertRedirect();
+        $this->assertStringContainsString('/marketplace/demo/obrigado/', (string) $response->headers->get('Location'));
 
         $lead = MarketplaceLead::query()->where('company_name', 'NetVale Telecom')->first();
         $this->assertNotNull($lead);
@@ -62,6 +63,7 @@ class SprintCommercialFunnelWhatsAppAlertTest extends TestCase
         $this->assertSame('GO', $lead->state);
         $this->assertSame(4, (int) $lead->sellers_count);
         $this->assertSame(2500, (int) $lead->customers_count);
+        $this->assertSame('marcos@netvale.test', $lead->email);
         $this->assertSame('5564999999999', $lead->phone_normalized);
         $this->assertNotNull($lead->pipeline);
         $this->assertSame(PipelineStage::New, $lead->pipeline->stage);
@@ -74,9 +76,59 @@ class SprintCommercialFunnelWhatsAppAlertTest extends TestCase
             ->post(route('marketplace.leads.store'), $this->demoPayload([
                 'phone' => '123',
                 'state' => 'XX',
+                'email' => '',
+                'customers_count' => null,
             ]))
             ->assertRedirect()
-            ->assertSessionHasErrors(['phone', 'state']);
+            ->assertSessionHasErrors(['phone', 'state', 'email', 'customers_count']);
+    }
+
+    public function test_confirmation_page_shows_whatsapp_cta_with_encoded_message(): void
+    {
+        MarketplaceSetting::query()->update([
+            'whatsapp_enabled' => true,
+            'whatsapp_number' => '5562999887766',
+        ]);
+        cache()->forget(MarketplaceSettingsRepository::CACHE_KEY);
+
+        $response = $this->post(route('marketplace.leads.store'), $this->demoPayload([
+            'email' => 'cta@netvale.test',
+        ]));
+        $response->assertRedirect();
+        $thanksUrl = (string) $response->headers->get('Location');
+
+        $page = $this->get($thanksUrl);
+        $page->assertOk()
+            ->assertSee('Pedido de demonstração recebido!', false)
+            ->assertSee('Falar agora no WhatsApp', false)
+            ->assertSee('Continuar no site', false)
+            ->assertSee('wa.me/5562999887766', false)
+            ->assertSee(rawurlencode('Meu nome é Marcos Silva.'), false)
+            ->assertSee(rawurlencode('Provedor: NetVale Telecom'), false)
+            ->assertSee(rawurlencode('Cidade: Rio Verde/GO'), false)
+            ->assertSee(rawurlencode('Vendedores externos: 4'), false)
+            ->assertSee(rawurlencode('Clientes aproximados: 2.500'), false);
+
+        $this->assertNotNull(MarketplaceLead::query()->where('email', 'cta@netvale.test')->first());
+    }
+
+    public function test_confirmation_without_commercial_number_hides_whatsapp_cta(): void
+    {
+        MarketplaceSetting::query()->update([
+            'whatsapp_enabled' => false,
+            'whatsapp_number' => null,
+        ]);
+        cache()->forget(MarketplaceSettingsRepository::CACHE_KEY);
+
+        $thanksUrl = (string) $this->post(route('marketplace.leads.store'), $this->demoPayload([
+            'email' => 'semwa@netvale.test',
+        ]))->headers->get('Location');
+
+        $this->get($thanksUrl)
+            ->assertOk()
+            ->assertSee('Pedido de demonstração recebido!', false)
+            ->assertDontSee('Falar agora no WhatsApp', false)
+            ->assertSee('Continuar no site', false);
     }
 
     public function test_utms_and_human_origin_are_stored(): void
@@ -122,7 +174,7 @@ class SprintCommercialFunnelWhatsAppAlertTest extends TestCase
         ]))->assertRedirect();
 
         $this->assertSame(1, MarketplaceLead::query()->where('phone_normalized', '5564999999999')->count());
-        Queue::assertPushed(SendNewDemoLeadWhatsAppNotification::class, 1);
+        Queue::assertNotPushed(SendNewDemoLeadWhatsAppNotification::class);
     }
 
     public function test_pipeline_stage_change_and_kanban(): void
@@ -245,10 +297,7 @@ class SprintCommercialFunnelWhatsAppAlertTest extends TestCase
             'email' => 'skip@test.local',
         ]));
 
-        $this->assertSame(
-            MarketplaceLeadNotification::STATUS_SKIPPED,
-            MarketplaceLeadNotification::query()->where('lead_id', $lead->id)->value('status')
-        );
+        $this->assertNull(MarketplaceLeadNotification::query()->where('lead_id', $lead->id)->first());
         Http::assertNothingSent();
 
         MarketplaceSetting::query()->update(['commercial_alert_enabled' => true]);
@@ -314,7 +363,9 @@ class SprintCommercialFunnelWhatsAppAlertTest extends TestCase
         $this->get(route('marketplace.home'))
             ->assertOk()
             ->assertSee('Nome do provedor', false)
-            ->assertSee('Vendedores externos', false);
+            ->assertSee('Quantidade de vendedores externos', false)
+            ->assertSee('Quantidade aproximada de clientes', false)
+            ->assertSee('mkp-lead-email', false);
     }
 
     public function test_configurable_outreach_does_not_hardcode_owner_name(): void
@@ -326,6 +377,26 @@ class SprintCommercialFunnelWhatsAppAlertTest extends TestCase
         );
 
         $this->assertStringContainsString('Carla', $message);
+        $this->assertStringContainsString('demonstração do sistema', $message);
         $this->assertStringNotContainsString('Fábio', $message);
+    }
+
+    public function test_lead_details_show_all_required_demo_fields(): void
+    {
+        $lead = app(LeadCaptureService::class)->capture($this->demoPayload([
+            'email' => 'detalhes@netvale.test',
+        ]));
+        $owner = $this->makePlatformAdmin();
+
+        $this->actingAs($owner)
+            ->get(route('platform.marketplace.leads.show', $lead))
+            ->assertOk()
+            ->assertSee('Marcos Silva', false)
+            ->assertSee('detalhes@netvale.test', false)
+            ->assertSee('NetVale Telecom', false)
+            ->assertSee('Rio Verde/GO', false)
+            ->assertSee('2.500', false)
+            ->assertSee('Recebido em', false)
+            ->assertSee('Estágio', false);
     }
 }

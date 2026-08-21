@@ -12,7 +12,13 @@
         @else
             Sem WhatsApp
         @endif
+        @if($lead?->email)
+            · {{ $lead->email }}
+        @endif
         · {{ $lead?->sellers_count !== null ? $lead->sellers_count.' vend.' : '—' }}
+        @if($lead?->customers_count !== null)
+            · {{ number_format((int) $lead->customers_count, 0, ',', '.') }} cli.
+        @endif
     </div>
     <div class="meta">
         Score {{ $score?->score ?? '—' }}

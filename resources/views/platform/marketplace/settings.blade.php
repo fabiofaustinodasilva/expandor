@@ -161,11 +161,12 @@
                 </div>
 
                 <h2 id="notificacoes-comerciais">Notificações comerciais</h2>
+                <p class="header-meta" style="margin:0 0 .85rem;">Fluxo principal: o visitante confirma no site e fala no WhatsApp comercial (wa.me). O alerta automático via WppConnect é opcional/experimental e fica desligado por padrão.</p>
                 <input type="hidden" name="commercial_alert_enabled" value="0">
                 <div class="form-group">
                     <label style="display:inline-flex; gap:.45rem; align-items:center;">
                         <input type="checkbox" name="commercial_alert_enabled" value="1" @checked(old('commercial_alert_enabled', $settings->commercial_alert_enabled))>
-                        Avisar novo pedido de demonstração pelo WhatsApp
+                        Avisar novo pedido de demonstração pelo WhatsApp (experimental / WppConnect)
                     </label>
                 </div>
                 <div class="form-group">
