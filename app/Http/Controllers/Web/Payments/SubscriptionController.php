@@ -54,6 +54,13 @@ class SubscriptionController extends Controller
         $subscription = $this->subscriptions->overview($company)->subscription;
         abort_if($subscription === null, 404);
 
+        $fidelity = app(\App\Domains\Payments\Services\BillingFidelityService::class)->progress($subscription);
+        if ($fidelity['inside_term']) {
+            return redirect()
+                ->route('company.finance.index')
+                ->with('error', 'Fidelidade ativa: '.$fidelity['progress_label'].' (término previsto '.optional($fidelity['ends_at'])->format('d/m/Y').'). Multa de rescisão será definida em regra financeira separada — cancelamento administrativo requer Platform Owner.');
+        }
+
         $this->subscriptions->cancel($subscription);
 
         return redirect()

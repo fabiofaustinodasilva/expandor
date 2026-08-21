@@ -56,6 +56,10 @@ class MercadoPagoProvider implements PaymentProviderContract
             return $this->createPixPayment($data);
         }
 
+        if ($billingType === 'BOLETO' || $billingType === 'TICKET') {
+            return $this->createBoletoPayment($data);
+        }
+
         return $this->createCheckoutProPreference($data);
     }
 
@@ -115,6 +119,68 @@ class MercadoPagoProvider implements PaymentProviderContract
                 'pix_qr_code_base64' => $qrBase64,
                 'pix_expiration_date' => $expiration,
                 'flow' => 'pix_direct',
+            ],
+        );
+    }
+
+    /**
+     * Boleto — POST /v1/payments (payment_method_id=bolbradesco)
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function createBoletoPayment(array $data): GatewayCheckoutResult
+    {
+        $this->assertConfigured();
+
+        $uuid = (string) ($data['checkout_uuid'] ?? Str::uuid());
+
+        $payload = [
+            'transaction_amount' => round((float) $data['amount'], 2),
+            'description' => (string) ($data['description'] ?? 'Expandor'),
+            'payment_method_id' => 'bolbradesco',
+            'payer' => array_filter([
+                'email' => $data['buyer_email'] ?? null,
+                'first_name' => $data['buyer_name'] ?? null,
+            ]),
+            'external_reference' => $uuid,
+            'notification_url' => url('/webhooks/mercadopago'),
+        ];
+
+        $response = $this->client()
+            ->withHeaders(['X-Idempotency-Key' => 'boleto-'.$uuid])
+            ->post('/v1/payments', $payload)
+            ->throw()
+            ->json();
+
+        $paymentId = (string) ($response['id'] ?? '');
+        $ticketUrl = (string) data_get($response, 'transaction_details.external_resource_url', '');
+        $digitable = (string) (
+            data_get($response, 'barcode.content')
+            ?: data_get($response, 'transaction_details.digitable_line')
+            ?: data_get($response, 'payment_method_reference_id')
+            ?: ''
+        );
+
+        if ($paymentId === '') {
+            Log::warning('mercadopago.boleto_incomplete', [
+                'checkout_uuid' => $uuid,
+            ]);
+
+            throw new RuntimeException('Mercado Pago não retornou boleto válido.');
+        }
+
+        return new GatewayCheckoutResult(
+            gatewaySessionId: $paymentId,
+            checkoutUrl: $ticketUrl !== '' ? $ticketUrl : url('/company/financeiro'),
+            raw: [
+                'id' => $paymentId,
+                'status' => $response['status'] ?? 'pending',
+                'boleto_url' => $ticketUrl,
+                'ticket_url' => $ticketUrl,
+                'digitable_line' => $digitable,
+                'barcode' => data_get($response, 'barcode'),
+                'flow' => 'boleto_direct',
+                'transaction_details' => $response['transaction_details'] ?? null,
             ],
         );
     }
@@ -506,6 +572,13 @@ class MercadoPagoProvider implements PaymentProviderContract
                     ['id' => 'credit_card'],
                     ['id' => 'debit_card'],
                     ['id' => 'ticket'],
+                ],
+            ],
+            'BOLETO', 'TICKET' => [
+                'excluded_payment_types' => [
+                    ['id' => 'credit_card'],
+                    ['id' => 'debit_card'],
+                    ['id' => 'bank_transfer'],
                 ],
             ],
             'CREDIT_CARD', 'CARD' => [

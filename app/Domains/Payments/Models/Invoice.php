@@ -3,6 +3,7 @@
 namespace App\Domains\Payments\Models;
 
 use App\Domains\Company\Models\Company;
+use App\Domains\Company\Models\Plan;
 use App\Domains\Company\Models\Subscription;
 use App\Domains\Payments\Enums\InvoiceStatus;
 use App\Tenancy\Concerns\BelongsToTenant;
@@ -20,7 +21,9 @@ class Invoice extends Model
         'company_id',
         'customer_id',
         'subscription_id',
+        'plan_id',
         'number',
+        'billing_period_key',
         'status',
         'amount_due',
         'amount_paid',
@@ -30,6 +33,7 @@ class Invoice extends Model
         'due_at',
         'paid_at',
         'gateway',
+        'payment_method',
         'gateway_invoice_id',
         'pdf_path',
         'metadata',
@@ -67,6 +71,11 @@ class Invoice extends Model
     public function subscription(): BelongsTo
     {
         return $this->belongsTo(Subscription::class);
+    }
+
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class);
     }
 
     public function payments(): HasMany

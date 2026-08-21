@@ -19,6 +19,20 @@ return [
 
     'trial_days' => (int) env('PAYMENT_TRIAL_DAYS', 0),
 
+    /*
+    | Fidelidade mínima para NOVAS assinaturas comerciais (cobrança continua mensal).
+    */
+    'fidelity' => [
+        'minimum_term_months' => (int) env('BILLING_MINIMUM_TERM_MONTHS', 6),
+    ],
+
+    /*
+    | Tolerância após vencimento antes da suspensão financeira automática.
+    */
+    'delinquency' => [
+        'grace_days' => (int) env('BILLING_GRACE_DAYS', 5),
+    ],
+
     'providers' => [
         'asaas' => [
             'base_url' => env('ASAAS_BASE_URL', 'https://sandbox.asaas.com/api/v3'),

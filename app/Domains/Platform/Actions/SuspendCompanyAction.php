@@ -4,6 +4,7 @@ namespace App\Domains\Platform\Actions;
 
 use App\Domains\Company\Models\Company;
 use App\Domains\Company\Models\User;
+use App\Domains\Payments\Support\BillingSuspensionReasons;
 use App\Domains\Security\Services\SecurityService;
 use Illuminate\Validation\ValidationException;
 
@@ -28,14 +29,22 @@ class SuspendCompanyAction
         }
 
         $old = $company->status;
-        $company->forceFill(['status' => Company::STATUS_SUSPENDED])->save();
+        $company->forceFill([
+            'status' => Company::STATUS_SUSPENDED,
+            'suspended_at' => now(),
+            'suspension_reason' => BillingSuspensionReasons::ADMINISTRATIVE,
+        ])->save();
 
         $this->security->recordAudit(
             action: 'platform.company.suspended',
             user: $actor,
             auditable: $company,
             oldValues: ['status' => $old],
-            newValues: ['status' => Company::STATUS_SUSPENDED, 'reason' => $reason],
+            newValues: [
+                'status' => Company::STATUS_SUSPENDED,
+                'reason' => $reason ?: BillingSuspensionReasons::ADMINISTRATIVE,
+                'suspension_reason' => BillingSuspensionReasons::ADMINISTRATIVE,
+            ],
             companyId: $company->id,
         );
 

@@ -20,6 +20,7 @@ class PlatformBillingController extends Controller
         $data = $this->billing->dashboard(
             subscriptionStatus: $request->query('subscription_status'),
             paymentStatus: $request->query('payment_status'),
+            financialStatus: $request->query('financial_status'),
         );
 
         return view('platform.billing.index', $data);

@@ -192,7 +192,11 @@ class PaymentsModuleTest extends TestCase
         $this->assertDatabaseHas('payments', [
             'company_id' => $company->id,
             'method' => 'renewal',
-            'status' => PaymentStatus::Paid->value,
+            'status' => PaymentStatus::Pending->value,
+        ]);
+        $this->assertDatabaseHas('invoices', [
+            'company_id' => $company->id,
+            'status' => InvoiceStatus::Open->value,
         ]);
 
         $scale = Plan::query()->where('slug', 'scale')->firstOrFail();

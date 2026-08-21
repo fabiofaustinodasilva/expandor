@@ -38,6 +38,8 @@ class Company extends Model
         'segment',
         'logo',
         'status',
+        'suspended_at',
+        'suspension_reason',
         'onboarding_status',
         'onboarding_step',
         'onboarding_completed_at',
@@ -52,6 +54,7 @@ class Company extends Model
             'is_system' => 'boolean',
             'onboarding_step' => 'integer',
             'onboarding_completed_at' => 'datetime',
+            'suspended_at' => 'datetime',
         ];
     }
 

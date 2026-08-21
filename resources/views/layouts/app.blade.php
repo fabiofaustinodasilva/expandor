@@ -185,6 +185,19 @@
                 </div>
             @endif
 
+            @if(session('error'))
+                <div class="alert alert-error">{{ session('error') }}</div>
+            @endif
+
+            @if(!empty($billingBannerInvoice) && !request()->routeIs('company.finance.*'))
+                @include('payments.finance._banner', [
+                    'currentInvoice' => $billingBannerInvoice,
+                    'company' => $authUser?->company,
+                    'withinGrace' => $billingBannerWithinGrace ?? false,
+                    'daysPastDue' => $billingBannerDaysPastDue ?? 0,
+                ])
+            @endif
+
             @yield('content')
         </main>
     </div>

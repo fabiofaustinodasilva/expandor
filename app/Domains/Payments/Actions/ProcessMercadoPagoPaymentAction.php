@@ -4,8 +4,12 @@ namespace App\Domains\Payments\Actions;
 
 use App\Domains\Company\Models\Subscription;
 use App\Domains\Payments\Enums\CheckoutStatus;
+use App\Domains\Payments\Enums\InvoiceStatus;
+use App\Domains\Payments\Enums\PaymentStatus;
 use App\Domains\Payments\Mail\WelcomeCredentialsMail;
 use App\Domains\Payments\Models\Customer;
+use App\Domains\Payments\Models\Invoice;
+use App\Domains\Payments\Models\Payment;
 use App\Domains\Payments\Models\PaymentGatewayTransaction;
 use App\Domains\Payments\Providers\MercadoPagoProvider;
 use App\Domains\Payments\Providers\ProviderFactory;
@@ -35,6 +39,7 @@ class ProcessMercadoPagoPaymentAction
         protected InvoiceService $invoices,
         protected SubscriptionService $subscriptions,
         protected SecurityService $security,
+        protected RestoreFinancialAccessAction $restoreAccess,
     ) {}
 
     /**
@@ -77,6 +82,12 @@ class ProcessMercadoPagoPaymentAction
             ?? $this->repository->findCheckoutByGatewaySession('mercadopago', $paymentId);
 
         if ($checkout === null) {
+            $invoiceResult = $this->processInvoicePayment($paymentId, $status, $externalReference, $payment);
+
+            if ($invoiceResult !== null) {
+                return $invoiceResult;
+            }
+
             Log::warning('mercadopago.payment.checkout_missing', [
                 'payment_id' => $paymentId,
                 'external_reference' => $externalReference !== '' ? $externalReference : null,
@@ -291,6 +302,160 @@ class ProcessMercadoPagoPaymentAction
 
             throw $e;
         }
+    }
+
+    /**
+     * Pagamento de fatura recorrente (external_reference inv_* ou payment local).
+     *
+     * @param  array<string, mixed>  $gatewayPayment
+     * @return array{status: string, provisioned: bool, company_id: int|null, checkout_uuid: string|null, message: string}|null
+     */
+    protected function processInvoicePayment(
+        string $paymentId,
+        string $status,
+        string $externalReference,
+        array $gatewayPayment,
+    ): ?array {
+        $localPayment = Payment::query()
+            ->withoutGlobalScopes()
+            ->where('gateway', 'mercadopago')
+            ->where('gateway_payment_id', $paymentId)
+            ->first();
+
+        if ($localPayment === null && str_starts_with($externalReference, 'inv_')) {
+            $invoiceId = (int) explode('_', $externalReference)[1];
+            $localPayment = Payment::query()
+                ->withoutGlobalScopes()
+                ->where('invoice_id', $invoiceId)
+                ->where('status', PaymentStatus::Pending)
+                ->latest('id')
+                ->first();
+        }
+
+        if ($localPayment === null || $localPayment->invoice_id === null) {
+            return null;
+        }
+
+        $invoice = Invoice::query()->withoutGlobalScopes()->find($localPayment->invoice_id);
+        if ($invoice === null) {
+            return null;
+        }
+
+        PaymentGatewayTransaction::query()
+            ->where('payment_id', $paymentId)
+            ->orWhere('payment_record_id', $localPayment->id)
+            ->update([
+                'status' => $status,
+                'payment_id' => $paymentId,
+                'raw' => $gatewayPayment,
+            ]);
+
+        if (in_array($status, ['rejected', 'cancelled', 'canceled', 'refunded', 'charged_back'], true)) {
+            $this->payments->markFailed($localPayment, 'Mercado Pago status: '.$status);
+
+            return [
+                'status' => $status,
+                'provisioned' => false,
+                'company_id' => $invoice->company_id,
+                'checkout_uuid' => null,
+                'message' => 'Pagamento de fatura recusado/cancelado.',
+            ];
+        }
+
+        if (! in_array($status, ['approved', 'accredited'], true)) {
+            return [
+                'status' => $status !== '' ? $status : 'pending',
+                'provisioned' => false,
+                'company_id' => $invoice->company_id,
+                'checkout_uuid' => null,
+                'message' => 'Pagamento de fatura ainda pendente.',
+            ];
+        }
+
+        return DB::transaction(function () use ($localPayment, $invoice, $paymentId, $gatewayPayment) {
+            $lockedInvoice = Invoice::query()->withoutGlobalScopes()->whereKey($invoice->id)->lockForUpdate()->first();
+            $lockedPayment = Payment::query()->withoutGlobalScopes()->whereKey($localPayment->id)->lockForUpdate()->first();
+
+            if ($lockedInvoice === null || $lockedPayment === null) {
+                throw new RuntimeException('Fatura/pagamento sumiu durante confirmação.');
+            }
+
+            // Idempotência
+            if ($lockedInvoice->status === InvoiceStatus::Paid && $lockedPayment->status === PaymentStatus::Paid) {
+                return [
+                    'status' => 'approved',
+                    'provisioned' => false,
+                    'company_id' => $lockedInvoice->company_id,
+                    'checkout_uuid' => null,
+                    'message' => 'Fatura já quitada (idempotente).',
+                ];
+            }
+
+            $expected = round((float) $lockedInvoice->amount_due, 2);
+            $paidAmount = round((float) ($gatewayPayment['transaction_amount'] ?? $lockedPayment->amount), 2);
+
+            if ($paidAmount + 0.009 < $expected) {
+                Log::warning('mercadopago.invoice.amount_mismatch', [
+                    'invoice_id' => $lockedInvoice->id,
+                    'expected' => $expected,
+                    'paid' => $paidAmount,
+                ]);
+
+                return [
+                    'status' => 'amount_mismatch',
+                    'provisioned' => false,
+                    'company_id' => $lockedInvoice->company_id,
+                    'checkout_uuid' => null,
+                    'message' => 'Valor pago inferior ao da fatura.',
+                ];
+            }
+
+            $lockedPayment->gateway_payment_id = $paymentId;
+            $this->payments->markPaid($lockedPayment);
+            $this->invoices->markPaid($lockedInvoice, $expected);
+
+            $lockedInvoice->forceFill([
+                'payment_method' => $lockedPayment->method,
+            ])->save();
+
+            $subscription = Subscription::query()
+                ->withoutGlobalScopes()
+                ->whereKey($lockedInvoice->subscription_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($subscription !== null) {
+                $advanceFrom = $lockedInvoice->due_at ?? now();
+                $subscription->forceFill([
+                    'status' => Subscription::STATUS_ACTIVE,
+                    'next_billing_at' => ($subscription->billing_cycle === 'yearly')
+                        ? $advanceFrom->copy()->addYear()
+                        : $advanceFrom->copy()->addMonth(),
+                ])->save();
+            }
+
+            $company = \App\Domains\Company\Models\Company::query()
+                ->withoutGlobalScopes()
+                ->find($lockedInvoice->company_id);
+
+            if ($company !== null) {
+                $this->restoreAccess->execute($company);
+            }
+
+            Log::info('mercadopago.invoice.paid', [
+                'payment_id' => $paymentId,
+                'invoice_id' => $lockedInvoice->id,
+                'company_id' => $lockedInvoice->company_id,
+            ]);
+
+            return [
+                'status' => 'approved',
+                'provisioned' => true,
+                'company_id' => $lockedInvoice->company_id,
+                'checkout_uuid' => null,
+                'message' => 'Fatura paga e acesso regularizado.',
+            ];
+        });
     }
 
     /**

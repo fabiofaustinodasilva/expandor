@@ -237,6 +237,35 @@ class AppServiceProvider extends ServiceProvider
             $view->with('onboardingStatus', $onboardingStatus);
             $view->with('trialBanner', $trialBanner);
             $view->with('saasOnboardingBanner', $saasOnboardingBanner);
+
+            $billingBannerInvoice = null;
+            $billingBannerWithinGrace = false;
+            $billingBannerDaysPastDue = 0;
+            if ($user instanceof User && ! $user->isPlatformAdmin() && $user->company && $user->hasPermission('billing.view')) {
+                try {
+                    $billingBannerInvoice = \App\Domains\Payments\Models\Invoice::query()
+                        ->where('company_id', $user->company_id)
+                        ->whereIn('status', [
+                            \App\Domains\Payments\Enums\InvoiceStatus::Open->value,
+                            \App\Domains\Payments\Enums\InvoiceStatus::Overdue->value,
+                        ])
+                        ->whereNull('paid_at')
+                        ->orderBy('due_at')
+                        ->first();
+                    if ($billingBannerInvoice !== null) {
+                        $policy = app(\App\Domains\Payments\Services\BillingDelinquencyPolicy::class);
+                        $billingBannerWithinGrace = $policy->isWithinGrace($billingBannerInvoice);
+                        $billingBannerDaysPastDue = $billingBannerInvoice->due_at
+                            ? $policy->daysPastDue($billingBannerInvoice->due_at)
+                            : 0;
+                    }
+                } catch (\Throwable) {
+                    $billingBannerInvoice = null;
+                }
+            }
+            $view->with('billingBannerInvoice', $billingBannerInvoice);
+            $view->with('billingBannerWithinGrace', $billingBannerWithinGrace);
+            $view->with('billingBannerDaysPastDue', $billingBannerDaysPastDue);
         });
     }
 

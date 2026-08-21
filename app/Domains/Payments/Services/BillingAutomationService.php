@@ -44,29 +44,22 @@ class BillingAutomationService
     public function renewSubscription(Subscription $subscription): Payment
     {
         return DB::transaction(function () use ($subscription) {
-            $amount = (float) ($subscription->plan?->price ?? 0);
+            $invoice = app(RecurringBillingService::class)->ensureOpenInvoice($subscription);
+
+            $amount = (float) ($invoice?->amount_due ?? $subscription->plan?->price ?? 0);
 
             $payment = $this->payments->create([
                 'company_id' => $subscription->company_id,
                 'subscription_id' => $subscription->id,
+                'invoice_id' => $invoice?->id,
                 'amount' => $amount,
                 'currency' => config('payments.currency', 'BRL'),
-                'status' => PaymentStatus::Paid,
+                'status' => PaymentStatus::Pending,
                 'method' => 'renewal',
                 'gateway' => $subscription->gateway ?? config('payments.default'),
-                'gateway_payment_id' => 'renewal_'.$subscription->id.'_'.now()->timestamp,
-                'paid_at' => now(),
-                'raw' => ['source' => 'renewal'],
+                'gateway_payment_id' => 'pending_renewal_'.$subscription->id.'_'.now()->timestamp,
+                'raw' => ['source' => 'renewal_open_invoice'],
             ]);
-
-            $this->payments->markPaid($payment);
-
-            $subscription->forceFill([
-                'next_billing_at' => ($subscription->billing_cycle === 'yearly')
-                    ? now()->addYear()
-                    : now()->addMonth(),
-                'status' => Subscription::STATUS_ACTIVE,
-            ])->save();
 
             return $payment->fresh();
         });

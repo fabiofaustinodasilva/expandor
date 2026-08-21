@@ -25,6 +25,9 @@ class Subscription extends Model
         'plan_id',
         'status',
         'starts_at',
+        'contract_started_at',
+        'minimum_term_months',
+        'minimum_term_ends_at',
         'ends_at',
         'trial_ends_at',
         'gateway',
@@ -38,11 +41,18 @@ class Subscription extends Model
     {
         return [
             'starts_at' => 'datetime',
+            'contract_started_at' => 'datetime',
+            'minimum_term_ends_at' => 'datetime',
             'ends_at' => 'datetime',
             'trial_ends_at' => 'datetime',
             'next_billing_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
+    }
+
+    public function isInsideMinimumTerm(): bool
+    {
+        return $this->minimum_term_ends_at !== null && now()->lt($this->minimum_term_ends_at);
     }
 
     public function plan(): BelongsTo

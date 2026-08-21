@@ -85,6 +85,7 @@ final class ClientNav
             'company.branding.edit',
             'company.plan.show',
             'company.subscription.show',
+            'company.finance.index',
             'company.audit.index',
             'commissions.products.index',
         ];
@@ -182,6 +183,7 @@ final class ClientNav
                     // Produtos fica no rail principal + seção Comercial (evitar duplicata Empresa).
                     ['module' => 'branding', 'label' => 'Identidade visual', 'route' => 'company.branding.edit', 'params' => [], 'patterns' => ['company.branding.*']],
                     ['module' => 'integrations', 'label' => 'Integrações', 'route' => 'operations.integrations', 'params' => [], 'patterns' => ['operations.integrations']],
+                    ['module' => 'billing', 'label' => 'Financeiro', 'route' => 'company.finance.index', 'params' => [], 'patterns' => ['company.finance.*']],
                     ['module' => 'billing', 'label' => 'Plano e uso', 'route' => 'company.plan.show', 'params' => [], 'patterns' => ['company.plan.*']],
                     ['module' => 'billing', 'label' => 'Minha assinatura', 'route' => 'company.subscription.show', 'params' => [], 'patterns' => ['company.subscription.*']],
                 ],

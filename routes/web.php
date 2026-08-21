@@ -20,6 +20,7 @@ use App\Http\Controllers\Web\Onboarding\TourController;
 use App\Http\Controllers\Web\Onboarding\TrialConversionController;
 use App\Http\Controllers\Web\Payments\CheckoutController;
 use App\Http\Controllers\Web\Payments\SubscriptionController;
+use App\Http\Controllers\Web\Payments\CompanyFinanceController;
 use App\Http\Controllers\Web\Payments\WebhookController;
 use App\Http\Controllers\Web\AI\AIConversationController;
 use App\Http\Controllers\Web\Acquisition\TrialSignupController;
@@ -445,6 +446,14 @@ Route::middleware([
     Route::post('/company/subscription/upgrade', [SubscriptionController::class, 'upgrade'])->name('company.subscription.upgrade');
     Route::post('/company/subscription/downgrade', [SubscriptionController::class, 'downgrade'])->name('company.subscription.downgrade');
     Route::post('/company/subscription/cancel', [SubscriptionController::class, 'cancel'])->name('company.subscription.cancel');
+
+    Route::get('/company/financeiro', [CompanyFinanceController::class, 'index'])->name('company.finance.index');
+    Route::get('/company/financeiro/pagamento-pendente', [CompanyFinanceController::class, 'pending'])->name('company.finance.pending');
+    Route::get('/company/financeiro/faturas/{invoice}', [CompanyFinanceController::class, 'showInvoice'])->name('company.finance.invoice.show');
+    Route::post('/company/financeiro/faturas/{invoice}/pix', [CompanyFinanceController::class, 'payPix'])->name('company.finance.invoice.pix');
+    Route::post('/company/financeiro/faturas/{invoice}/boleto', [CompanyFinanceController::class, 'payBoleto'])->name('company.finance.invoice.boleto');
+    Route::post('/company/financeiro/faturas/{invoice}/segunda-via', [CompanyFinanceController::class, 'secondCopy'])->name('company.finance.invoice.second-copy');
+
     Route::get('/company/branding', [BrandingController::class, 'edit'])->name('company.branding.edit');
     Route::post('/company/branding', [BrandingController::class, 'store'])->name('company.branding.store');
     Route::put('/company/branding', [BrandingController::class, 'update'])->name('company.branding.update');
