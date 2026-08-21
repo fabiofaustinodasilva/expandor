@@ -450,9 +450,9 @@ Route::middleware([
     Route::get('/company/financeiro', [CompanyFinanceController::class, 'index'])->name('company.finance.index');
     Route::get('/company/financeiro/pagamento-pendente', [CompanyFinanceController::class, 'pending'])->name('company.finance.pending');
     Route::get('/company/financeiro/faturas/{invoice}', [CompanyFinanceController::class, 'showInvoice'])->name('company.finance.invoice.show');
-    Route::post('/company/financeiro/faturas/{invoice}/pix', [CompanyFinanceController::class, 'payPix'])->name('company.finance.invoice.pix');
-    Route::post('/company/financeiro/faturas/{invoice}/boleto', [CompanyFinanceController::class, 'payBoleto'])->name('company.finance.invoice.boleto');
-    Route::post('/company/financeiro/faturas/{invoice}/segunda-via', [CompanyFinanceController::class, 'secondCopy'])->name('company.finance.invoice.second-copy');
+    Route::match(['get', 'post'], '/company/financeiro/faturas/{invoice}/pix', [CompanyFinanceController::class, 'payPix'])->name('company.finance.invoice.pix');
+    Route::match(['get', 'post'], '/company/financeiro/faturas/{invoice}/boleto', [CompanyFinanceController::class, 'payBoleto'])->name('company.finance.invoice.boleto');
+    Route::match(['get', 'post'], '/company/financeiro/faturas/{invoice}/segunda-via', [CompanyFinanceController::class, 'secondCopy'])->name('company.finance.invoice.second-copy');
 
     Route::get('/company/branding', [BrandingController::class, 'edit'])->name('company.branding.edit');
     Route::post('/company/branding', [BrandingController::class, 'store'])->name('company.branding.store');

@@ -7,6 +7,7 @@ use App\Domains\Payments\Enums\PaymentStatus;
 use App\Domains\Payments\Models\Invoice;
 use App\Domains\Payments\Models\Payment;
 use App\Domains\Payments\Models\PaymentGatewayTransaction;
+use App\Domains\Payments\Providers\DTOs\GatewayCheckoutResult;
 use App\Domains\Payments\Providers\MercadoPagoProvider;
 use App\Domains\Payments\Providers\ProviderFactory;
 use Illuminate\Support\Facades\DB;
@@ -78,30 +79,37 @@ class InvoicePaymentService
             return $reuse;
         }
 
-        $provider = $this->providers->make('mercadopago');
-        if (! $provider instanceof MercadoPagoProvider) {
-            throw new RuntimeException('Mercado Pago indisponível.');
-        }
-
         $amount = round((float) $invoice->amount_due, 2);
         $external = 'inv_'.$invoice->id.'_'.Str::lower(Str::random(10));
         $company = $invoice->company()->withoutGlobalScopes()->first()
             ?? \App\Domains\Company\Models\Company::query()->withoutGlobalScopes()->find($invoice->company_id);
 
-        $data = [
-            'amount' => $amount,
-            'description' => 'Expandor — fatura '.$invoice->number,
-            'buyer_email' => $company?->email,
-            'buyer_name' => $company?->name,
-            'checkout_uuid' => $external,
-            'billing_type' => $method === PaymentMethodType::Pix ? 'PIX' : 'BOLETO',
-            'success_url' => url('/company/financeiro/faturas/'.$invoice->id),
-            'cancel_url' => url('/company/financeiro/faturas/'.$invoice->id),
-        ];
+        $token = (string) config('payments.providers.mercadopago.access_token', '');
+        $allowDemo = $token === '' && (app()->environment('local', 'testing') || (bool) config('payments.allow_fake'));
 
-        $result = $method === PaymentMethodType::Pix
-            ? $provider->createPixPayment($data)
-            : $provider->createBoletoPayment($data);
+        if ($allowDemo) {
+            $result = $this->demoChargeResult($method, $external, $amount);
+        } else {
+            $provider = $this->providers->make('mercadopago');
+            if (! $provider instanceof MercadoPagoProvider) {
+                throw new RuntimeException('Mercado Pago indisponível.');
+            }
+
+            $data = [
+                'amount' => $amount,
+                'description' => 'Expandor — fatura '.$invoice->number,
+                'buyer_email' => $company?->email,
+                'buyer_name' => $company?->name,
+                'checkout_uuid' => $external,
+                'billing_type' => $method === PaymentMethodType::Pix ? 'PIX' : 'BOLETO',
+                'success_url' => url('/company/financeiro/faturas/'.$invoice->id),
+                'cancel_url' => url('/company/financeiro/faturas/'.$invoice->id),
+            ];
+
+            $result = $method === PaymentMethodType::Pix
+                ? $provider->createPixPayment($data)
+                : $provider->createBoletoPayment($data);
+        }
 
         return DB::transaction(function () use ($invoice, $method, $result, $amount, $external) {
             $payment = $this->payments->create([
@@ -146,6 +154,50 @@ class InvoicePaymentService
 
             return $this->present($payment, $tx, $result->checkoutUrl);
         });
+    }
+
+    /**
+     * Demo local/QA quando não há access token (nunca usa produção).
+     */
+    protected function demoChargeResult(PaymentMethodType $method, string $external, float $amount): GatewayCheckoutResult
+    {
+        $id = 'demo_'.Str::lower(Str::random(10));
+
+        if ($method === PaymentMethodType::Pix) {
+            $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">'
+                .'<rect width="240" height="240" fill="#ffffff"/>'
+                .'<rect x="16" y="16" width="64" height="64" fill="#111111"/>'
+                .'<rect x="160" y="16" width="64" height="64" fill="#111111"/>'
+                .'<rect x="16" y="160" width="64" height="64" fill="#111111"/>'
+                .'<rect x="40" y="40" width="16" height="16" fill="#ffffff"/>'
+                .'<rect x="184" y="40" width="16" height="16" fill="#ffffff"/>'
+                .'<rect x="40" y="184" width="16" height="16" fill="#ffffff"/>'
+                .'<rect x="100" y="100" width="40" height="40" fill="#111111"/>'
+                .'<text x="120" y="228" text-anchor="middle" font-size="12" fill="#666666">DEMO PIX</text>'
+                .'</svg>';
+
+            return new GatewayCheckoutResult(
+                gatewaySessionId: $id,
+                checkoutUrl: url('/company/financeiro'),
+                raw: [
+                    'status' => 'pending',
+                    'flow' => 'demo_pix',
+                    'pix_qr_code' => '00020126580014br.gov.bcb.pix0136DEMOEXPANDORPIX'.substr($external, -8),
+                    'pix_qr_code_base64' => base64_encode($svg),
+                ],
+            );
+        }
+
+        return new GatewayCheckoutResult(
+            gatewaySessionId: $id,
+            checkoutUrl: 'https://example.com/boleto-demo',
+            raw: [
+                'status' => 'pending',
+                'flow' => 'demo_boleto',
+                'boleto_url' => 'https://example.com/boleto-demo',
+                'digitable_line' => '23790.00000 00000.000000 00000.000000 1 00000000000000',
+            ],
+        );
     }
 
     /**

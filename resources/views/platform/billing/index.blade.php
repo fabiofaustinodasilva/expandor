@@ -1,10 +1,10 @@
 @extends('layouts.platform')
 
-@section('title', 'Billing')
+@section('title', 'Financeiro da plataforma')
 
 @section('content')
     <div style="margin-bottom:1rem;">
-        <h1 class="page-title" style="margin:0;">Billing</h1>
+        <h1 class="page-title" style="margin:0;">Financeiro da plataforma</h1>
         <div class="header-meta">MRR, inadimplência, fidelidade e cobranças SaaS</div>
     </div>
 
@@ -101,7 +101,7 @@
                         <td>{{ $row['plan']?->name ?? '—' }}</td>
                         <td>R$ {{ number_format((float) $row['monthly'], 2, ',', '.') }}</td>
                         <td>{{ optional($row['next_due'])->format('d/m/Y') ?: '—' }}</td>
-                        <td>{{ $row['financial_status'] }}</td>
+                        <td>{{ \App\Domains\Payments\Support\BillingUiLabels::financialStatus($row['financial_status']) }}</td>
                         <td>{{ $row['days_past_due'] }}</td>
                         <td>{{ optional($row['fidelity_ends'])->format('d/m/Y') ?: '—' }}</td>
                     </tr>
