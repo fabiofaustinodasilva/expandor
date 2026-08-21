@@ -16,11 +16,13 @@ use App\Domains\Sales\Properties\Models\Property;
 use App\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\CreatesTenantUsers;
+use Tests\Support\PlatformCompanyStorePayload;
 use Tests\TestCase;
 
 class PlatformAdminModuleTest extends TestCase
 {
     use CreatesTenantUsers;
+    use PlatformCompanyStorePayload;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -104,15 +106,14 @@ class PlatformAdminModuleTest extends TestCase
         $plan = \App\Domains\Company\Models\Plan::query()->where('slug', 'professional')->firstOrFail();
 
         $this->actingAs($owner)
-            ->post(route('platform.companies.store'), [
+            ->post(route('platform.companies.store'), $this->platformCompanyStorePayload($plan->id, [
                 'company_name' => 'Nova Empresa Platform',
                 'company_email' => 'contato@nova-platform.test',
-                'plan_id' => $plan->id,
                 'admin_name' => 'Admin Novo',
                 'admin_email' => 'admin@nova-platform.test',
                 'admin_password' => 'password',
                 'admin_password_confirmation' => 'password',
-            ])
+            ]))
             ->assertRedirect();
 
         $this->assertDatabaseHas('companies', [

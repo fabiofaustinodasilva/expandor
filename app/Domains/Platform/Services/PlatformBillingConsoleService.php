@@ -223,11 +223,12 @@ class PlatformBillingConsoleService
             return [
                 'company' => $company,
                 'plan' => $subscription->plan,
-                'monthly' => (float) ($subscription->plan?->price ?? 0),
+                'monthly' => $subscription->monthlyAmount(),
                 'next_due' => $open?->due_at ?? $subscription->next_billing_at,
                 'financial_status' => $status,
                 'days_past_due' => $days,
                 'fidelity_ends' => $subscription->minimum_term_ends_at,
+                'has_commercial_exception' => (bool) $subscription->has_commercial_exception,
             ];
         })->when($financialStatus, function (Collection $rows) use ($financialStatus) {
             $map = [
@@ -235,6 +236,7 @@ class PlatformBillingConsoleService
                 'pendente' => 'pendente',
                 'tolerancia' => 'tolerancia',
                 'vencido' => 'vencido',
+                'inadimplente' => 'vencido',
                 'suspenso' => 'suspenso',
             ];
 

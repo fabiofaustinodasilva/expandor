@@ -75,7 +75,7 @@ class RecurringBillingService
                 return $again;
             }
 
-            $amount = round((float) ($locked->plan?->price ?? 0), 2);
+            $amount = round((float) ($locked->monthlyAmount()), 2);
             if ($amount <= 0) {
                 return null;
             }

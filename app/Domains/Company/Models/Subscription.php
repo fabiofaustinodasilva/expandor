@@ -23,6 +23,7 @@ class Subscription extends Model
     protected $fillable = [
         'company_id',
         'plan_id',
+        'contracted_amount',
         'status',
         'starts_at',
         'contract_started_at',
@@ -33,6 +34,9 @@ class Subscription extends Model
         'gateway',
         'gateway_subscription_id',
         'billing_cycle',
+        'billing_day',
+        'has_commercial_exception',
+        'commercial_exception_reason',
         'next_billing_at',
         'cancelled_at',
     ];
@@ -40,6 +44,9 @@ class Subscription extends Model
     protected function casts(): array
     {
         return [
+            'contracted_amount' => 'decimal:2',
+            'billing_day' => 'integer',
+            'has_commercial_exception' => 'boolean',
             'starts_at' => 'datetime',
             'contract_started_at' => 'datetime',
             'minimum_term_ends_at' => 'datetime',
@@ -48,6 +55,15 @@ class Subscription extends Model
             'next_billing_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
+    }
+
+    public function monthlyAmount(): float
+    {
+        if ($this->contracted_amount !== null) {
+            return round((float) $this->contracted_amount, 2);
+        }
+
+        return round((float) ($this->plan?->price ?? 0), 2);
     }
 
     public function isInsideMinimumTerm(): bool

@@ -20,9 +20,9 @@
                 @if($subscription && $plan)
                     <dl class="finance-dl">
                         <div><dt>Plano</dt><dd>{{ $plan->name }}</dd></div>
-                        <div><dt>Valor mensal</dt><dd>R$ {{ number_format((float) $plan->price, 2, ',', '.') }}</dd></div>
+                        <div><dt>Valor mensal</dt><dd>R$ {{ number_format((float) ($subscription->monthlyAmount()), 2, ',', '.') }}</dd></div>
                         <div><dt>Status</dt><dd>{{ \App\Domains\Payments\Support\BillingUiLabels::subscriptionStatus($subscription->status) }}</dd></div>
-                        <div><dt>Próximo vencimento</dt><dd>{{ optional($subscription->next_billing_at)->format('d/m/Y') ?: '—' }}</dd></div>
+                        <div><dt>Próximo vencimento</dt><dd>{{ optional($currentInvoice?->due_at ?? $subscription->next_billing_at)->format('d/m/Y') ?: '—' }}</dd></div>
                         <div><dt>Início do contrato</dt><dd>{{ optional($subscription->contract_started_at)->format('d/m/Y') ?: '—' }}</dd></div>
                         @if($fidelity && $fidelity['has_term'])
                             <div><dt>Fidelidade mínima</dt><dd>{{ $fidelity['months'] }} meses</dd></div>
@@ -30,6 +30,9 @@
                             <div><dt>Progresso</dt><dd>{{ $fidelity['progress_label'] }}</dd></div>
                         @else
                             <div><dt>Fidelidade</dt><dd>{{ $fidelity['progress_label'] ?? '—' }}</dd></div>
+                        @endif
+                        @if($subscription->has_commercial_exception)
+                            <div><dt>Condição</dt><dd>Condição comercial especial</dd></div>
                         @endif
                     </dl>
                 @else

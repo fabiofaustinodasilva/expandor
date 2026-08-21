@@ -14,11 +14,13 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Tests\Support\CreatesTenantUsers;
+use Tests\Support\PlatformCompanyStorePayload;
 use Tests\TestCase;
 
 class Sprint8191TotalUniquenessShieldTest extends TestCase
 {
     use CreatesTenantUsers;
+    use PlatformCompanyStorePayload;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -201,15 +203,14 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
         $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->actingAs($owner)
-            ->post(route('platform.companies.store'), [
+            ->post(route('platform.companies.store'), $this->platformCompanyStorePayload($plan->id, [
                 'company_name' => 'Nova Manual',
                 'document' => '66777888000133',
-                'plan_id' => $plan->id,
                 'admin_name' => 'Admin Novo',
                 'admin_email' => 'admin.dup@expandor.test',
                 'admin_password' => 'SenhaForte123!',
                 'admin_password_confirmation' => 'SenhaForte123!',
-            ])
+            ]))
             ->assertSessionHasErrors([
                 'admin_email' => RegistrationIntegrityService::EMAIL_TAKEN_MESSAGE,
             ]);
@@ -225,15 +226,14 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
         $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->actingAs($owner)
-            ->post(route('platform.companies.store'), [
+            ->post(route('platform.companies.store'), $this->platformCompanyStorePayload($plan->id, [
                 'company_name' => 'Nova Manual Doc',
                 'document' => '66777888000144',
-                'plan_id' => $plan->id,
                 'admin_name' => 'Admin Novo',
                 'admin_email' => 'admin.ok@expandor.test',
                 'admin_password' => 'SenhaForte123!',
                 'admin_password_confirmation' => 'SenhaForte123!',
-            ])
+            ]))
             ->assertSessionHasErrors([
                 'document' => RegistrationIntegrityService::DOCUMENT_TAKEN_MESSAGE,
             ]);
@@ -330,15 +330,14 @@ class Sprint8191TotalUniquenessShieldTest extends TestCase
         $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         $this->actingAs($owner)
-            ->post(route('platform.companies.store'), [
+            ->post(route('platform.companies.store'), $this->platformCompanyStorePayload($plan->id, [
                 'company_name' => 'Empresa Manual OK',
                 'document' => '44555666000177',
-                'plan_id' => $plan->id,
                 'admin_name' => 'Admin Livre',
                 'admin_email' => 'admin.livre@expandor.test',
                 'admin_password' => 'SenhaForte123!',
                 'admin_password_confirmation' => 'SenhaForte123!',
-            ])
+            ]))
             ->assertRedirect();
 
         $this->assertDatabaseHas('companies', ['name' => 'Empresa Manual OK']);

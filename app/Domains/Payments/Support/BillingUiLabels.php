@@ -35,9 +35,9 @@ final class BillingUiLabels
         return match ($status) {
             'em_dia' => 'Em dia',
             'pendente' => 'Pendente',
-            'tolerancia' => 'Em tolerância',
-            'vencido' => 'Vencido',
-            'suspenso' => 'Suspenso',
+            'tolerancia' => 'Em período de regularização',
+            'vencido' => 'Inadimplente',
+            'suspenso' => 'Suspensa',
             default => $status,
         };
     }

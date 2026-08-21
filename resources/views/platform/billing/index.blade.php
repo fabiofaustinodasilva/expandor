@@ -30,7 +30,7 @@
             <div style="font-size:1.8rem; font-weight:700;">{{ number_format((int) ($saasMetrics['companies_current'] ?? 0), 0, ',', '.') }}</div>
         </div>
         <div class="card">
-            <div class="header-meta">Em tolerância</div>
+            <div class="header-meta">Em período de regularização</div>
             <div style="font-size:1.8rem; font-weight:700;">{{ number_format((int) ($saasMetrics['companies_in_grace'] ?? 0), 0, ',', '.') }}</div>
         </div>
         <div class="card">
@@ -49,7 +49,7 @@
                 <label for="financial_status">Status financeiro</label>
                 <select class="form-control" name="financial_status" id="financial_status">
                     <option value="">Todos</option>
-                    @foreach(['em_dia' => 'Em dia', 'pendente' => 'Pendente', 'tolerancia' => 'Em tolerância', 'vencido' => 'Vencido', 'suspenso' => 'Suspenso'] as $value => $label)
+                    @foreach(['em_dia' => 'Em dia', 'pendente' => 'Pendente', 'tolerancia' => 'Em período de regularização', 'vencido' => 'Inadimplente', 'suspenso' => 'Suspensa'] as $value => $label)
                         <option value="{{ $value }}" @selected(($filters['financial_status'] ?? '') === $value)>{{ $label }}</option>
                     @endforeach
                 </select>

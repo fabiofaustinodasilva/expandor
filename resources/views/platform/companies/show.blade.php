@@ -160,12 +160,25 @@
             <div>
                 <p><strong>Plano:</strong> {{ $subscription?->plan?->name ?? '—' }}</p>
                 <p><strong>Status:</strong> {{ $subscription?->status ?? '—' }}</p>
+                <p><strong>Mensalidade contratada:</strong> R$ {{ number_format((float) ($subscription?->monthlyAmount() ?? 0), 2, ',', '.') }}</p>
+                <p><strong>Início do contrato:</strong> {{ optional($subscription?->contract_started_at)->format('d/m/Y') ?: '—' }}</p>
+                <p><strong>Dia de vencimento:</strong> {{ $subscription?->billing_day ? ('Dia '.$subscription->billing_day) : '—' }}</p>
+                <p><strong>Fidelidade:</strong>
+                    @if($subscription?->minimum_term_months)
+                        {{ $subscription->minimum_term_months }} meses (até {{ optional($subscription->minimum_term_ends_at)->format('d/m/Y') }})
+                    @else
+                        Sem fidelidade registrada
+                    @endif
+                </p>
+                @if($subscription?->has_commercial_exception)
+                    <p><strong>Condição comercial especial:</strong> {{ $subscription->commercial_exception_reason ?: 'Sim' }}</p>
+                @endif
                 <p><strong>Início:</strong> {{ optional($subscription?->starts_at)->format('d/m/Y') ?: '—' }}</p>
                 <p><strong>Trial até:</strong> {{ optional($subscription?->trial_ends_at)->format('d/m/Y H:i') ?: '—' }}</p>
                 <p><strong>Próxima cobrança:</strong> {{ optional($subscription?->next_billing_at)->format('d/m/Y') ?: '—' }}</p>
                 <p><strong>Término:</strong> {{ optional($subscription?->ends_at)->format('d/m/Y') ?: '—' }}</p>
                 <p><strong>Cancelada em:</strong> {{ optional($subscription?->cancelled_at)->format('d/m/Y H:i') ?: '—' }}</p>
-                <p><strong>Gateway:</strong> {{ $subscription?->gateway ?: '—' }}</p>
+                <p class="header-meta">Condições comerciais financeiras em somente leitura nesta sprint.</p>
             </div>
 
             @unless($company->trashed())
