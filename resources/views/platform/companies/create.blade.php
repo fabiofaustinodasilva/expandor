@@ -55,7 +55,7 @@
                 </div>
                 <div class="form-group">
                     <label for="company_uf">UF *</label>
-                    <input class="form-control" type="text" name="company_uf" id="company_uf" value="{{ old('company_uf') }}" required maxlength="2" style="text-transform:uppercase;">
+                    <input class="form-control" type="text" name="company_uf" id="company_uf" value="{{ old('company_uf') }}" required maxlength="2" autocomplete="address-level1">
                     @error('company_uf')<div class="header-meta" style="color:#f87171;">{{ $message }}</div>@enderror
                 </div>
             </div>
@@ -121,22 +121,22 @@
             </div>
 
             <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,.08);">
-                <label style="display:flex; gap:.5rem; align-items:center;">
+                <label class="touch-check" for="has_commercial_exception">
                     <input type="checkbox" name="has_commercial_exception" id="has_commercial_exception" value="1" @checked(old('has_commercial_exception'))>
-                    Aplicar condição comercial especial
+                    <span>Aplicar condição comercial especial</span>
                 </label>
                 <div id="exception-fields" style="{{ old('has_commercial_exception') ? '' : 'display:none;' }}; margin-top:1rem;" class="grid grid-2">
                     <div class="form-group">
                         <label for="negotiated_amount">Mensalidade negociada *</label>
-                        <input class="form-control" type="number" step="0.01" min="0" name="negotiated_amount" id="negotiated_amount" value="{{ old('negotiated_amount') }}">
+                        <input class="form-control" type="number" step="0.01" min="0" name="negotiated_amount" id="negotiated_amount" value="{{ old('negotiated_amount') }}" inputmode="decimal">
                         @error('negotiated_amount')<div class="header-meta" style="color:#f87171;">{{ $message }}</div>@enderror
                     </div>
                     <div class="form-group">
-                        <label style="display:flex; gap:.5rem; align-items:center; margin-bottom:.35rem;">
+                        <label class="touch-check" for="first_due_at_override" style="margin-bottom:.45rem;">
                             <input type="checkbox" name="first_due_at_override" id="first_due_at_override" value="1" @checked(old('first_due_at_override'))>
-                            Personalizar primeiro vencimento
+                            <span>Personalizar primeiro vencimento</span>
                         </label>
-                        <input class="form-control" type="date" name="first_due_at" id="first_due_at" value="{{ old('first_due_at') }}">
+                        <input class="form-control" type="date" name="first_due_at" id="first_due_at" value="{{ old('first_due_at') }}" @disabled(! old('first_due_at_override'))>
                         @error('first_due_at')<div class="header-meta" style="color:#f87171;">{{ $message }}</div>@enderror
                     </div>
                     <div class="form-group" style="grid-column:1 / -1;">
@@ -201,18 +201,35 @@
     </form>
 
     <style>
-        .company-create-form .form-group { margin-bottom: .85rem; }
-        .summary-dl { margin:0; display:grid; gap:.55rem; }
-        .summary-dl > div { display:grid; grid-template-columns: 12rem 1fr; gap:.75rem; }
-        .summary-dl dt { margin:0; opacity:.75; }
-        .summary-dl dd { margin:0; font-weight:600; }
-        .company-create-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
-        .company-create-cta { min-height:44px; padding:.7rem 1.1rem; }
-        @media (max-width: 720px) {
-            .grid.grid-2 { grid-template-columns: 1fr !important; }
-            .summary-dl > div { grid-template-columns: 1fr; gap:.1rem; }
+        .company-create-form { max-width: 960px; }
+        .company-create-form .form-group { margin-bottom: .9rem; }
+        .company-create-form .form-control { min-height: 2.75rem; width: 100%; max-width: 100%; }
+        .company-create-form textarea.form-control { min-height: 5.5rem; }
+        .company-create-form label { display:block; margin-bottom:.35rem; font-weight:600; }
+        .touch-check {
+            display:flex !important;
+            align-items:center;
+            gap:.65rem;
+            min-height:44px;
+            margin:0;
+            font-weight:550;
+            cursor:pointer;
+        }
+        .touch-check input { width:1.15rem; height:1.15rem; flex-shrink:0; }
+        .summary-dl { margin:0; display:grid; gap:.7rem; }
+        .summary-dl > div { display:grid; grid-template-columns: 12rem minmax(0, 1fr); gap:.75rem; align-items:baseline; }
+        .summary-dl dt { margin:0; opacity:.75; font-weight:500; }
+        .summary-dl dd { margin:0; font-weight:650; word-break:break-word; }
+        .company-create-actions { display:flex; gap:.75rem; flex-wrap:wrap; align-items:stretch; }
+        .company-create-actions .btn { min-height:44px; }
+        .company-create-cta { min-height:44px; padding:.75rem 1.15rem; font-weight:700; }
+        #company_uf { max-width: 6rem; text-transform:uppercase; }
+        @media (max-width: 900px) {
+            .company-create-form .grid.grid-2 { grid-template-columns: 1fr !important; }
+            .summary-dl > div { grid-template-columns: 1fr; gap:.15rem; }
             .company-create-actions { flex-direction: column; }
             .company-create-cta, .company-create-actions .btn { width:100%; }
+            #company_uf { max-width: 100%; }
         }
     </style>
 
@@ -254,28 +271,32 @@
                     ? new Date(document.getElementById('first_due_at').value+'T00:00:00')
                     : firstDue(start, day);
                 var mode = document.getElementById('fidelity_mode').value;
-                var months = mode === 'none' ? null : (mode === 'custom' ? Number(document.getElementById('fidelity_custom_months').value||0) : Number(mode));
+                var customMonthsRaw = document.getElementById('fidelity_custom_months').value;
+                var months = mode === 'none' ? null : (mode === 'custom' ? (customMonthsRaw ? Number(customMonthsRaw) : null) : Number(mode));
                 var end = (start && months) ? addMonths(new Date(start+'T00:00:00'), months) : null;
                 document.getElementById('sum-company').textContent = document.getElementById('company_name').value || '—';
                 document.getElementById('sum-plan').textContent = plan?.name || '—';
                 document.getElementById('sum-amount').textContent = money(amount);
                 document.getElementById('sum-billing-day').textContent = 'Dia ' + day;
                 document.getElementById('sum-start').textContent = start ? fmtDate(new Date(start+'T00:00:00')) : '—';
-                document.getElementById('sum-fidelity').textContent = months ? (months + ' meses') : 'Sem fidelidade';
+                document.getElementById('sum-fidelity').textContent = mode === 'none' ? 'Sem fidelidade' : (months ? (months + ' meses') : '—');
                 document.getElementById('sum-fidelity-end').textContent = end ? fmtDate(end) : '—';
                 document.getElementById('sum-first-due').textContent = due ? fmtDate(due) : '—';
                 document.getElementById('exception-badge').style.display = special ? 'block' : 'none';
                 var sellers = opt?.dataset?.sellers;
-                document.getElementById('plan-hint').textContent = plan
-                    ? ('Mensalidade padrão: ' + money(plan.price) + (sellers ? ' · até ' + sellers + ' vendedores' : (sellers === '0' || sellers === '' ? '' : '')))
-                    : '';
-                if (plan && (plan.max_sellers === null || plan.max_sellers === undefined)) {
-                    // keep hint from option dataset
+                var hint = '';
+                if (plan) {
+                    hint = 'Mensalidade padrão: ' + money(plan.price);
+                    if (sellers) hint += ' · até ' + sellers + ' vendedores';
                 }
+                document.getElementById('plan-hint').textContent = hint;
             }
             function toggle(){
                 document.getElementById('fidelity-custom-wrap').style.display = document.getElementById('fidelity_mode').value === 'custom' ? '' : 'none';
                 document.getElementById('exception-fields').style.display = document.getElementById('has_commercial_exception').checked ? '' : 'none';
+                var dueOverride = document.getElementById('first_due_at_override');
+                var dueInput = document.getElementById('first_due_at');
+                dueInput.disabled = !dueOverride.checked;
                 refresh();
             }
             ['company_name','plan_id','contract_started_at','billing_day','fidelity_mode','fidelity_custom_months','has_commercial_exception','negotiated_amount','first_due_at','first_due_at_override']
