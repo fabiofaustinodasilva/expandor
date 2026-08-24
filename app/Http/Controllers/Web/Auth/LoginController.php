@@ -83,12 +83,6 @@ class LoginController extends Controller
             ? route('map.index')
             : route('dashboard');
 
-        if ($user->company && ! $user->company->isSystem() && $user->hasPermission('onboarding.manage')) {
-            if ($user->company->needsSaasOnboarding()) {
-                $home = route('onboarding.index');
-            }
-        }
-
         return redirect()->intended($home);
     }
 

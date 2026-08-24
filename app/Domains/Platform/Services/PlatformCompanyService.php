@@ -245,6 +245,10 @@ class PlatformCompanyService
                 'address' => $address !== '' ? $address : null,
                 'status' => Company::STATUS_ACTIVE,
                 'is_system' => false,
+                // Setup SaaS não é mais obrigatório: empresa nasce pronta para uso.
+                'onboarding_status' => Company::ONBOARDING_COMPLETED,
+                'onboarding_step' => \App\Domains\Onboarding\Services\SaasOnboardingService::STEP_DONE,
+                'onboarding_completed_at' => now(),
             ]);
 
             $subscription = Subscription::query()->withoutGlobalScopes()->create([

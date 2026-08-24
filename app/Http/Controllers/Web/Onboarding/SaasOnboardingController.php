@@ -46,15 +46,8 @@ class SaasOnboardingController extends Controller
         $company = $this->resolveCompany($request);
         $this->authorize('onboarding.manage', $company);
 
-        if ($company->hasCompletedSaasOnboarding()) {
-            return redirect()->route('dashboard')
-                ->with('success', 'Configuração já concluída.');
-        }
-
-        $this->start->execute($company, $request->user());
-        $company->refresh();
-
-        return view('onboarding.index', $this->viewData($company));
+        // Setup SaaS não é mais obrigatório: rotas antigas não prendem o usuário.
+        return $this->redirectAwayFromMandatorySetup($request);
     }
 
     public function company(Request $request): View|RedirectResponse
@@ -221,13 +214,7 @@ class SaasOnboardingController extends Controller
         $company = $this->resolveCompany($request);
         $this->authorize('onboarding.manage', $company);
 
-        if ($company->hasCompletedSaasOnboarding()) {
-            return redirect()->route('dashboard');
-        }
-
-        $this->start->execute($company, $request->user());
-
-        return view($view, array_merge($this->viewData($company->fresh()), $extra));
+        return $this->redirectAwayFromMandatorySetup($request);
     }
 
     /**
@@ -239,6 +226,17 @@ class SaasOnboardingController extends Controller
             'company' => $company,
             'progress' => $this->saasOnboarding->progress($company),
         ];
+    }
+
+    protected function redirectAwayFromMandatorySetup(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $home = ($user && $user->hasPermission('maps.view'))
+            ? route('map.index')
+            : route('dashboard');
+
+        return redirect()->to($home)
+            ->with('success', 'Sua conta já está pronta para uso.');
     }
 
     protected function resolveCompany(Request $request): \App\Domains\Company\Models\Company

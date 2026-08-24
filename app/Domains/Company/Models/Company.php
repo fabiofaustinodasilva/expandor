@@ -63,13 +63,14 @@ class Company extends Model
         return $this->onboarding_status === self::ONBOARDING_COMPLETED;
     }
 
+    /**
+     * Setup SaaS deixou de ser obrigatório: empresas nascem prontas para uso.
+     * Campos onboarding_* permanecem no banco para compatibilidade/métricas;
+     * este método controla redirects, banners e qualquer bloqueio de primeiro acesso.
+     */
     public function needsSaasOnboarding(): bool
     {
-        if ($this->isSystem()) {
-            return false;
-        }
-
-        return ! $this->hasCompletedSaasOnboarding();
+        return false;
     }
     protected static function newFactory(): CompanyFactory
     {
