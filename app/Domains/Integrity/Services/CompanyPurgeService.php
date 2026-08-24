@@ -134,6 +134,8 @@ class CompanyPurgeService
                 $counts['commission_rules'] = $this->deleteByCompany(CommissionRule::class, $id);
                 $counts['follow_ups'] = $this->deleteByCompany(FollowUp::class, $id);
                 $counts['visits'] = $this->deleteByCompany(Visit::class, $id);
+                $counts['campaign_users'] = $this->detachCampaignPivots($id);
+                $counts['campaign_sectors'] = $this->detachCampaignSectors($id);
                 $counts['campaigns'] = $this->deleteByCompany(Campaign::class, $id);
 
                 $counts['sale_items'] = $this->deleteSaleItems($id);
@@ -169,6 +171,7 @@ class CompanyPurgeService
                 $counts['usage_records'] = $this->deleteByCompany(UsageRecord::class, $id);
                 $counts['brands'] = $this->deleteByCompany(Brand::class, $id);
                 $counts['company_settings'] = $this->deleteByCompany(CompanySetting::class, $id);
+                $counts['company_integrations'] = $this->deleteCompanyIntegrations($id);
 
                 // 3) Invoices
                 $counts['invoices'] = $this->deleteByCompany(Invoice::class, $id);
@@ -205,6 +208,7 @@ class CompanyPurgeService
                 $counts['teams'] = $this->deleteByCompany(Team::class, $id);
 
                 // 8) Usuários (force delete — libera UNIQUE email)
+                $counts['personal_access_tokens'] = $this->deletePersonalAccessTokens($id);
                 $counts['users'] = $this->forceDeleteUsers($id);
 
                 // Auditoria (nullable FK)
@@ -372,6 +376,60 @@ class CompanyPurgeService
         }
 
         return DB::table('team_user')->whereIn('team_id', $teamIds)->delete();
+    }
+
+    protected function detachCampaignPivots(int $companyId): int
+    {
+        if (! Schema::hasTable('campaign_users') || ! Schema::hasTable('campaigns')) {
+            return 0;
+        }
+
+        $campaignIds = Campaign::query()->withoutGlobalScopes()->where('company_id', $companyId)->pluck('id');
+        if ($campaignIds->isEmpty()) {
+            return 0;
+        }
+
+        return DB::table('campaign_users')->whereIn('campaign_id', $campaignIds)->delete();
+    }
+
+    protected function detachCampaignSectors(int $companyId): int
+    {
+        if (! Schema::hasTable('campaign_sectors') || ! Schema::hasTable('campaigns')) {
+            return 0;
+        }
+
+        $campaignIds = Campaign::query()->withoutGlobalScopes()->where('company_id', $companyId)->pluck('id');
+        if ($campaignIds->isEmpty()) {
+            return 0;
+        }
+
+        return DB::table('campaign_sectors')->whereIn('campaign_id', $campaignIds)->delete();
+    }
+
+    protected function deleteCompanyIntegrations(int $companyId): int
+    {
+        if (! Schema::hasTable('company_integrations')) {
+            return 0;
+        }
+
+        return DB::table('company_integrations')->where('company_id', $companyId)->delete();
+    }
+
+    protected function deletePersonalAccessTokens(int $companyId): int
+    {
+        if (! Schema::hasTable('personal_access_tokens') || ! Schema::hasTable('users')) {
+            return 0;
+        }
+
+        $userIds = User::query()->withoutGlobalScopes()->withTrashed()->where('company_id', $companyId)->pluck('id');
+        if ($userIds->isEmpty()) {
+            return 0;
+        }
+
+        return DB::table('personal_access_tokens')
+            ->where('tokenable_type', User::class)
+            ->whereIn('tokenable_id', $userIds)
+            ->delete();
     }
 
     protected function forceDeleteUsers(int $companyId): int
