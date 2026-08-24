@@ -36,30 +36,6 @@
     </x-client.quick-actions>
 </x-client.page-header>
 
-@if(isset($onboarding) && $onboarding && ! $onboarding->isCompleted && empty($saasWorkspaceReady))
-    <x-client.section-card title="Setup">
-        <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:center;">
-            <div class="header-meta">{{ $onboarding->percent }}% concluído</div>
-            @if(auth()->user()?->hasPermission('onboarding.manage'))
-                <x-client.primary-button :href="route('setup.show')">Continuar setup</x-client.primary-button>
-            @endif
-        </div>
-        <div style="margin-top:0.75rem; background:var(--bg-soft); border-radius:999px; overflow:hidden; height:12px;">
-            <div style="width:{{ $onboarding->percent }}%; height:100%; background:var(--accent);"></div>
-        </div>
-        @if($onboarding->alerts)
-            <ul style="margin:0.85rem 0 0; padding-left:1.1rem; color:var(--warning);">
-                @foreach($onboarding->alerts as $alert)
-                    <li>{{ $alert }}</li>
-                @endforeach
-            </ul>
-        @endif
-    </x-client.section-card>
-@endif
-
-@include('onboarding.partials.activation-card')
-@include('onboarding.partials.activation-guidance')
-
 <details class="client-filters-collapsible">
     <summary>Filtros</summary>
     <div class="client-filters-collapsible__body">

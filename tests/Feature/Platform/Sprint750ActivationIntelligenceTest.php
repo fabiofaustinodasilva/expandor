@@ -156,7 +156,7 @@ class Sprint750ActivationIntelligenceTest extends TestCase
         $this->assertContains('internal', $channels);
     }
 
-    public function test_client_dashboard_shows_activation_guidance(): void
+    public function test_client_dashboard_does_not_show_activation_guidance(): void
     {
         $company = $this->makeCompanyWithPlan('Guidance Co');
         $company->forceFill([
@@ -169,8 +169,8 @@ class Sprint750ActivationIntelligenceTest extends TestCase
         $this->actingAs($admin)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('data-activation-guidance="1"', false)
-            ->assertSee('Progresso de ativação', false)
-            ->assertSee('data-activation-next-steps="1"', false);
+            ->assertDontSee('data-activation-guidance="1"', false)
+            ->assertDontSee('Progresso de ativação', false)
+            ->assertDontSee('Continuar setup', false);
     }
 }

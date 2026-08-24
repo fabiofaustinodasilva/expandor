@@ -53,7 +53,10 @@ class Sprint740ActivationTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertDontSee('data-saas-onboarding-banner="1"', false)
-            ->assertDontSee('data-saas-activation-card="1"', false);
+            ->assertDontSee('Continuar setup', false)
+            ->assertDontSee('data-saas-activation-card="1"', false)
+            ->assertDontSee('Progresso de ativação', false)
+            ->assertDontSee('data-activation-guidance="1"', false);
     }
 
     public function test_complete_still_works_and_skip_advances(): void
