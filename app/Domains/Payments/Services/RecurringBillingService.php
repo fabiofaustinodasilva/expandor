@@ -5,6 +5,8 @@ namespace App\Domains\Payments\Services;
 use App\Domains\Company\Models\Subscription;
 use App\Domains\Payments\Enums\InvoiceStatus;
 use App\Domains\Payments\Models\Invoice;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -15,22 +17,54 @@ class RecurringBillingService
         protected BillingDelinquencyPolicy $delinquency,
     ) {}
 
+    public function invoiceGenerationDays(): int
+    {
+        return max(0, (int) config('payments.invoice_generation_days', 10));
+    }
+
     /**
-     * Gera faturas abertas para assinaturas ativas vencidas (idempotente por período).
+     * A fatura pode ser gerada quando hoje >= vencimento - N dias.
+     */
+    public function isWithinGenerationWindow(CarbonInterface $dueAt, ?CarbonInterface $now = null): bool
+    {
+        $now = Carbon::parse($now ?? now())->startOfDay();
+        $due = Carbon::parse($dueAt)->startOfDay();
+        $windowEnd = $now->copy()->addDays($this->invoiceGenerationDays())->endOfDay();
+
+        return $due->lte($windowEnd);
+    }
+
+    public function invoiceAvailableFrom(CarbonInterface $dueAt): CarbonInterface
+    {
+        return Carbon::parse($dueAt)->startOfDay()->subDays($this->invoiceGenerationDays());
+    }
+
+    /**
+     * Gera faturas abertas para assinaturas elegíveis dentro da janela de antecedência (idempotente por período).
      */
     public function generateDueInvoices(): int
     {
         $count = 0;
+        $windowEnd = now()->addDays($this->invoiceGenerationDays())->endOfDay();
 
         Subscription::query()
             ->withoutGlobalScopes()
             ->where('status', Subscription::STATUS_ACTIVE)
+            ->whereNull('cancelled_at')
             ->whereNotNull('next_billing_at')
-            ->where('next_billing_at', '<=', now())
+            ->where('next_billing_at', '<=', $windowEnd)
             ->with('plan')
             ->chunkById(50, function ($subscriptions) use (&$count): void {
                 foreach ($subscriptions as $subscription) {
-                    if ($this->ensureOpenInvoice($subscription) !== null) {
+                    $periodKey = ($subscription->next_billing_at ?? now())->format('Y-m');
+                    $existed = Invoice::query()
+                        ->withoutGlobalScopes()
+                        ->where('subscription_id', $subscription->id)
+                        ->where('billing_period_key', $periodKey)
+                        ->exists();
+
+                    $invoice = $this->ensureOpenInvoice($subscription);
+                    if ($invoice !== null && ! $existed) {
                         $count++;
                     }
                 }
@@ -61,7 +95,7 @@ class RecurringBillingService
                 ->lockForUpdate()
                 ->first();
 
-            if ($locked === null) {
+            if ($locked === null || ! $locked->isEligibleForRecurringBilling()) {
                 return null;
             }
 
@@ -75,7 +109,7 @@ class RecurringBillingService
                 return $again;
             }
 
-            $amount = round((float) ($locked->monthlyAmount()), 2);
+            $amount = round((float) $locked->monthlyAmount(), 2);
             if ($amount <= 0) {
                 return null;
             }
@@ -97,10 +131,9 @@ class RecurringBillingService
                 'metadata' => [
                     'source' => 'recurring_billing',
                     'period_key' => $periodKey,
+                    'contracted_amount' => $amount,
                 ],
             ]);
-
-            // next_billing_at avança só após quitação (evita faturas duplicadas no mesmo ciclo).
 
             return $invoice;
         });
@@ -117,13 +150,8 @@ class RecurringBillingService
             ->where('due_at', '<', now()->startOfDay())
             ->chunkById(100, function ($invoices) use (&$count): void {
                 foreach ($invoices as $invoice) {
-                    if ($this->delinquency->shouldSuspend($invoice) || ! $this->delinquency->isWithinGrace($invoice)) {
-                        // Within grace after due: still Open until suspend job; mark overdue when past due day.
-                        if ($invoice->due_at !== null && now()->startOfDay()->gt($invoice->due_at->copy()->startOfDay())) {
-                            $invoice->forceFill(['status' => InvoiceStatus::Overdue])->save();
-                            $count++;
-                        }
-                    }
+                    $invoice->forceFill(['status' => InvoiceStatus::Overdue])->save();
+                    $count++;
                 }
             });
 

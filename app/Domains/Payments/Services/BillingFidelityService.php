@@ -35,7 +35,18 @@ class BillingFidelityService
     }
 
     /**
-     * @return array{has_term:bool, months:int|null, started_at:?CarbonInterface, ends_at:?CarbonInterface, completed_months:int, remaining_months:int, inside_term:bool, progress_label:string}
+     * @return array{
+     *     has_term:bool,
+     *     months:int|null,
+     *     started_at:?CarbonInterface,
+     *     ends_at:?CarbonInterface,
+     *     completed_months:int,
+     *     remaining_months:int,
+     *     inside_term:bool,
+     *     term_completed:bool,
+     *     progress_label:string,
+     *     continuity_note:string|null
+     * }
      */
     public function progress(Subscription $subscription, ?CarbonInterface $now = null): array
     {
@@ -53,20 +64,27 @@ class BillingFidelityService
                 'completed_months' => 0,
                 'remaining_months' => 0,
                 'inside_term' => false,
-                'progress_label' => 'Sem fidelidade registrada (legado ou isento)',
+                'term_completed' => false,
+                'progress_label' => 'Sem fidelidade mínima',
+                'continuity_note' => 'A assinatura continua mensalmente até o cancelamento.',
             ];
         }
 
-        $completed = min(
-            (int) $months,
-            max(0, (int) $started->diffInMonths($now, false))
-        );
-        if ($now->gte($ends)) {
-            $completed = (int) $months;
-        }
+        $termCompleted = $now->gte($ends);
+        $inside = ! $termCompleted;
 
-        $remaining = max(0, (int) $months - $completed);
-        $inside = $now->lt($ends);
+        if ($termCompleted) {
+            $completed = (int) $months;
+            $remaining = 0;
+            $progressLabel = 'Fidelidade concluída';
+            $continuityNote = 'Sua permanência mínima foi concluída. A assinatura continua mensalmente até o cancelamento.';
+        } else {
+            $elapsed = max(0, (int) $started->copy()->startOfDay()->diffInMonths($now->copy()->startOfDay()));
+            $completed = min((int) $months, $elapsed + 1);
+            $remaining = max(0, (int) $months - $completed);
+            $progressLabel = $completed.' de '.$months.' meses';
+            $continuityNote = 'Após o término da fidelidade mínima, sua assinatura continua ativa mensalmente até o cancelamento.';
+        }
 
         return [
             'has_term' => true,
@@ -76,7 +94,14 @@ class BillingFidelityService
             'completed_months' => $completed,
             'remaining_months' => $remaining,
             'inside_term' => $inside,
-            'progress_label' => $completed.' de '.$months.' meses',
+            'term_completed' => $termCompleted,
+            'progress_label' => $progressLabel,
+            'continuity_note' => $continuityNote,
         ];
+    }
+
+    public function remainingMinimumTermMonths(Subscription $subscription, ?CarbonInterface $now = null): int
+    {
+        return $this->progress($subscription, $now)['remaining_months'];
     }
 }

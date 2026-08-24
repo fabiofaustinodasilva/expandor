@@ -18,23 +18,26 @@
             <div class="card">
                 <h2 style="margin-top:0;">Minha assinatura</h2>
                 @if($subscription && $plan)
+                    @if($fidelity && ($fidelity['term_completed'] ?? false))
+                        <div class="finance-badge finance-badge--success">Fidelidade concluída</div>
+                    @endif
                     <dl class="finance-dl">
                         <div><dt>Plano</dt><dd>{{ $plan->name }}</dd></div>
-                        <div><dt>Valor mensal</dt><dd>R$ {{ number_format((float) ($subscription->monthlyAmount()), 2, ',', '.') }}</dd></div>
+                        <div><dt>Valor mensal</dt><dd>R$ {{ number_format((float) $subscription->monthlyAmount(), 2, ',', '.') }}</dd></div>
                         <div><dt>Status</dt><dd>{{ \App\Domains\Payments\Support\BillingUiLabels::subscriptionStatus($subscription->status) }}</dd></div>
                         <div><dt>Próximo vencimento</dt><dd>{{ optional($currentInvoice?->due_at ?? $subscription->next_billing_at)->format('d/m/Y') ?: '—' }}</dd></div>
                         <div><dt>Início do contrato</dt><dd>{{ optional($subscription->contract_started_at)->format('d/m/Y') ?: '—' }}</dd></div>
-                        @if($fidelity && $fidelity['has_term'])
+                        @if($fidelity && ($fidelity['has_term'] ?? false))
                             <div><dt>Fidelidade mínima</dt><dd>{{ $fidelity['months'] }} meses</dd></div>
                             <div><dt>Fim da fidelidade</dt><dd>{{ optional($fidelity['ends_at'])->format('d/m/Y') }}</dd></div>
                             <div><dt>Progresso</dt><dd>{{ $fidelity['progress_label'] }}</dd></div>
                         @else
-                            <div><dt>Fidelidade</dt><dd>{{ $fidelity['progress_label'] ?? '—' }}</dd></div>
-                        @endif
-                        @if($subscription->has_commercial_exception)
-                            <div><dt>Condição</dt><dd>Condição comercial especial</dd></div>
+                            <div><dt>Fidelidade</dt><dd>{{ $fidelity['progress_label'] ?? 'Sem fidelidade mínima' }}</dd></div>
                         @endif
                     </dl>
+                    @if(!empty($fidelity['continuity_note']))
+                        <p class="finance-note">{{ $fidelity['continuity_note'] }}</p>
+                    @endif
                 @else
                     <p>Nenhuma assinatura encontrada.</p>
                 @endif
@@ -60,11 +63,48 @@
                             </form>
                         </div>
                     @endif
+                @elseif($nextChargePreview)
+                    <dl class="finance-dl">
+                        <div><dt>Próxima cobrança</dt><dd>{{ $nextChargePreview['due_at']->format('d/m/Y') }}</dd></div>
+                        <div><dt>Valor</dt><dd>R$ {{ number_format((float) $nextChargePreview['amount'], 2, ',', '.') }}</dd></div>
+                    </dl>
+                    @if(!($nextChargePreview['within_window'] ?? false))
+                        <p class="finance-note">
+                            Disponível para pagamento a partir de {{ $nextChargePreview['available_from']->format('d/m/Y') }}.
+                        </p>
+                    @endif
                 @else
                     <p>Nenhuma fatura em aberto.</p>
                 @endif
             </div>
         </div>
+
+        @if(isset($upcomingCharges) && $upcomingCharges->isNotEmpty())
+            <div class="card" style="margin-bottom:1rem;">
+                <h2 style="margin-top:0;">Próximas mensalidades</h2>
+                <div class="finance-table-wrap">
+                    <table class="table finance-table">
+                        <thead>
+                        <tr>
+                            <th>Vencimento</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach($upcomingCharges as $charge)
+                            <tr>
+                                <td>{{ $charge['due_at']->format('d/m/Y') }}</td>
+                                <td>R$ {{ number_format((float) $charge['amount'], 2, ',', '.') }}</td>
+                                <td>{{ $charge['status_label'] }}</td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <p class="finance-note">Mensalidades programadas são projeções. PIX e boleto ficam disponíveis quando a fatura real for gerada.</p>
+            </div>
+        @endif
 
         <div class="card">
             <h2 style="margin-top:0;">Histórico de faturas</h2>
@@ -107,6 +147,9 @@
         .finance-dl > div { display:grid; grid-template-columns: 11rem 1fr; gap:.75rem; align-items:baseline; }
         .finance-dl dt { margin:0; color: var(--muted, #6b7280); font-size:.9rem; }
         .finance-dl dd { margin:0; font-weight:600; }
+        .finance-note { margin:.85rem 0 0; color: var(--muted, #9aa3b5); font-size:.9rem; line-height:1.45; }
+        .finance-badge { display:inline-block; margin-bottom:.75rem; padding:.25rem .6rem; border-radius:999px; font-size:.78rem; font-weight:700; }
+        .finance-badge--success { background: rgba(34,197,94,.15); color:#16a34a; }
         .finance-actions { display:flex; flex-wrap:wrap; gap:.75rem; margin-top:1rem; }
         .finance-cta { min-height:44px; min-width:140px; padding:.7rem 1rem; }
         .finance-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }

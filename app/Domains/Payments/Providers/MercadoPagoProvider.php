@@ -79,18 +79,22 @@ class MercadoPagoProvider implements PaymentProviderContract
             'description' => (string) ($data['description'] ?? 'Expandor'),
             'payment_method_id' => 'pix',
             'payer' => array_filter([
-                'email' => $data['buyer_email'] ?? null,
+                'email' => $this->assertValidPayerEmail($data['buyer_email'] ?? null),
                 'first_name' => $data['buyer_name'] ?? null,
             ]),
             'external_reference' => $uuid,
             'notification_url' => url('/webhooks/mercadopago'),
         ];
 
-        $response = $this->client()
-            ->withHeaders(['X-Idempotency-Key' => $uuid])
-            ->post('/v1/payments', $payload)
-            ->throw()
-            ->json();
+        try {
+            $response = $this->client()
+                ->withHeaders(['X-Idempotency-Key' => $uuid])
+                ->post('/v1/payments', $payload)
+                ->throw()
+                ->json();
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $this->rethrowAsClientException($e, 'PIX');
+        }
 
         $paymentId = (string) ($response['id'] ?? '');
         $qrCode = (string) data_get($response, 'point_of_interaction.transaction_data.qr_code', '');
@@ -139,18 +143,22 @@ class MercadoPagoProvider implements PaymentProviderContract
             'description' => (string) ($data['description'] ?? 'Expandor'),
             'payment_method_id' => 'bolbradesco',
             'payer' => array_filter([
-                'email' => $data['buyer_email'] ?? null,
+                'email' => $this->assertValidPayerEmail($data['buyer_email'] ?? null),
                 'first_name' => $data['buyer_name'] ?? null,
             ]),
             'external_reference' => $uuid,
             'notification_url' => url('/webhooks/mercadopago'),
         ];
 
-        $response = $this->client()
-            ->withHeaders(['X-Idempotency-Key' => 'boleto-'.$uuid])
-            ->post('/v1/payments', $payload)
-            ->throw()
-            ->json();
+        try {
+            $response = $this->client()
+                ->withHeaders(['X-Idempotency-Key' => 'boleto-'.$uuid])
+                ->post('/v1/payments', $payload)
+                ->throw()
+                ->json();
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            $this->rethrowAsClientException($e, 'boleto');
+        }
 
         $paymentId = (string) ($response['id'] ?? '');
         $ticketUrl = (string) data_get($response, 'transaction_details.external_resource_url', '');
@@ -607,5 +615,40 @@ class MercadoPagoProvider implements PaymentProviderContract
         if (empty($this->config['access_token'])) {
             throw new RuntimeException('Mercado Pago access token não configurado.');
         }
+    }
+
+    protected function assertValidPayerEmail(mixed $email): string
+    {
+        $normalized = strtolower(trim((string) $email));
+
+        if (! filter_var($normalized, FILTER_VALIDATE_EMAIL)) {
+            throw new \App\Domains\Payments\Exceptions\PaymentGatewayClientException(
+                'Não foi possível gerar a cobrança. Verifique o e-mail de cobrança da empresa ou entre em contato com o suporte.',
+                'Invalid payer.email: '.json_encode($email),
+            );
+        }
+
+        return $normalized;
+    }
+
+    protected function rethrowAsClientException(\Illuminate\Http\Client\RequestException $exception, string $methodLabel): never
+    {
+        $response = $exception->response;
+        $body = $response?->json() ?? [];
+        $message = (string) (data_get($body, 'message') ?? $exception->getMessage());
+        $causes = data_get($body, 'cause', []);
+
+        Log::warning('mercadopago.client_error', [
+            'method' => $methodLabel,
+            'status' => $response?->status(),
+            'message' => $message,
+            'cause' => $causes,
+        ]);
+
+        throw new \App\Domains\Payments\Exceptions\PaymentGatewayClientException(
+            'Não foi possível gerar o '.$methodLabel.'. Verifique os dados de cobrança da empresa ou entre em contato com o suporte.',
+            $message,
+            is_array($causes) ? $causes : null,
+        );
     }
 }

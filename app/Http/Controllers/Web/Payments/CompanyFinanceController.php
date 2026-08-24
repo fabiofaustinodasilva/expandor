@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Web\Payments;
 use App\Domains\Company\Models\Company;
 use App\Domains\Payments\Enums\PaymentMethodType;
 use App\Domains\Payments\Models\Invoice;
+use App\Domains\Payments\Exceptions\PaymentGatewayClientException;
 use App\Domains\Payments\Services\BillingDelinquencyPolicy;
 use App\Domains\Payments\Services\BillingFidelityService;
 use App\Domains\Payments\Services\InvoicePaymentService;
+use App\Domains\Payments\Services\RecurringBillingService;
 use App\Domains\Payments\Services\SubscriptionService;
+use App\Domains\Payments\Services\UpcomingBillingScheduleService;
 use App\Http\Controllers\Controller;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\RedirectResponse;
@@ -24,6 +27,8 @@ class CompanyFinanceController extends Controller
         protected BillingFidelityService $fidelity,
         protected BillingDelinquencyPolicy $delinquency,
         protected InvoicePaymentService $invoicePayments,
+        protected UpcomingBillingScheduleService $upcomingBilling,
+        protected RecurringBillingService $recurringBilling,
     ) {}
 
     public function index(Request $request): View
@@ -62,8 +67,10 @@ class CompanyFinanceController extends Controller
 
         try {
             $charge = $this->invoicePayments->payWithPix($invoice);
+        } catch (PaymentGatewayClientException $e) {
+            return back()->with('error', $e->userMessage());
         } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', 'Não foi possível gerar o PIX. Verifique os dados de cobrança da empresa ou entre em contato com o suporte.');
         }
 
         return view('payments.finance.pix', array_merge($this->payload($company), [
@@ -80,8 +87,10 @@ class CompanyFinanceController extends Controller
 
         try {
             $charge = $this->invoicePayments->payWithBoleto($invoice);
+        } catch (PaymentGatewayClientException $e) {
+            return back()->with('error', $e->userMessage());
         } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', 'Não foi possível gerar o boleto. Verifique os dados de cobrança da empresa ou entre em contato com o suporte.');
         }
 
         return view('payments.finance.boleto', array_merge($this->payload($company), [
@@ -126,6 +135,14 @@ class CompanyFinanceController extends Controller
         $currentInvoice = $overview->invoices
             ->first(fn (Invoice $invoice) => $invoice->status->isPayable());
 
+        $upcomingCharges = $subscription
+            ? $this->upcomingBilling->upcomingCharges($subscription)
+            : collect();
+
+        $nextChargePreview = ($subscription && $currentInvoice === null)
+            ? $this->upcomingBilling->nextChargePreview($subscription)
+            : null;
+
         return [
             'company' => $company,
             'overview' => $overview,
@@ -133,6 +150,9 @@ class CompanyFinanceController extends Controller
             'plan' => $subscription?->plan,
             'fidelity' => $subscription ? $this->fidelity->progress($subscription) : null,
             'currentInvoice' => $currentInvoice,
+            'upcomingCharges' => $upcomingCharges,
+            'nextChargePreview' => $nextChargePreview,
+            'invoiceGenerationDays' => $this->recurringBilling->invoiceGenerationDays(),
             'daysPastDue' => $currentInvoice?->due_at
                 ? $this->delinquency->daysPastDue($currentInvoice->due_at)
                 : 0,

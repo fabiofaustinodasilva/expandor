@@ -71,6 +71,18 @@ class Subscription extends Model
         return $this->minimum_term_ends_at !== null && now()->lt($this->minimum_term_ends_at);
     }
 
+    public function minimumTermCompleted(): bool
+    {
+        return $this->minimum_term_ends_at !== null && now()->gte($this->minimum_term_ends_at);
+    }
+
+    public function isEligibleForRecurringBilling(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE
+            && $this->cancelled_at === null
+            && $this->next_billing_at !== null;
+    }
+
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);

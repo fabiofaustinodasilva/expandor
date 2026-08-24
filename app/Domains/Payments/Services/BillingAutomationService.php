@@ -8,6 +8,7 @@ use App\Domains\Company\Models\Subscription;
 use App\Domains\Payments\Enums\CheckoutStatus;
 use App\Domains\Payments\Enums\PaymentStatus;
 use App\Domains\Payments\Models\CheckoutSession;
+use App\Domains\Payments\Models\Invoice;
 use App\Domains\Payments\Models\Payment;
 use App\Domains\Payments\Repositories\PaymentRepository;
 use Illuminate\Support\Collection;
@@ -23,46 +24,14 @@ class BillingAutomationService
 
     public function renewDueSubscriptions(): int
     {
-        $count = 0;
-
-        Subscription::query()
-            ->withoutGlobalScopes()
-            ->where('status', Subscription::STATUS_ACTIVE)
-            ->whereNotNull('next_billing_at')
-            ->where('next_billing_at', '<=', now())
-            ->with('plan')
-            ->chunkById(50, function ($subscriptions) use (&$count): void {
-                foreach ($subscriptions as $subscription) {
-                    $this->renewSubscription($subscription);
-                    $count++;
-                }
-            });
-
-        return $count;
+        // A recorrência SaaS é controlada internamente via GenerateSubscriptionInvoicesJob
+        // (Invoice open com antecedência). Não criar Payment/gateway automaticamente aqui.
+        return app(RecurringBillingService::class)->generateDueInvoices();
     }
 
-    public function renewSubscription(Subscription $subscription): Payment
+    public function renewSubscription(Subscription $subscription): ?Invoice
     {
-        return DB::transaction(function () use ($subscription) {
-            $invoice = app(RecurringBillingService::class)->ensureOpenInvoice($subscription);
-
-            $amount = (float) ($invoice?->amount_due ?? $subscription->plan?->price ?? 0);
-
-            $payment = $this->payments->create([
-                'company_id' => $subscription->company_id,
-                'subscription_id' => $subscription->id,
-                'invoice_id' => $invoice?->id,
-                'amount' => $amount,
-                'currency' => config('payments.currency', 'BRL'),
-                'status' => PaymentStatus::Pending,
-                'method' => 'renewal',
-                'gateway' => $subscription->gateway ?? config('payments.default'),
-                'gateway_payment_id' => 'pending_renewal_'.$subscription->id.'_'.now()->timestamp,
-                'raw' => ['source' => 'renewal_open_invoice'],
-            ]);
-
-            return $payment->fresh();
-        });
+        return app(RecurringBillingService::class)->ensureOpenInvoice($subscription);
     }
 
     public function expireTrials(): int

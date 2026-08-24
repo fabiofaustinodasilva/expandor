@@ -92,6 +92,7 @@ class SprintSaasBillingFidelityDelinquencyTest extends TestCase
 
         $progress = app(BillingFidelityService::class)->progress($sub);
         $this->assertFalse($progress['has_term']);
+        $this->assertSame('Sem fidelidade mínima', $progress['progress_label']);
     }
 
     public function test_generate_invoice_is_idempotent(): void
@@ -314,7 +315,7 @@ class SprintSaasBillingFidelityDelinquencyTest extends TestCase
 
         $progress = app(BillingFidelityService::class)->progress($sub->fresh());
         $this->assertTrue($progress['inside_term']);
-        $this->assertSame('2 de 6 meses', $progress['progress_label']);
+        $this->assertSame('3 de 6 meses', $progress['progress_label']);
     }
 
     public function test_legacy_plans_still_exist(): void

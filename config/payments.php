@@ -33,6 +33,11 @@ return [
         'grace_days' => (int) env('BILLING_GRACE_DAYS', 5),
     ],
 
+    /*
+    | Dias antes do vencimento em que a próxima fatura mensal é gerada automaticamente.
+    */
+    'invoice_generation_days' => (int) env('BILLING_INVOICE_GENERATION_DAYS', 10),
+
     'providers' => [
         'asaas' => [
             'base_url' => env('ASAAS_BASE_URL', 'https://sandbox.asaas.com/api/v3'),

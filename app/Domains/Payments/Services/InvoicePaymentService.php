@@ -2,6 +2,7 @@
 
 namespace App\Domains\Payments\Services;
 
+use App\Domains\Payments\Exceptions\PaymentGatewayClientException;
 use App\Domains\Payments\Enums\PaymentMethodType;
 use App\Domains\Payments\Enums\PaymentStatus;
 use App\Domains\Payments\Models\Invoice;
@@ -10,6 +11,7 @@ use App\Domains\Payments\Models\PaymentGatewayTransaction;
 use App\Domains\Payments\Providers\DTOs\GatewayCheckoutResult;
 use App\Domains\Payments\Providers\MercadoPagoProvider;
 use App\Domains\Payments\Providers\ProviderFactory;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -84,6 +86,8 @@ class InvoicePaymentService
         $company = $invoice->company()->withoutGlobalScopes()->first()
             ?? \App\Domains\Company\Models\Company::query()->withoutGlobalScopes()->find($invoice->company_id);
 
+        $payerEmail = $this->resolvePayerEmail($company);
+
         $token = (string) config('payments.providers.mercadopago.access_token', '');
         $allowDemo = $token === '' && (app()->environment('local', 'testing') || (bool) config('payments.allow_fake'));
 
@@ -98,7 +102,7 @@ class InvoicePaymentService
             $data = [
                 'amount' => $amount,
                 'description' => 'Expandor — fatura '.$invoice->number,
-                'buyer_email' => $company?->email,
+                'buyer_email' => $payerEmail,
                 'buyer_name' => $company?->name,
                 'checkout_uuid' => $external,
                 'billing_type' => $method === PaymentMethodType::Pix ? 'PIX' : 'BOLETO',
@@ -106,9 +110,13 @@ class InvoicePaymentService
                 'cancel_url' => url('/company/financeiro/faturas/'.$invoice->id),
             ];
 
-            $result = $method === PaymentMethodType::Pix
-                ? $provider->createPixPayment($data)
-                : $provider->createBoletoPayment($data);
+            try {
+                $result = $method === PaymentMethodType::Pix
+                    ? $provider->createPixPayment($data)
+                    : $provider->createBoletoPayment($data);
+            } catch (RequestException $e) {
+                $this->throwGatewayClientError($e, $method);
+            }
         }
 
         return DB::transaction(function () use ($invoice, $method, $result, $amount, $external) {
@@ -154,6 +162,50 @@ class InvoicePaymentService
 
             return $this->present($payment, $tx, $result->checkoutUrl);
         });
+    }
+
+    protected function resolvePayerEmail(?\App\Domains\Company\Models\Company $company): string
+    {
+        $candidates = array_filter([
+            $company?->email,
+            $company?->users()
+                ->withoutGlobalScopes()
+                ->whereHas('role', fn ($q) => $q->where('slug', \App\Domains\Company\Models\Role::ADMINISTRATOR))
+                ->value('email'),
+        ]);
+
+        foreach ($candidates as $email) {
+            $normalized = strtolower(trim((string) $email));
+            if (filter_var($normalized, FILTER_VALIDATE_EMAIL)) {
+                return $normalized;
+            }
+        }
+
+        throw new PaymentGatewayClientException(
+            'Não foi possível gerar a cobrança. Verifique o e-mail de cobrança da empresa ou entre em contato com o suporte.',
+            'Invalid payer email for company '.$company?->id,
+        );
+    }
+
+    protected function throwGatewayClientError(RequestException $exception, PaymentMethodType $method): void
+    {
+        $response = $exception->response;
+        $body = $response?->json() ?? [];
+        $message = (string) (data_get($body, 'message') ?? $exception->getMessage());
+        $causes = data_get($body, 'cause', []);
+
+        Log::warning('billing.gateway_client_error', [
+            'method' => $method->value,
+            'status' => $response?->status(),
+            'message' => $message,
+            'cause' => $causes,
+        ]);
+
+        $userMessage = 'Não foi possível gerar o '
+            .($method === PaymentMethodType::Pix ? 'PIX' : 'boleto')
+            .'. Verifique os dados de cobrança da empresa ou entre em contato com o suporte.';
+
+        throw new PaymentGatewayClientException($userMessage, $message, is_array($causes) ? $causes : null);
     }
 
     /**
