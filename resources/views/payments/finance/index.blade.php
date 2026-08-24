@@ -30,7 +30,9 @@
                         @if($fidelity && ($fidelity['has_term'] ?? false))
                             <div><dt>Fidelidade mínima</dt><dd>{{ $fidelity['months'] }} meses</dd></div>
                             <div><dt>Fim da fidelidade</dt><dd>{{ optional($fidelity['ends_at'])->format('d/m/Y') }}</dd></div>
-                            <div><dt>Progresso</dt><dd>{{ $fidelity['progress_label'] }}</dd></div>
+                            @unless($fidelity['term_completed'] ?? false)
+                                <div><dt>Progresso</dt><dd>{{ $fidelity['progress_label'] }}</dd></div>
+                            @endunless
                         @else
                             <div><dt>Fidelidade</dt><dd>{{ $fidelity['progress_label'] ?? 'Sem fidelidade mínima' }}</dd></div>
                         @endif
@@ -140,26 +142,28 @@
     </div>
 
     <style>
-        .finance-page { max-width: 1100px; }
+        .finance-page { max-width: 1100px; width: 100%; box-sizing: border-box; }
         .finance-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1rem; flex-wrap:wrap; }
         .finance-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:1rem; margin-bottom:1rem; }
         .finance-dl { margin:0; display:grid; gap:.65rem; }
-        .finance-dl > div { display:grid; grid-template-columns: 11rem 1fr; gap:.75rem; align-items:baseline; }
+        .finance-dl > div { display:grid; grid-template-columns: 11rem minmax(0, 1fr); gap:.75rem; align-items:baseline; }
         .finance-dl dt { margin:0; color: var(--muted, #6b7280); font-size:.9rem; }
-        .finance-dl dd { margin:0; font-weight:600; }
+        .finance-dl dd { margin:0; font-weight:600; overflow-wrap:anywhere; }
         .finance-note { margin:.85rem 0 0; color: var(--muted, #9aa3b5); font-size:.9rem; line-height:1.45; }
         .finance-badge { display:inline-block; margin-bottom:.75rem; padding:.25rem .6rem; border-radius:999px; font-size:.78rem; font-weight:700; }
         .finance-badge--success { background: rgba(34,197,94,.15); color:#16a34a; }
         .finance-actions { display:flex; flex-wrap:wrap; gap:.75rem; margin-top:1rem; }
-        .finance-cta { min-height:44px; min-width:140px; padding:.7rem 1rem; }
-        .finance-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+        .finance-cta { min-height:44px; min-width:140px; padding:.7rem 1rem; box-sizing:border-box; }
+        .finance-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
         .finance-table { min-width:560px; }
         .finance-link { font-weight:600; }
         @media (max-width: 720px) {
+            .finance-page { max-width: 100%; overflow-x: hidden; }
             .finance-grid { grid-template-columns: 1fr; }
             .finance-dl > div { grid-template-columns: 1fr; gap:.15rem; }
             .finance-actions { flex-direction: column; }
-            .finance-cta { width: 100%; }
+            .finance-cta { width: 100%; min-height: 44px; }
+            .finance-table { min-width: 480px; }
         }
     </style>
 @endsection
