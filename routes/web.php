@@ -185,6 +185,7 @@ Route::middleware([
         Route::put('/plans/{plan}', [PlatformPlanController::class, 'update'])->name('plans.update');
         Route::post('/plans/{plan}/activate', [PlatformPlanController::class, 'activate'])->name('plans.activate');
         Route::post('/plans/{plan}/deactivate', [PlatformPlanController::class, 'deactivate'])->name('plans.deactivate');
+        Route::delete('/plans/{plan}', [PlatformPlanController::class, 'destroy'])->name('plans.destroy');
 
         Route::get('/billing', [PlatformBillingController::class, 'index'])->name('billing.index');
 

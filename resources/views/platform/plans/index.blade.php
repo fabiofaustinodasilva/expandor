@@ -42,7 +42,7 @@
                         <span class="badge">{{ $plan->status }}</span>
                     </td>
                     <td>
-                        <div class="actions" style="justify-content:flex-end; flex-wrap:wrap;">
+                        <div class="actions" style="justify-content:flex-end; flex-wrap:wrap; gap:0.35rem;">
                             <a class="btn btn-ghost" href="{{ route('platform.plans.edit', $plan) }}">Editar</a>
                             @if($plan->status === \App\Domains\Company\Models\Plan::STATUS_ACTIVE)
                                 <form method="POST" action="{{ route('platform.plans.deactivate', $plan) }}">
@@ -54,6 +54,16 @@
                                     @csrf
                                     <button class="btn btn-primary" type="submit">Ativar</button>
                                 </form>
+                            @endif
+                            @if($plan->can_be_deleted)
+                                <button
+                                    class="btn btn-ghost"
+                                    type="button"
+                                    style="color:#fca5a5; border-color:rgba(239,68,68,0.35);"
+                                    data-plan-delete-open
+                                    data-plan-name="{{ $plan->name }}"
+                                    data-plan-action="{{ route('platform.plans.destroy', $plan) }}"
+                                >Excluir</button>
                             @endif
                         </div>
                     </td>
@@ -68,4 +78,47 @@
             {{ $plans->links() }}
         </div>
     </div>
+
+    <dialog id="plan-delete-dialog" style="border:1px solid var(--border); border-radius:12px; padding:0; background:var(--bg-elevated); color:var(--text); max-width:min(420px, 92vw); width:100%;">
+        <form method="POST" id="plan-delete-form" style="padding:1.25rem;">
+            @csrf
+            @method('DELETE')
+            <h2 style="margin:0 0 0.5rem; font-size:1.05rem;" id="plan-delete-title">Excluir plano?</h2>
+            <p class="header-meta" style="margin:0 0 1.25rem; line-height:1.45;">Esta ação é permanente.</p>
+            <div class="actions" style="justify-content:flex-end; flex-wrap:wrap; gap:0.5rem;">
+                <button class="btn btn-ghost" type="button" data-plan-delete-cancel>Cancelar</button>
+                <button class="btn btn-primary" type="submit" style="background:#EF4444; border-color:#EF4444;">Excluir definitivamente</button>
+            </div>
+        </form>
+    </dialog>
 @endsection
+
+@push('scripts')
+<script>
+(() => {
+    const dialog = document.getElementById('plan-delete-dialog');
+    const form = document.getElementById('plan-delete-form');
+    const title = document.getElementById('plan-delete-title');
+    if (!dialog || !form || !title) return;
+
+    document.querySelectorAll('[data-plan-delete-open]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const name = btn.getAttribute('data-plan-name') || 'este plano';
+            const action = btn.getAttribute('data-plan-action');
+            if (!action) return;
+            title.textContent = `Excluir plano ${name}?`;
+            form.setAttribute('action', action);
+            if (typeof dialog.showModal === 'function') {
+                dialog.showModal();
+            } else {
+                form.submit();
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-plan-delete-cancel]').forEach((btn) => {
+        btn.addEventListener('click', () => dialog.close());
+    });
+})();
+</script>
+@endpush

@@ -46,6 +46,19 @@ final class CommercialPlanCatalog
         return [self::FREE, self::PROFESSIONAL, self::ENTERPRISE_LEGACY];
     }
 
+    /**
+     * Planos estruturais / comerciais oficiais — nunca excluir pelo painel.
+     *
+     * @return list<string>
+     */
+    public static function protectedSlugs(): array
+    {
+        return array_values(array_unique(array_merge(
+            self::publicSlugs(),
+            self::legacySlugs(),
+        )));
+    }
+
     public static function nextPlanHint(?string $slug): ?string
     {
         return match ($slug) {

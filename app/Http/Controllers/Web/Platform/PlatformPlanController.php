@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Platform;
 
 use App\Domains\Platform\Requests\StorePlatformPlanRequest;
 use App\Domains\Platform\Requests\UpdatePlatformPlanRequest;
+use App\Domains\Platform\Actions\DeletePlatformPlanAction;
 use App\Domains\Platform\Services\PlatformPlanService;
 use App\Domains\Platform\Support\PlanCatalog;
 use App\Http\Controllers\Controller;
@@ -15,14 +16,22 @@ class PlatformPlanController extends Controller
 {
     public function __construct(
         protected PlatformPlanService $plans,
+        protected DeletePlatformPlanAction $deletePlan,
     ) {}
 
     public function index(): View
     {
         $this->authorize('platform.managePlans');
 
+        $plans = $this->plans->paginate();
+        $plans->getCollection()->transform(function ($plan) {
+            $plan->setAttribute('can_be_deleted', $this->deletePlan->canDelete($plan));
+
+            return $plan;
+        });
+
         return view('platform.plans.index', [
-            'plans' => $this->plans->paginate(),
+            'plans' => $plans,
         ]);
     }
 
@@ -82,5 +91,17 @@ class PlatformPlanController extends Controller
         $this->plans->deactivate($model, $request->user());
 
         return back()->with('success', 'Plano desativado.');
+    }
+
+    public function destroy(Request $request, int $plan): RedirectResponse
+    {
+        $this->authorize('platform.managePlans');
+        $model = $this->plans->find($plan);
+        $name = $model->name;
+        $this->deletePlan->execute($model, $request->user());
+
+        return redirect()
+            ->route('platform.plans.index')
+            ->with('success', "Plano {$name} excluído definitivamente.");
     }
 }
