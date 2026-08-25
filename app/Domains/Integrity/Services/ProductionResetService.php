@@ -8,7 +8,12 @@ use App\Domains\Company\Models\Plan;
 use App\Domains\Company\Models\Role;
 use App\Domains\Company\Models\User;
 use App\Domains\Marketplace\Growth\Models\MarketplaceLead;
+use App\Domains\Marketplace\Growth\Models\MarketplaceLeadActivity;
+use App\Domains\Marketplace\Growth\Models\MarketplaceLeadNotification;
+use App\Domains\Marketplace\Models\MarketplaceEvent;
 use App\Domains\Marketplace\Models\MarketplaceSetting;
+use App\Domains\Marketplace\Revenue\Models\MarketplaceLeadScore;
+use App\Domains\Marketplace\Revenue\Models\MarketplaceSalesPipeline;
 use App\Domains\Payments\Models\Payment;
 use App\Domains\Payments\Models\PaymentGatewaySetting;
 use App\Domains\Platform\Models\PlatformBrand;
@@ -122,29 +127,53 @@ class ProductionResetService
 
     /**
      * @param  list<int>  $companyIds
-     * @return array{removed: list<array<string, mixed>>, backup: ?string}
+     * @param  list<int>  $leadIds
+     * @return array{removed: list<array<string, mixed>>, removed_leads: list<array<string, mixed>>, backup: ?string}
      */
-    public function execute(array $companyIds, ?User $actor = null, ?string $backupPath = null): array
+    public function execute(array $companyIds, ?User $actor = null, ?string $backupPath = null, array $leadIds = []): array
     {
-        $preview = $this->preview($companyIds);
-        $blocked = $preview->firstWhere('blocked', true);
-        if ($blocked !== null) {
-            throw ValidationException::withMessages([
-                'company' => ["Empresa #{$blocked['id']} bloqueada: ".($blocked['block_reason'] ?? 'protegida')],
-            ]);
-        }
-
-        $missing = $preview->firstWhere('exists', false);
-        if ($missing !== null) {
-            throw ValidationException::withMessages([
-                'company' => ["Empresa #{$missing['id']} não encontrada."],
-            ]);
-        }
-
         $removed = [];
-        foreach ($preview as $row) {
-            $result = $this->purge->purge((int) $row['id'], $actor);
-            $removed[] = $result;
+        $removedLeads = [];
+
+        if ($companyIds !== []) {
+            $preview = $this->preview($companyIds);
+            $blocked = $preview->firstWhere('blocked', true);
+            if ($blocked !== null) {
+                throw ValidationException::withMessages([
+                    'company' => ["Empresa #{$blocked['id']} bloqueada: ".($blocked['block_reason'] ?? 'protegida')],
+                ]);
+            }
+
+            $missing = $preview->firstWhere('exists', false);
+            if ($missing !== null) {
+                throw ValidationException::withMessages([
+                    'company' => ["Empresa #{$missing['id']} não encontrada."],
+                ]);
+            }
+
+            foreach ($preview as $row) {
+                $removed[] = $this->purge->purge((int) $row['id'], $actor);
+            }
+        }
+
+        if ($leadIds !== []) {
+            $leadPreview = $this->previewLeads($leadIds);
+            $missingLead = $leadPreview->firstWhere('exists', false);
+            if ($missingLead !== null) {
+                throw ValidationException::withMessages([
+                    'lead' => ["Lead #{$missingLead['id']} não encontrado."],
+                ]);
+            }
+
+            foreach ($leadPreview as $row) {
+                $removedLeads[] = $this->purgeLead((int) $row['id']);
+            }
+        }
+
+        if ($removed === [] && $removedLeads === []) {
+            throw ValidationException::withMessages([
+                'scope' => ['Nenhuma empresa ou lead informado para remoção.'],
+            ]);
         }
 
         $this->security->recordAudit(
@@ -152,8 +181,12 @@ class ProductionResetService
             user: $actor,
             newValues: [
                 'company_ids' => array_column($removed, 'company_id'),
+                'lead_ids' => array_column($removedLeads, 'lead_id'),
                 'counts' => collect($removed)->mapWithKeys(
                     fn ($r) => [(string) $r['company_id'] => $r['deleted']]
+                )->all(),
+                'lead_counts' => collect($removedLeads)->mapWithKeys(
+                    fn ($r) => [(string) $r['lead_id'] => $r['deleted']]
                 )->all(),
                 'backup' => $backupPath,
                 'env' => app()->environment(),
@@ -163,14 +196,171 @@ class ProductionResetService
 
         return [
             'removed' => $removed,
+            'removed_leads' => $removedLeads,
             'backup' => $backupPath,
         ];
     }
 
     /**
+     * @param  list<int>  $leadIds
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function previewLeads(array $leadIds): Collection
+    {
+        $ids = array_values(array_unique(array_map('intval', $leadIds)));
+
+        return collect($ids)->map(function (int $id) {
+            $lead = MarketplaceLead::query()->withoutGlobalScopes()->with('pipeline')->find($id);
+            if ($lead === null) {
+                return [
+                    'id' => $id,
+                    'exists' => false,
+                    'related' => [],
+                ];
+            }
+
+            $stage = $lead->pipeline?->stage;
+            $stageValue = $stage instanceof \BackedEnum ? $stage->value : (string) ($stage ?? '—');
+
+            return [
+                'id' => $id,
+                'exists' => true,
+                'name' => $lead->name,
+                'company_name' => $lead->company_name,
+                'email' => $lead->email,
+                'source' => $lead->source,
+                'status' => $lead->status instanceof \BackedEnum ? $lead->status->value : (string) $lead->status,
+                'pipeline_stage' => $stageValue,
+                'demo_scheduled_at' => $lead->pipeline?->demo_scheduled_at?->toDateTimeString(),
+                'next_action_at' => $lead->pipeline?->next_action_at?->toDateTimeString(),
+                'created_at' => $lead->created_at?->toDateTimeString(),
+                'qa_heuristic' => $this->looksLikeQaLead($lead),
+                'related' => $this->countLeadResources($id),
+            ];
+        });
+    }
+
+    /**
+     * @return array{lead_id: int, name: string, company_name: ?string, deleted: array<string, int>}
+     */
+    public function purgeLead(int $leadId): array
+    {
+        $lead = MarketplaceLead::query()->withoutGlobalScopes()->find($leadId);
+        if ($lead === null) {
+            throw ValidationException::withMessages([
+                'lead' => ["Lead #{$leadId} não encontrado."],
+            ]);
+        }
+
+        $name = (string) $lead->name;
+        $companyName = $lead->company_name;
+        $deleted = [];
+
+        DB::transaction(function () use ($leadId, &$deleted, $lead) {
+            if (Schema::hasTable('marketplace_lead_notifications')) {
+                $deleted['marketplace_lead_notifications'] = MarketplaceLeadNotification::query()
+                    ->where('lead_id', $leadId)
+                    ->delete();
+            }
+            if (Schema::hasTable('marketplace_lead_activities')) {
+                $deleted['marketplace_lead_activities'] = MarketplaceLeadActivity::query()
+                    ->where('lead_id', $leadId)
+                    ->delete();
+            }
+            if (Schema::hasTable('marketplace_events')) {
+                $deleted['marketplace_events'] = MarketplaceEvent::query()
+                    ->where('lead_id', $leadId)
+                    ->delete();
+            }
+            if (Schema::hasTable('marketplace_lead_scores')) {
+                $deleted['marketplace_lead_scores'] = MarketplaceLeadScore::query()
+                    ->where('lead_id', $leadId)
+                    ->delete();
+            }
+            if (Schema::hasTable('marketplace_sales_pipeline')) {
+                $deleted['marketplace_sales_pipeline'] = MarketplaceSalesPipeline::query()
+                    ->where('lead_id', $leadId)
+                    ->delete();
+            }
+
+            $lead->delete();
+            $deleted['marketplace_leads'] = 1;
+        });
+
+        return [
+            'lead_id' => $leadId,
+            'name' => $name,
+            'company_name' => $companyName,
+            'deleted' => $deleted,
+        ];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function countLeadResources(int $leadId): array
+    {
+        $map = [
+            'marketplace_sales_pipeline' => MarketplaceSalesPipeline::class,
+            'marketplace_lead_scores' => MarketplaceLeadScore::class,
+            'marketplace_lead_activities' => MarketplaceLeadActivity::class,
+            'marketplace_lead_notifications' => MarketplaceLeadNotification::class,
+            'marketplace_events' => MarketplaceEvent::class,
+        ];
+
+        $counts = [];
+        foreach ($map as $table => $class) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+            $counts[$table] = (int) $class::query()->where('lead_id', $leadId)->count();
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Relatório heurístico de leads QA/demo (somente leitura).
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function auditMarketplaceLeads(): Collection
+    {
+        return $this->demoMarketplaceLeads()->map(function (MarketplaceLead $lead) {
+            $stage = $lead->pipeline?->stage;
+
+            return [
+                'id' => (int) $lead->id,
+                'name' => $lead->name,
+                'company_name' => $lead->company_name,
+                'email' => $lead->email,
+                'source' => $lead->source,
+                'status' => $lead->status instanceof \BackedEnum ? $lead->status->value : (string) $lead->status,
+                'pipeline_stage' => $stage instanceof \BackedEnum ? $stage->value : (string) ($stage ?? '—'),
+                'demo_scheduled_at' => $lead->pipeline?->demo_scheduled_at?->toDateTimeString(),
+                'created_at' => $lead->created_at?->toDateTimeString(),
+                'qa_heuristic' => true,
+                'related' => $this->countLeadResources((int) $lead->id),
+            ];
+        });
+    }
+
+    public function looksLikeQaLead(MarketplaceLead $lead): bool
+    {
+        $hay = strtolower(trim(implode(' ', [
+            (string) $lead->name,
+            (string) $lead->company_name,
+            (string) $lead->email,
+            (string) $lead->source,
+        ])));
+
+        return (bool) preg_match('/\bqa\b|teste|test|demo|demo_form|@qa\.|\.demo/i', $hay);
+    }
+
+    /**
      * @return array{ok: bool, checks: list<array{key: string, ok: bool, detail: string}>}
      */
-    public function verify(?array $expectedRemovedIds = null): array
+    public function verify(?array $expectedRemovedIds = null, ?array $expectedRemovedLeadIds = null): array
     {
         $checks = [];
 
@@ -222,6 +412,17 @@ class ProductionResetService
             'detail' => $marketplace ? 'Marketplace/brand settings presentes' : 'Sem marketplace_settings/platform_brands (opcional)',
         ];
 
+        $settingsCount = Schema::hasTable('marketplace_settings')
+            ? (int) MarketplaceSetting::query()->count()
+            : 0;
+        $checks[] = [
+            'key' => 'marketplace_settings',
+            'ok' => true,
+            'detail' => $settingsCount > 0
+                ? "{$settingsCount} marketplace_settings (preservado)"
+                : 'Sem marketplace_settings (opcional)',
+        ];
+
         $companyIds = Company::query()->withoutGlobalScopes()->withTrashed()->pluck('id');
 
         $orphanUsers = DB::table('users')
@@ -244,6 +445,46 @@ class ProductionResetService
             'detail' => $orphanInvoices === 0 ? 'Sem faturas órfãs' : "{$orphanInvoices} fatura(s) órfã(s)",
         ];
 
+        $leadIds = Schema::hasTable('marketplace_leads')
+            ? DB::table('marketplace_leads')->pluck('id')
+            : collect();
+
+        foreach ([
+            'marketplace_sales_pipeline' => 'orphan_pipeline',
+            'marketplace_lead_scores' => 'orphan_scores',
+            'marketplace_lead_activities' => 'orphan_timeline',
+            'marketplace_lead_notifications' => 'orphan_lead_notifications',
+        ] as $table => $key) {
+            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'lead_id')) {
+                continue;
+            }
+            $orphans = DB::table($table)
+                ->whereNotNull('lead_id')
+                ->whereNotIn('lead_id', $leadIds)
+                ->count();
+            $checks[] = [
+                'key' => $key,
+                'ok' => $orphans === 0,
+                'detail' => $orphans === 0
+                    ? "Sem órfãos em {$table}"
+                    : "{$orphans} registro(s) órfão(s) em {$table}",
+            ];
+        }
+
+        if (Schema::hasTable('marketplace_events') && Schema::hasColumn('marketplace_events', 'lead_id')) {
+            $orphanEvents = DB::table('marketplace_events')
+                ->whereNotNull('lead_id')
+                ->whereNotIn('lead_id', $leadIds)
+                ->count();
+            $checks[] = [
+                'key' => 'orphan_lead_events',
+                'ok' => $orphanEvents === 0,
+                'detail' => $orphanEvents === 0
+                    ? 'Sem eventos de lead órfãos'
+                    : "{$orphanEvents} evento(s) com lead_id órfão",
+            ];
+        }
+
         if ($expectedRemovedIds !== null) {
             foreach ($expectedRemovedIds as $id) {
                 $stillThere = Company::query()->withoutGlobalScopes()->withTrashed()->whereKey($id)->exists();
@@ -251,6 +492,17 @@ class ProductionResetService
                     'key' => 'removed_company_'.$id,
                     'ok' => ! $stillThere,
                     'detail' => $stillThere ? "Empresa #{$id} ainda existe" : "Empresa #{$id} removida",
+                ];
+            }
+        }
+
+        if ($expectedRemovedLeadIds !== null) {
+            foreach ($expectedRemovedLeadIds as $id) {
+                $stillThere = MarketplaceLead::query()->withoutGlobalScopes()->whereKey($id)->exists();
+                $checks[] = [
+                    'key' => 'removed_lead_'.$id,
+                    'ok' => ! $stillThere,
+                    'detail' => $stillThere ? "Lead #{$id} ainda existe" : "Lead #{$id} removido",
                 ];
             }
         }
@@ -404,11 +656,15 @@ class ProductionResetService
     public function demoMarketplaceLeads(): Collection
     {
         return MarketplaceLead::query()->withoutGlobalScopes()
+            ->with('pipeline')
             ->where(function ($q) {
                 $q->where('source', 'like', 'demo%')
                     ->orWhere('source', 'like', '%qa%')
                     ->orWhere('email', 'like', '%@qa.%')
-                    ->orWhere('email', 'like', '%.demo');
+                    ->orWhere('email', 'like', '%.demo')
+                    ->orWhere('company_name', 'like', '%teste%')
+                    ->orWhere('company_name', 'like', '%test%')
+                    ->orWhere('company_name', 'like', '%demo%');
             })
             ->orderBy('id')
             ->get();

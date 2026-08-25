@@ -1,12 +1,12 @@
 # Production Data Reset (Expandor)
 
-Reset **seguro** de dados tenant/QA para início de uso real em produção.
+Reset **seguro** de dados tenant/QA e leads demo da Central Comercial para início de uso real em produção.
 
-> Este fluxo **não** usa `migrate:fresh`, **não** dropa schema e **não** apaga planos, Platform Owner, Mercado Pago, roles/permissions ou configurações globais.
+> Este fluxo **não** usa `migrate:fresh`, **não** dropa schema e **não** apaga planos, Platform Owner, Mercado Pago, roles/permissions, stages/config do funil, settings do site ou templates.
 
 ## Objetivo
 
-Remover empresas de teste/QA e todo o grafo tenant associado, deixando a plataforma pronta para cadastrar clientes reais do zero.
+Remover empresas de teste/QA e/ou marketplace leads QA/demo **selecionados por ID**, deixando a plataforma pronta para clientes e tráfego reais.
 
 ## O que é preservado
 
@@ -15,35 +15,30 @@ Remover empresas de teste/QA e todo o grafo tenant associado, deixando a platafo
 - Planos comerciais (catálogo)
 - Roles / permissions
 - Configurações globais / feature flags estruturais
-- Marketplace settings / platform brand
+- Marketplace settings / platform brand / templates comerciais
+- Stages/config do funil (enum/config — não registros de lead)
+- Lógica UTM / site público / formulários
 - Payment gateway settings (Mercado Pago)
 - Integrações/configurações de plataforma (não tenant)
 - Migrations / schema
 
 ## O que pode ser removido
 
-Somente empresas **explicitamente** passadas em `--company=ID` (e que não estejam protegidas):
+### Empresas (`--company=ID`)
 
-- users, teams, tokens/sessions
-- subscriptions, invoices, payments, checkouts
-- campaigns, visits, follow-ups
-- properties, residents, addresses, cities, sectors
-- products, commissions, training progress
-- company settings / company integrations
-- audit logs **do tenant**
-- leads/pipeline tenant ligados à company
+Somente IDs explícitos (não protegidos): users, teams, tokens, billing tenant, campaigns, mapa, CRM tenant, etc.
 
-Heurística de nomes (`teste`, `demo`, `qa`) serve **apenas** para relatório (`--audit`). **Nunca** autoriza exclusão.
+### Marketplace leads (`--lead=ID`)
 
-## Empresas que exigem decisão manual
+Somente IDs explícitos. Remove o lead e relações:
 
-Antes de qualquer `--execute`, revisar manualmente:
+- `marketplace_sales_pipeline` (registro do lead, não a config de stages)
+- `marketplace_lead_scores`
+- `marketplace_lead_activities` (timeline/notes)
+- `marketplace_lead_notifications`
+- `marketplace_events` com `lead_id` do lead
 
-| Empresa | Ação sugerida |
-|---------|---------------|
-| Expandor Platform (`is_system`) | Sempre preservar |
-| Única Network / iFF (e-mails reais) | Decisão humana — não auto-apagar |
-| Empresas `*.demo` / QA financeiro | Candidatas a `--company=` após confirmação |
+Heurística (`demo_form`, nomes teste) serve **apenas** para `--audit`. **Nunca** autoriza exclusão no execute.
 
 ## Backup
 
@@ -52,32 +47,23 @@ Em `--execute`, o comando tenta `mysqldump` para:
 `storage/app/backups/production-reset/expandor-before-reset-YYYYMMDD-HHMMSS.sql.gz`
 
 - Pasta **não** é versionada no Git.
-- Senha do banco vai via `MYSQL_PWD` no processo (não é impressa no log).
 - Se o backup falhar → **abort**.
-- Alternativa controlada:
-
-```bash
-php artisan expandor:production-reset --execute --confirm=RESET-PRODUCTION-DATA \
-  --company=ID --skip-backup --confirm-backup-exists=YES
-```
-
-Backup externo sugerido:
-
-```bash
-mysqldump --single-transaction --routines --triggers -h HOST -u USER DB | gzip > expandor-before-reset.sql.gz
-```
+- Alternativa: `--skip-backup --confirm-backup-exists=YES`
 
 ## Dry-run (padrão)
 
 ```bash
 php artisan expandor:production-reset
-php artisan expandor:production-reset --company=5 --company=6
+php artisan expandor:production-reset --company=5
+php artisan expandor:production-reset --lead=1 --lead=2 --lead=3 --lead=4
 php artisan expandor:production-reset --audit
 ```
 
-Não altera o banco. Mostra contagens e pagamentos (flag DEMO/TEST vs REVIEW).
+Não altera o banco. Para leads, mostra nome, provedor, source, status, stage, demo scheduled e contagens relacionadas.
 
 ## Execute
+
+Empresas:
 
 ```bash
 php artisan expandor:production-reset \
@@ -87,7 +73,21 @@ php artisan expandor:production-reset \
   --company=6
 ```
 
-Confirmações:
+Leads QA (exemplo IDs 1–4):
+
+```bash
+php artisan expandor:production-reset \
+  --execute \
+  --confirm=RESET-PRODUCTION-DATA \
+  --lead=1 \
+  --lead=2 \
+  --lead=3 \
+  --lead=4
+```
+
+Pode combinar `--company=` e `--lead=` no mesmo execute.
+
+Confirmações (inalteradas):
 
 1. `--execute`
 2. `--confirm=RESET-PRODUCTION-DATA`
@@ -100,41 +100,38 @@ Confirmações:
 php artisan expandor:production-reset --verify
 ```
 
-Checa Platform Owner, empresa sistema, planos, RBAC, órfãos óbvios (users/invoices), config MP.
-
-## Rollback
-
-Não há “undo” automático do purge. O rollback é **restaurar o dump** gerado antes do reset.
+Checa Platform Owner, empresa sistema, planos, RBAC, marketplace settings, órfãos (users/invoices + pipeline/score/timeline/events de lead), config MP.
 
 ## Segurança
 
 - Default = dry-run
-- Sem allowlist explícita de IDs → nada é apagado no execute
+- Execute exige IDs explícitos (`--company` e/ou `--lead`)
+- Sem `DELETE` por `source=demo_form`
 - Empresas protegidas / sistema / host do Platform Owner → bloqueio
-- Sem refund/cancel no Mercado Pago (reset só local)
-- Audit log: `platform.production_reset` (IDs, counts, backup path; sem secrets)
+- Sem refund/cancel no Mercado Pago
+- Audit log: `platform.production_reset` (company_ids, lead_ids, counts, backup; sem secrets)
+
+## Checklist limpeza de leads em produção
+
+1. Backup
+2. `--audit` (revisar lista heurística)
+3. Dry-run: `--lead=1 --lead=2 --lead=3 --lead=4`
+4. Confirmar que nenhum lead real está na lista
+5. Execute com confirm + frase production
+6. `--verify`
+7. Smoke: Central Comercial / site / formulário demo
+
+## Rollback
+
+Restaurar o dump gerado antes do reset.
 
 ## Troubleshooting
 
 | Sintoma | Ação |
 |---------|------|
-| `mysqldump não encontrado` | Instale no PATH ou use `--skip-backup --confirm-backup-exists=YES` após backup externo |
-| Empresa bloqueada | Remova do `--company=` ou ajuste `PRODUCTION_RESET_PROTECTED_COMPANY_IDS` com cuidado extremo |
-| Verify falhou (órfãos) | Investigar FKs; não rodar execute novamente às cegas |
-| Production sem TTY | Não force sem procedimento; use sessão interativa |
-
-## Checklist produção (dia do reset)
-
-1. Backup externo + confirmação de restore testado
-2. `php artisan expandor:production-reset --audit` (revisar MANUAL)
-3. Definir lista **explícita** de `--company=`
-4. Dry-run com esses IDs
-5. Confirmar Platform Owner / planos / MP intactos no dry-run mental
-6. Janela de manutenção
-7. Execute **somente** com IDs revisados + confirmações
-8. `--verify`
-9. Smoke: `/platform`, `/platform/companies`, `/platform/billing`, site público, planos
-10. **Não** push/merge deste checklist como execução automática
+| `mysqldump não encontrado` | Backup externo + `--skip-backup --confirm-backup-exists=YES` |
+| Lead missing no execute | Remova ID inexistente da lista |
+| Verify falhou (órfãos) | Investigar FKs; não reexecutar às cegas |
 
 ## Testes
 

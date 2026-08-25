@@ -10,7 +10,8 @@ use Illuminate\Validation\ValidationException;
 class ProductionResetCommand extends Command
 {
     protected $signature = 'expandor:production-reset
-                            {--company=* : IDs de empresas a remover (obrigatório no --execute)}
+                            {--company=* : IDs de empresas a remover}
+                            {--lead=* : IDs de marketplace leads a remover}
                             {--execute : Executa a remoção (padrão: dry-run)}
                             {--confirm= : Deve ser RESET-PRODUCTION-DATA com --execute}
                             {--verify : Apenas valida saúde pós-reset / estrutura}
@@ -20,7 +21,7 @@ class ProductionResetCommand extends Command
                             {--typed= : Frase RESET EXPANDOR PRODUCTION DATA (production / no-tty)}
                             {--audit : Lista heurística de candidatos QA (somente relatório)}';
 
-    protected $description = 'Reset seguro de dados tenant para início de produção (dry-run por padrão)';
+    protected $description = 'Reset seguro de dados tenant/leads QA para início de produção (dry-run por padrão)';
 
     public function handle(ProductionResetService $reset): int
     {
@@ -32,37 +33,48 @@ class ProductionResetCommand extends Command
             return $this->runAudit($reset);
         }
 
-        $companyIds = $this->resolveCompanyIds();
+        $companyIds = $this->resolveIds('company');
+        $leadIds = $this->resolveIds('lead');
 
         if ($this->option('execute')) {
-            return $this->runExecute($reset, $companyIds);
+            return $this->runExecute($reset, $companyIds, $leadIds);
         }
 
-        return $this->runDryRun($reset, $companyIds);
+        return $this->runDryRun($reset, $companyIds, $leadIds);
     }
 
-    protected function runDryRun(ProductionResetService $reset, array $companyIds): int
+    /**
+     * @param  list<int>  $companyIds
+     * @param  list<int>  $leadIds
+     */
+    protected function runDryRun(ProductionResetService $reset, array $companyIds, array $leadIds): int
     {
         $this->info('PRODUCTION RESET — DRY RUN');
         $this->line('Nenhuma alteração será realizada.');
         $this->newLine();
 
-        if ($companyIds === []) {
-            $this->warn('Nenhuma empresa informada via --company=.');
+        if ($companyIds === [] && $leadIds === []) {
+            $this->warn('Nenhuma empresa (--company=) nem lead (--lead=) informado.');
             $this->line('Use --audit para ver candidatos heurísticos (somente relatório).');
-            $this->line('Ex.: php artisan expandor:production-reset --company=5 --company=6');
+            $this->line('Ex.: php artisan expandor:production-reset --lead=1 --lead=2');
             $this->newLine();
             $this->runAudit($reset);
 
             return self::SUCCESS;
         }
 
-        $preview = $reset->preview($companyIds);
-        $this->renderPreview($preview);
+        if ($companyIds !== []) {
+            $this->renderPreview($reset->preview($companyIds));
+            $this->newLine();
+        }
 
-        $this->newLine();
+        if ($leadIds !== []) {
+            $this->renderLeadPreview($reset->previewLeads($leadIds));
+            $this->newLine();
+        }
+
         $this->comment('Para executar de verdade:');
-        $this->line('php artisan expandor:production-reset --execute --confirm=RESET-PRODUCTION-DATA --company=ID');
+        $this->line('php artisan expandor:production-reset --execute --confirm=RESET-PRODUCTION-DATA --lead=ID');
 
         return self::SUCCESS;
     }
@@ -86,23 +98,34 @@ class ProductionResetCommand extends Command
             $rows
         );
 
-        $leads = $reset->demoMarketplaceLeads();
+        $leads = $reset->auditMarketplaceLeads();
         $this->newLine();
-        $this->info('Marketplace leads com source/email demo/QA: '.$leads->count());
-        foreach ($leads as $lead) {
-            $this->line("  #{$lead->id} {$lead->name} / {$lead->company_name} ({$lead->source})");
-        }
+        $this->info('Marketplace leads QA/demo (heurística): '.$leads->count());
+        $this->table(
+            ['ID', 'Nome', 'Provedor', 'Email', 'Source', 'Status', 'Stage', 'Criado em'],
+            $leads->map(fn ($l) => [
+                $l['id'],
+                $l['name'],
+                $l['company_name'] ?? '—',
+                $l['email'] ?: '—',
+                $l['source'] ?? '—',
+                $l['status'] ?? '—',
+                $l['pipeline_stage'] ?? '—',
+                $l['created_at'] ?? '—',
+            ])->all()
+        );
 
         $this->newLine();
-        $this->warn('Heurística NÃO autoriza exclusão. Use --company=ID explicitamente.');
+        $this->warn('Heurística NÃO autoriza exclusão. Use --company=ID e/ou --lead=ID explicitamente.');
 
         return self::SUCCESS;
     }
 
     /**
      * @param  list<int>  $companyIds
+     * @param  list<int>  $leadIds
      */
-    protected function runExecute(ProductionResetService $reset, array $companyIds): int
+    protected function runExecute(ProductionResetService $reset, array $companyIds, array $leadIds): int
     {
         $confirm = (string) $this->option('confirm');
         $expected = (string) config('production_reset.confirm_phrase', 'RESET-PRODUCTION-DATA');
@@ -112,8 +135,8 @@ class ProductionResetCommand extends Command
             return self::FAILURE;
         }
 
-        if ($companyIds === []) {
-            $this->error('Informe ao menos um --company=ID para executar.');
+        if ($companyIds === [] && $leadIds === []) {
+            $this->error('Informe ao menos um --company=ID ou --lead=ID para executar.');
 
             return self::FAILURE;
         }
@@ -136,12 +159,24 @@ class ProductionResetCommand extends Command
             }
         }
 
-        $preview = $reset->preview($companyIds);
-        $this->renderPreview($preview);
-        if ($preview->contains(fn ($row) => ($row['blocked'] ?? false) === true || ($row['exists'] ?? false) === false)) {
-            $this->error('Há empresas bloqueadas ou inexistentes. Abortado.');
+        if ($companyIds !== []) {
+            $preview = $reset->preview($companyIds);
+            $this->renderPreview($preview);
+            if ($preview->contains(fn ($row) => ($row['blocked'] ?? false) === true || ($row['exists'] ?? false) === false)) {
+                $this->error('Há empresas bloqueadas ou inexistentes. Abortado.');
 
-            return self::FAILURE;
+                return self::FAILURE;
+            }
+        }
+
+        if ($leadIds !== []) {
+            $leadPreview = $reset->previewLeads($leadIds);
+            $this->renderLeadPreview($leadPreview);
+            if ($leadPreview->contains(fn ($row) => ($row['exists'] ?? false) === false)) {
+                $this->error('Há leads inexistentes. Abortado.');
+
+                return self::FAILURE;
+            }
         }
 
         $backupPath = null;
@@ -172,7 +207,7 @@ class ProductionResetCommand extends Command
         }
 
         try {
-            $result = $reset->execute($companyIds, $this->resolveActor(), $backupPath);
+            $result = $reset->execute($companyIds, $this->resolveActor(), $backupPath, $leadIds);
         } catch (ValidationException $e) {
             foreach ($e->errors() as $messages) {
                 foreach ($messages as $message) {
@@ -189,19 +224,23 @@ class ProductionResetCommand extends Command
 
         $this->info('Reset concluído.');
         foreach ($result['removed'] as $row) {
-            $this->line("Removida #{$row['company_id']} {$row['company_name']}");
+            $this->line("Removida empresa #{$row['company_id']} {$row['company_name']}");
+        }
+        foreach ($result['removed_leads'] as $row) {
+            $this->line("Removido lead #{$row['lead_id']} {$row['name']} / ".($row['company_name'] ?? '—'));
         }
 
-        return $this->runVerify($reset, $companyIds);
+        return $this->runVerify($reset, $companyIds !== [] ? $companyIds : null, $leadIds !== [] ? $leadIds : null);
     }
 
     /**
      * @param  list<int>|null  $expectedRemoved
+     * @param  list<int>|null  $expectedRemovedLeads
      */
-    protected function runVerify(ProductionResetService $reset, ?array $expectedRemoved = null): int
+    protected function runVerify(ProductionResetService $reset, ?array $expectedRemoved = null, ?array $expectedRemovedLeads = null): int
     {
         $this->info('PRODUCTION RESET — VERIFY');
-        $report = $reset->verify($expectedRemoved);
+        $report = $reset->verify($expectedRemoved, $expectedRemovedLeads);
         $this->table(
             ['Check', 'OK', 'Detalhe'],
             collect($report['checks'])->map(fn ($c) => [
@@ -227,6 +266,7 @@ class ProductionResetCommand extends Command
      */
     protected function renderPreview($preview): void
     {
+        $this->info('Empresas:');
         $this->table(
             ['ID', 'Nome', 'Status', 'Blocked', 'Users', 'Invoices', 'Payments', 'Props', 'Visits'],
             $preview->map(function ($row) {
@@ -263,11 +303,43 @@ class ProductionResetCommand extends Command
     }
 
     /**
+     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $preview
+     */
+    protected function renderLeadPreview($preview): void
+    {
+        $this->info('Leads:');
+        $this->table(
+            ['ID', 'Nome', 'Provedor', 'Source', 'Status', 'Stage', 'Demo scheduled', 'Related'],
+            $preview->map(function ($row) {
+                if (! ($row['exists'] ?? false)) {
+                    return [$row['id'], '—', '—', '—', 'missing', '—', '—', '—'];
+                }
+                $related = $row['related'] ?? [];
+                $relatedStr = collect($related)
+                    ->filter(fn ($n) => (int) $n > 0)
+                    ->map(fn ($n, $k) => $k.'='.$n)
+                    ->implode(', ') ?: '0';
+
+                return [
+                    $row['id'],
+                    $row['name'],
+                    $row['company_name'] ?? '—',
+                    $row['source'] ?? '—',
+                    $row['status'] ?? '—',
+                    $row['pipeline_stage'] ?? '—',
+                    $row['demo_scheduled_at'] ?? '—',
+                    $relatedStr,
+                ];
+            })->all()
+        );
+    }
+
+    /**
      * @return list<int>
      */
-    protected function resolveCompanyIds(): array
+    protected function resolveIds(string $option): array
     {
-        $raw = $this->option('company');
+        $raw = $this->option($option);
         if (! is_array($raw)) {
             $raw = $raw !== null && $raw !== '' ? [$raw] : [];
         }
