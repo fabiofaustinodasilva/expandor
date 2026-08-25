@@ -30,6 +30,10 @@ class BillingService
             return null;
         }
 
+        if ($company->isSystem()) {
+            return app(\App\Domains\Integrations\Services\IntegrationEntitlementService::class)->planFor($company);
+        }
+
         return $this->repository->activeSubscription($company)?->plan;
     }
 

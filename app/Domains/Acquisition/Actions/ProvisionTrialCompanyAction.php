@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Provisiona tenant trial (2 dias / Professional) — reutiliza padrão de ProvisionCompanyAction.
+ * Provisiona tenant trial (dias via config / plano Start do catálogo oficial).
  */
 class ProvisionTrialCompanyAction
 {
@@ -44,7 +44,7 @@ class ProvisionTrialCompanyAction
      */
     public function execute(array $data): TrialProvisionResult
     {
-        $planSlug = (string) config('acquisition.plan_slug', 'professional');
+        $planSlug = (string) config('acquisition.plan_slug', 'start');
         $trialDays = max(1, (int) config('acquisition.trial_days', 2));
 
         $plan = Plan::query()

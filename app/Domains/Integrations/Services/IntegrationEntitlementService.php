@@ -63,6 +63,10 @@ class IntegrationEntitlementService
 
     public function planFor(Company $company): ?Plan
     {
+        if ($company->isSystem()) {
+            return $this->systemEntitlementPlan();
+        }
+
         // Prefer commercially active subscription (same rule as BillingRepository).
         $active = Subscription::query()
             ->withoutGlobalScopes()
@@ -80,6 +84,24 @@ class IntegrationEntitlementService
         }
 
         return $company->latestSubscription()?->plan;
+    }
+
+    /**
+     * Empresa sistema (Expandor Platform) não é cliente comercial —
+     * recebe entitlements completos sem subscription.
+     */
+    protected function systemEntitlementPlan(): Plan
+    {
+        $plan = new Plan([
+            'name' => 'Platform Internal',
+            'slug' => 'platform-internal',
+            'status' => Plan::STATUS_ACTIVE,
+            'active' => true,
+            'features' => \App\Domains\Platform\Support\CommercialPlanCatalog::enterpriseFeatures(),
+        ]);
+        $plan->exists = false;
+
+        return $plan;
     }
 
     public function invalidateCompanyCache(int $companyId): void

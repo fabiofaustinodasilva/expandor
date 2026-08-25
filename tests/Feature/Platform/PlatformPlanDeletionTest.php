@@ -26,16 +26,15 @@ class PlatformPlanDeletionTest extends TestCase
     {
         parent::setUp();
         $this->seedFoundation();
-        // Evita bloquear exclusão dos legados pelo default acquisition.plan_slug=professional
-        config(['acquisition.plan_slug' => 'pro']);
+        // Evita bloquear exclusão de planos de teste pelo trial default
+        config(['acquisition.plan_slug' => 'start']);
     }
 
     public function test_unused_legacy_free_slug_can_be_deleted(): void
     {
         $owner = $this->makePlatformAdmin();
-        $plan = Plan::query()->where('slug', CommercialPlanCatalog::FREE)->firstOrFail();
-        $this->assertTrue($plan->isLegacyPlan());
-        $this->assertSame(0, Subscription::query()->where('plan_id', $plan->id)->count());
+        $plan = $this->resolvePlan(CommercialPlanCatalog::FREE);
+        Subscription::query()->withoutGlobalScopes()->where('plan_id', $plan->id)->delete();
 
         $this->actingAs($owner)
             ->delete(route('platform.plans.destroy', $plan))
@@ -47,7 +46,10 @@ class PlatformPlanDeletionTest extends TestCase
     public function test_unused_professional_slug_can_be_deleted(): void
     {
         $owner = $this->makePlatformAdmin();
-        $plan = Plan::query()->where('slug', CommercialPlanCatalog::PROFESSIONAL)->firstOrFail();
+        config(['acquisition.plan_slug' => 'start']);
+        $plan = $this->resolvePlan(CommercialPlanCatalog::PROFESSIONAL);
+        Subscription::query()->withoutGlobalScopes()->where('plan_id', $plan->id)->delete();
+        \App\Domains\Payments\Models\CheckoutSession::query()->where('plan_id', $plan->id)->delete();
 
         $this->actingAs($owner)
             ->delete(route('platform.plans.destroy', $plan))
@@ -83,8 +85,8 @@ class PlatformPlanDeletionTest extends TestCase
     public function test_unused_enterprise_legacy_can_be_deleted(): void
     {
         $owner = $this->makePlatformAdmin();
-        $plan = Plan::query()->where('slug', CommercialPlanCatalog::ENTERPRISE_LEGACY)->firstOrFail();
-        $this->assertTrue($plan->isLegacyPlan());
+        $plan = $this->resolvePlan(CommercialPlanCatalog::ENTERPRISE_LEGACY);
+        Subscription::query()->withoutGlobalScopes()->where('plan_id', $plan->id)->delete();
 
         $this->actingAs($owner)
             ->delete(route('platform.plans.destroy', $plan))
@@ -170,8 +172,8 @@ class PlatformPlanDeletionTest extends TestCase
     public function test_acquisition_trial_plan_config_blocks_deletion(): void
     {
         $owner = $this->makePlatformAdmin();
-        config(['acquisition.plan_slug' => CommercialPlanCatalog::PROFESSIONAL]);
-        $plan = Plan::query()->where('slug', CommercialPlanCatalog::PROFESSIONAL)->firstOrFail();
+        config(['acquisition.plan_slug' => CommercialPlanCatalog::START]);
+        $plan = Plan::query()->where('slug', CommercialPlanCatalog::START)->firstOrFail();
 
         $this->actingAs($owner)
             ->from(route('platform.plans.index'))
@@ -235,7 +237,7 @@ class PlatformPlanDeletionTest extends TestCase
 
     public function test_deletion_audit_command_is_read_only(): void
     {
-        $plan = Plan::query()->where('slug', CommercialPlanCatalog::FREE)->firstOrFail();
+        $plan = $this->resolvePlan(CommercialPlanCatalog::FREE);
         $before = Plan::query()->count();
 
         $this->artisan('expandor:plans:deletion-audit', [

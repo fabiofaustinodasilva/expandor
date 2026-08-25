@@ -12,6 +12,7 @@ class ProductionResetCommand extends Command
     protected $signature = 'expandor:production-reset
                             {--company=* : IDs de empresas a remover}
                             {--lead=* : IDs de marketplace leads a remover}
+                            {--checkout=* : IDs de checkout_sessions a remover}
                             {--execute : Executa a remoção (padrão: dry-run)}
                             {--confirm= : Deve ser RESET-PRODUCTION-DATA com --execute}
                             {--verify : Apenas valida saúde pós-reset / estrutura}
@@ -21,7 +22,7 @@ class ProductionResetCommand extends Command
                             {--typed= : Frase RESET EXPANDOR PRODUCTION DATA (production / no-tty)}
                             {--audit : Lista heurística de candidatos QA (somente relatório)}';
 
-    protected $description = 'Reset seguro de dados tenant/leads QA para início de produção (dry-run por padrão)';
+    protected $description = 'Reset seguro de dados tenant/leads/checkouts QA (dry-run por padrão)';
 
     public function handle(ProductionResetService $reset): int
     {
@@ -35,28 +36,29 @@ class ProductionResetCommand extends Command
 
         $companyIds = $this->resolveIds('company');
         $leadIds = $this->resolveIds('lead');
+        $checkoutIds = $this->resolveIds('checkout');
 
         if ($this->option('execute')) {
-            return $this->runExecute($reset, $companyIds, $leadIds);
+            return $this->runExecute($reset, $companyIds, $leadIds, $checkoutIds);
         }
 
-        return $this->runDryRun($reset, $companyIds, $leadIds);
+        return $this->runDryRun($reset, $companyIds, $leadIds, $checkoutIds);
     }
 
     /**
      * @param  list<int>  $companyIds
      * @param  list<int>  $leadIds
+     * @param  list<int>  $checkoutIds
      */
-    protected function runDryRun(ProductionResetService $reset, array $companyIds, array $leadIds): int
+    protected function runDryRun(ProductionResetService $reset, array $companyIds, array $leadIds, array $checkoutIds): int
     {
         $this->info('PRODUCTION RESET — DRY RUN');
         $this->line('Nenhuma alteração será realizada.');
         $this->newLine();
 
-        if ($companyIds === [] && $leadIds === []) {
-            $this->warn('Nenhuma empresa (--company=) nem lead (--lead=) informado.');
+        if ($companyIds === [] && $leadIds === [] && $checkoutIds === []) {
+            $this->warn('Nenhuma empresa (--company=), lead (--lead=) ou checkout (--checkout=) informado.');
             $this->line('Use --audit para ver candidatos heurísticos (somente relatório).');
-            $this->line('Ex.: php artisan expandor:production-reset --lead=1 --lead=2');
             $this->newLine();
             $this->runAudit($reset);
 
@@ -73,8 +75,13 @@ class ProductionResetCommand extends Command
             $this->newLine();
         }
 
+        if ($checkoutIds !== []) {
+            $this->renderCheckoutPreview($reset->previewCheckouts($checkoutIds));
+            $this->newLine();
+        }
+
         $this->comment('Para executar de verdade:');
-        $this->line('php artisan expandor:production-reset --execute --confirm=RESET-PRODUCTION-DATA --lead=ID');
+        $this->line('php artisan expandor:production-reset --execute --confirm=RESET-PRODUCTION-DATA --checkout=ID');
 
         return self::SUCCESS;
     }
@@ -116,7 +123,7 @@ class ProductionResetCommand extends Command
         );
 
         $this->newLine();
-        $this->warn('Heurística NÃO autoriza exclusão. Use --company=ID e/ou --lead=ID explicitamente.');
+        $this->warn('Heurística NÃO autoriza exclusão. Use --company= / --lead= / --checkout= explicitamente.');
 
         return self::SUCCESS;
     }
@@ -124,8 +131,9 @@ class ProductionResetCommand extends Command
     /**
      * @param  list<int>  $companyIds
      * @param  list<int>  $leadIds
+     * @param  list<int>  $checkoutIds
      */
-    protected function runExecute(ProductionResetService $reset, array $companyIds, array $leadIds): int
+    protected function runExecute(ProductionResetService $reset, array $companyIds, array $leadIds, array $checkoutIds): int
     {
         $confirm = (string) $this->option('confirm');
         $expected = (string) config('production_reset.confirm_phrase', 'RESET-PRODUCTION-DATA');
@@ -135,8 +143,8 @@ class ProductionResetCommand extends Command
             return self::FAILURE;
         }
 
-        if ($companyIds === [] && $leadIds === []) {
-            $this->error('Informe ao menos um --company=ID ou --lead=ID para executar.');
+        if ($companyIds === [] && $leadIds === [] && $checkoutIds === []) {
+            $this->error('Informe ao menos um --company=ID, --lead=ID ou --checkout=ID para executar.');
 
             return self::FAILURE;
         }
@@ -179,6 +187,16 @@ class ProductionResetCommand extends Command
             }
         }
 
+        if ($checkoutIds !== []) {
+            $checkoutPreview = $reset->previewCheckouts($checkoutIds);
+            $this->renderCheckoutPreview($checkoutPreview);
+            if ($checkoutPreview->contains(fn ($row) => ($row['blocked'] ?? false) === true || ($row['exists'] ?? false) === false)) {
+                $this->error('Há checkouts bloqueados ou inexistentes. Abortado.');
+
+                return self::FAILURE;
+            }
+        }
+
         $backupPath = null;
         $requireBackup = (bool) config('production_reset.require_backup_on_execute', true);
         if ($requireBackup) {
@@ -207,7 +225,7 @@ class ProductionResetCommand extends Command
         }
 
         try {
-            $result = $reset->execute($companyIds, $this->resolveActor(), $backupPath, $leadIds);
+            $result = $reset->execute($companyIds, $this->resolveActor(), $backupPath, $leadIds, $checkoutIds);
         } catch (ValidationException $e) {
             foreach ($e->errors() as $messages) {
                 foreach ($messages as $message) {
@@ -229,18 +247,31 @@ class ProductionResetCommand extends Command
         foreach ($result['removed_leads'] as $row) {
             $this->line("Removido lead #{$row['lead_id']} {$row['name']} / ".($row['company_name'] ?? '—'));
         }
+        foreach ($result['removed_checkouts'] as $row) {
+            $this->line("Removido checkout #{$row['checkout_id']} (plan_id=".($row['plan_id'] ?? '—').')');
+        }
 
-        return $this->runVerify($reset, $companyIds !== [] ? $companyIds : null, $leadIds !== [] ? $leadIds : null);
+        return $this->runVerify(
+            $reset,
+            $companyIds !== [] ? $companyIds : null,
+            $leadIds !== [] ? $leadIds : null,
+            $checkoutIds !== [] ? $checkoutIds : null
+        );
     }
 
     /**
      * @param  list<int>|null  $expectedRemoved
      * @param  list<int>|null  $expectedRemovedLeads
+     * @param  list<int>|null  $expectedRemovedCheckouts
      */
-    protected function runVerify(ProductionResetService $reset, ?array $expectedRemoved = null, ?array $expectedRemovedLeads = null): int
-    {
+    protected function runVerify(
+        ProductionResetService $reset,
+        ?array $expectedRemoved = null,
+        ?array $expectedRemovedLeads = null,
+        ?array $expectedRemovedCheckouts = null,
+    ): int {
         $this->info('PRODUCTION RESET — VERIFY');
-        $report = $reset->verify($expectedRemoved, $expectedRemovedLeads);
+        $report = $reset->verify($expectedRemoved, $expectedRemovedLeads, $expectedRemovedCheckouts);
         $this->table(
             ['Check', 'OK', 'Detalhe'],
             collect($report['checks'])->map(fn ($c) => [
@@ -288,18 +319,6 @@ class ProductionResetCommand extends Command
                 ];
             })->all()
         );
-
-        foreach ($preview as $row) {
-            $payments = $row['payments'] ?? [];
-            if ($payments === []) {
-                continue;
-            }
-            $this->line("Pagamentos empresa #{$row['id']}:");
-            foreach ($payments as $p) {
-                $flag = ($p['looks_demo'] ?? false) ? 'DEMO/TEST' : 'REVIEW';
-                $this->line("  payment #{$p['id']} amount={$p['amount']} gateway={$p['gateway']} id={$p['gateway_payment_id']} [{$flag}]");
-            }
-        }
     }
 
     /**
@@ -328,6 +347,38 @@ class ProductionResetCommand extends Command
                     $row['status'] ?? '—',
                     $row['pipeline_stage'] ?? '—',
                     $row['demo_scheduled_at'] ?? '—',
+                    $relatedStr,
+                ];
+            })->all()
+        );
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $preview
+     */
+    protected function renderCheckoutPreview($preview): void
+    {
+        $this->info('Checkouts:');
+        $this->table(
+            ['ID', 'Plan', 'Status', 'Gateway', 'Amount', 'Expires', 'Blocked', 'Related'],
+            $preview->map(function ($row) {
+                if (! ($row['exists'] ?? false)) {
+                    return [$row['id'], '—', '—', '—', '—', '—', $row['block_reason'] ?? 'missing', '—'];
+                }
+                $related = $row['related'] ?? [];
+                $relatedStr = collect($related)
+                    ->filter(fn ($n) => (int) $n > 0)
+                    ->map(fn ($n, $k) => $k.'='.$n)
+                    ->implode(', ') ?: '0';
+
+                return [
+                    $row['id'],
+                    $row['plan_id'] ?? '—',
+                    $row['status'] ?? '—',
+                    $row['gateway'] ?? '—',
+                    $row['amount'] ?? '—',
+                    $row['expires_at'] ?? '—',
+                    ($row['blocked'] ?? false) ? ($row['block_reason'] ?? 'yes') : 'no',
                     $relatedStr,
                 ];
             })->all()

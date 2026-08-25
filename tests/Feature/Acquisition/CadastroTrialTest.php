@@ -58,7 +58,7 @@ class CadastroTrialTest extends TestCase
 
         $subscription = $result->subscription;
         $this->assertSame(Subscription::STATUS_TRIAL, $subscription->status);
-        $this->assertSame('professional', $subscription->plan?->slug);
+        $this->assertSame('start', $subscription->plan?->slug);
         $this->assertNotNull($subscription->trial_ends_at);
         $this->assertTrue(
             $subscription->trial_ends_at->between(now()->addDays(1)->startOfDay(), now()->addDays(3)->endOfDay())

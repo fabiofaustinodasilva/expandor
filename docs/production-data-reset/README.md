@@ -102,14 +102,31 @@ php artisan expandor:production-reset --verify
 
 Checa Platform Owner, empresa sistema, planos, RBAC, marketplace settings, órfãos (users/invoices + pipeline/score/timeline/events de lead), config MP.
 
-## Segurança
+## Limpeza de checkouts QA
 
-- Default = dry-run
-- Execute exige IDs explícitos (`--company` e/ou `--lead`)
-- Sem `DELETE` por `source=demo_form`
-- Empresas protegidas / sistema / host do Platform Owner → bloqueio
-- Sem refund/cancel no Mercado Pago
-- Audit log: `platform.production_reset` (company_ids, lead_ids, counts, backup; sem secrets)
+```bash
+php artisan expandor:production-reset --checkout=1 --checkout=2
+php artisan expandor:production-reset --execute --confirm=RESET-PRODUCTION-DATA \
+  --checkout=1 --checkout=2 --checkout=3 --checkout=4 --checkout=5 --checkout=6
+```
+
+Bloqueia checkouts pagos/provisionados. Dry-run por padrão.
+
+## Subscription da Expandor Platform
+
+A empresa sistema **não** precisa de subscription comercial.
+Entitlements internos usam plano sintético full-access.
+
+```bash
+php artisan expandor:platform:purge-system-subscriptions
+php artisan expandor:platform:purge-system-subscriptions \
+  --execute --confirm=PURGE-SYSTEM-SUBSCRIPTION
+```
+
+## Catálogo oficial
+
+Seed: **Start / Pro / Scale** apenas. Legados (`free`, `professional`, `enterprise`, `enterprise-legacy`) não são recriados.
+Trial (`ACQUISITION_TRIAL_PLAN`) padrão: `start`.
 
 ## Checklist limpeza de leads em produção
 

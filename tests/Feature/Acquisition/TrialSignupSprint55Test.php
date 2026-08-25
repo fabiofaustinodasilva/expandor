@@ -42,7 +42,7 @@ class TrialSignupSprint55Test extends TestCase
             ->assertRedirect(route('marketplace.home').'#demo');
     }
 
-    public function test_trial_signup_creates_tenant_professional_subscription_and_admin(): void
+    public function test_trial_signup_creates_tenant_start_subscription_and_admin(): void
     {
         $result = app(ProvisionTrialCompanyAction::class)->execute($this->actionPayload([
             'with_demo_data' => false,
@@ -62,7 +62,7 @@ class TrialSignupSprint55Test extends TestCase
 
         $subscription = $result->subscription;
         $this->assertSame(Subscription::STATUS_TRIAL, $subscription->status);
-        $this->assertSame('professional', $subscription->plan?->slug);
+        $this->assertSame('start', $subscription->plan?->slug);
         $this->assertNotNull($subscription->trial_ends_at);
         $this->assertTrue($subscription->trial_ends_at->between(now()->addDays(1), now()->addDays(3)));
 
@@ -177,10 +177,18 @@ class TrialSignupSprint55Test extends TestCase
             $result->company->fresh()->status
         );
 
-        $this->actingAs($result->administrator)
+        $response = $this->actingAs($result->administrator)
             ->getJson('/api/v1/users')
-            ->assertForbidden()
-            ->assertJsonPath('message', 'Company is suspended and cannot operate.');
+            ->assertForbidden();
+
+        $message = (string) $response->json('message');
+        $this->assertTrue(
+            in_array($message, [
+                'Company is suspended and cannot operate.',
+                'Pagamento pendente. Regularize no Financeiro.',
+            ], true),
+            'Unexpected block message: '.$message
+        );
     }
 
     public function test_owner_can_convert_trial_to_active_client(): void

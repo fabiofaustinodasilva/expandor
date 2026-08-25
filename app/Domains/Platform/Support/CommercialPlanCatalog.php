@@ -4,7 +4,8 @@ namespace App\Domains\Platform\Support;
 
 /**
  * Catálogo comercial oficial do Expandor (site + SaaS).
- * Planos legados permanecem no banco para assinaturas existentes, sem checkout público.
+ * Oficiais: Start / Pro / Scale.
+ * Constantes legadas permanecem só para referência histórica — não são seedadas.
  */
 final class CommercialPlanCatalog
 {
@@ -14,12 +15,16 @@ final class CommercialPlanCatalog
 
     public const SCALE = 'scale';
 
+    /** @deprecated Plano de consulta removido do catálogo oficial. */
     public const ENTERPRISE = 'enterprise';
 
+    /** @deprecated Legado — não seedar. */
     public const FREE = 'free';
 
+    /** @deprecated Legado — não seedar. */
     public const PROFESSIONAL = 'professional';
 
+    /** @deprecated Legado — não seedar. */
     public const ENTERPRISE_LEGACY = 'enterprise-legacy';
 
     /**
@@ -35,7 +40,15 @@ final class CommercialPlanCatalog
      */
     public static function publicSlugs(): array
     {
-        return [self::START, self::PRO, self::SCALE, self::ENTERPRISE];
+        return self::checkoutSlugs();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function officialSlugs(): array
+    {
+        return self::checkoutSlugs();
     }
 
     /**
@@ -43,7 +56,7 @@ final class CommercialPlanCatalog
      */
     public static function legacySlugs(): array
     {
-        return [self::FREE, self::PROFESSIONAL, self::ENTERPRISE_LEGACY];
+        return [self::FREE, self::PROFESSIONAL, self::ENTERPRISE_LEGACY, self::ENTERPRISE];
     }
 
     public static function nextPlanHint(?string $slug): ?string
@@ -162,28 +175,6 @@ final class CommercialPlanCatalog
                 'is_legacy' => false,
                 'allows_checkout' => true,
                 'features' => $features,
-            ],
-            [
-                'name' => 'Enterprise',
-                'slug' => self::ENTERPRISE,
-                'description' => 'Operações maiores, múltiplas necessidades ou integrações especiais. Sob consulta.',
-                'price' => 0,
-                'price_yearly' => 0,
-                'trial_days' => null,
-                'max_users' => null,
-                'max_sellers' => null,
-                'max_properties' => null,
-                'max_campaigns' => null,
-                'max_teams' => null,
-                'max_products' => null,
-                'max_storage_mb' => null,
-                'max_visits' => null,
-                'display_order' => 40,
-                'is_featured' => false,
-                'is_public' => true,
-                'is_legacy' => false,
-                'allows_checkout' => false,
-                'features' => self::enterpriseFeatures(),
             ],
         ];
     }

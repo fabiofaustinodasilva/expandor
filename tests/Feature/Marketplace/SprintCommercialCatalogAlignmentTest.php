@@ -34,7 +34,6 @@ class SprintCommercialCatalogAlignmentTest extends TestCase
         $start = Plan::query()->where('slug', CommercialPlanCatalog::START)->firstOrFail();
         $pro = Plan::query()->where('slug', CommercialPlanCatalog::PRO)->firstOrFail();
         $scale = Plan::query()->where('slug', CommercialPlanCatalog::SCALE)->firstOrFail();
-        $enterprise = Plan::query()->where('slug', CommercialPlanCatalog::ENTERPRISE)->firstOrFail();
 
         $this->assertEqualsWithDelta(349.00, (float) $start->price, 0.01);
         $this->assertSame(2, (int) $start->getAttributes()['max_sellers']);
@@ -49,41 +48,32 @@ class SprintCommercialCatalogAlignmentTest extends TestCase
         $this->assertNull($scale->getAttributes()['max_sellers']);
         $this->assertTrue($scale->allowsPublicCheckout());
 
-        $this->assertEqualsWithDelta(0.0, (float) $enterprise->price, 0.01);
-        $this->assertFalse($enterprise->allowsPublicCheckout());
-        $this->assertTrue($enterprise->is_public);
-        $this->assertFalse($enterprise->is_legacy);
+        $this->assertNull(Plan::query()->where('slug', CommercialPlanCatalog::ENTERPRISE)->first());
     }
 
-    public function test_legacy_plans_are_not_sellable(): void
+    public function test_legacy_plans_are_not_seeded(): void
     {
-        foreach ([
-            CommercialPlanCatalog::FREE,
-            CommercialPlanCatalog::PROFESSIONAL,
-            CommercialPlanCatalog::ENTERPRISE_LEGACY,
-        ] as $slug) {
-            $plan = Plan::query()->where('slug', $slug)->firstOrFail();
-            $this->assertTrue($plan->is_legacy);
-            $this->assertFalse($plan->is_public);
-            $this->assertFalse($plan->allowsPublicCheckout());
+        foreach (CommercialPlanCatalog::legacySlugs() as $slug) {
+            $this->assertNull(Plan::query()->where('slug', $slug)->first(), "legacy {$slug} should not be seeded");
         }
-
-        $this->assertEqualsWithDelta(199.90, (float) Plan::query()->where('slug', 'professional')->value('price'), 0.01);
-        $this->assertEqualsWithDelta(499.90, (float) Plan::query()->where('slug', 'enterprise-legacy')->value('price'), 0.01);
     }
 
-    public function test_checkout_rejects_legacy_and_consult_plans(): void
+    public function test_checkout_rejects_non_checkoutable_plans(): void
     {
         $checkout = app(CheckoutService::class);
+        $blocked = Plan::factory()->create([
+            'slug' => 'bloqueado-qa',
+            'allows_checkout' => false,
+            'is_public' => false,
+            'status' => Plan::STATUS_ACTIVE,
+            'price' => 10,
+        ]);
 
-        foreach (['free', 'professional', 'enterprise-legacy', 'enterprise'] as $slug) {
-            $plan = Plan::query()->where('slug', $slug)->firstOrFail();
-            try {
-                $checkout->start($this->checkoutPayload($plan->id, $slug.'@checkout.test'));
-                $this->fail("Expected checkout to reject {$slug}.");
-            } catch (ValidationException $exception) {
-                $this->assertArrayHasKey('plan_id', $exception->errors());
-            }
+        try {
+            $checkout->start($this->checkoutPayload($blocked->id, 'bloqueado@checkout.test'));
+            $this->fail('Expected checkout to reject non-checkoutable plan.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('plan_id', $exception->errors());
         }
     }
 
@@ -150,7 +140,7 @@ class SprintCommercialCatalogAlignmentTest extends TestCase
         $this->assertNull(User::query()->withoutGlobalScopes()->where('email', 'publico@cadastro.test')->first());
     }
 
-    public function test_internal_trial_provision_still_uses_legacy_professional(): void
+    public function test_internal_trial_provision_uses_start(): void
     {
         $result = app(ProvisionTrialCompanyAction::class)->execute([
             'company_name' => 'Trial Interno',
@@ -162,7 +152,7 @@ class SprintCommercialCatalogAlignmentTest extends TestCase
             'with_demo_data' => false,
         ]);
 
-        $this->assertSame('professional', $result->subscription->plan?->slug);
+        $this->assertSame('start', $result->subscription->plan?->slug);
         $this->assertSame(Subscription::STATUS_TRIAL, $result->subscription->status);
         $this->assertSame(Role::ADMINISTRATOR, $result->administrator->role?->slug);
     }

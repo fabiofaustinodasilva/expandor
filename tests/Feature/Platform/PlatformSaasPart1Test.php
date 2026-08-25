@@ -130,7 +130,7 @@ class PlatformSaasPart1Test extends TestCase
             'trial_ends_at' => now()->addDays(1),
         ])->save();
 
-        $enterprise = Plan::query()->where('slug', 'enterprise')->firstOrFail();
+        $scale = Plan::query()->where('slug', 'scale')->firstOrFail();
 
         $this->actingAs($owner)
             ->post(route('platform.companies.subscription.renew-trial', $company), ['days' => 5])
@@ -142,11 +142,11 @@ class PlatformSaasPart1Test extends TestCase
 
         $this->actingAs($owner)
             ->post(route('platform.companies.subscription.change-plan', $company), [
-                'plan_id' => $enterprise->id,
+                'plan_id' => $scale->id,
             ])
             ->assertRedirect();
 
-        $this->assertSame($enterprise->id, $subscription->fresh()->plan_id);
+        $this->assertSame($scale->id, $subscription->fresh()->plan_id);
 
         $this->actingAs($owner)
             ->post(route('platform.companies.subscription.cancel', $company), [

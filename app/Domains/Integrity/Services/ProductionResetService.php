@@ -14,8 +14,11 @@ use App\Domains\Marketplace\Models\MarketplaceEvent;
 use App\Domains\Marketplace\Models\MarketplaceSetting;
 use App\Domains\Marketplace\Revenue\Models\MarketplaceLeadScore;
 use App\Domains\Marketplace\Revenue\Models\MarketplaceSalesPipeline;
+use App\Domains\Payments\Enums\CheckoutStatus;
+use App\Domains\Payments\Models\CheckoutSession;
 use App\Domains\Payments\Models\Payment;
 use App\Domains\Payments\Models\PaymentGatewaySetting;
+use App\Domains\Payments\Models\PaymentGatewayTransaction;
 use App\Domains\Platform\Models\PlatformBrand;
 use App\Domains\Security\Services\SecurityService;
 use Illuminate\Support\Collection;
@@ -128,12 +131,14 @@ class ProductionResetService
     /**
      * @param  list<int>  $companyIds
      * @param  list<int>  $leadIds
-     * @return array{removed: list<array<string, mixed>>, removed_leads: list<array<string, mixed>>, backup: ?string}
+     * @param  list<int>  $checkoutIds
+     * @return array{removed: list<array<string, mixed>>, removed_leads: list<array<string, mixed>>, removed_checkouts: list<array<string, mixed>>, backup: ?string}
      */
-    public function execute(array $companyIds, ?User $actor = null, ?string $backupPath = null, array $leadIds = []): array
+    public function execute(array $companyIds, ?User $actor = null, ?string $backupPath = null, array $leadIds = [], array $checkoutIds = []): array
     {
         $removed = [];
         $removedLeads = [];
+        $removedCheckouts = [];
 
         if ($companyIds !== []) {
             $preview = $this->preview($companyIds);
@@ -170,9 +175,23 @@ class ProductionResetService
             }
         }
 
-        if ($removed === [] && $removedLeads === []) {
+        if ($checkoutIds !== []) {
+            $checkoutPreview = $this->previewCheckouts($checkoutIds);
+            $blockedCheckout = $checkoutPreview->firstWhere('blocked', true);
+            if ($blockedCheckout !== null) {
+                throw ValidationException::withMessages([
+                    'checkout' => ["Checkout #{$blockedCheckout['id']} bloqueado: ".($blockedCheckout['block_reason'] ?? 'protegido')],
+                ]);
+            }
+
+            foreach ($checkoutPreview as $row) {
+                $removedCheckouts[] = $this->purgeCheckout((int) $row['id']);
+            }
+        }
+
+        if ($removed === [] && $removedLeads === [] && $removedCheckouts === []) {
             throw ValidationException::withMessages([
-                'scope' => ['Nenhuma empresa ou lead informado para remoção.'],
+                'scope' => ['Nenhuma empresa, lead ou checkout informado para remoção.'],
             ]);
         }
 
@@ -182,11 +201,15 @@ class ProductionResetService
             newValues: [
                 'company_ids' => array_column($removed, 'company_id'),
                 'lead_ids' => array_column($removedLeads, 'lead_id'),
+                'checkout_ids' => array_column($removedCheckouts, 'checkout_id'),
                 'counts' => collect($removed)->mapWithKeys(
                     fn ($r) => [(string) $r['company_id'] => $r['deleted']]
                 )->all(),
                 'lead_counts' => collect($removedLeads)->mapWithKeys(
                     fn ($r) => [(string) $r['lead_id'] => $r['deleted']]
+                )->all(),
+                'checkout_counts' => collect($removedCheckouts)->mapWithKeys(
+                    fn ($r) => [(string) $r['checkout_id'] => $r['deleted']]
                 )->all(),
                 'backup' => $backupPath,
                 'env' => app()->environment(),
@@ -197,7 +220,106 @@ class ProductionResetService
         return [
             'removed' => $removed,
             'removed_leads' => $removedLeads,
+            'removed_checkouts' => $removedCheckouts,
             'backup' => $backupPath,
+        ];
+    }
+
+    /**
+     * @param  list<int>  $checkoutIds
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function previewCheckouts(array $checkoutIds): Collection
+    {
+        $ids = array_values(array_unique(array_map('intval', $checkoutIds)));
+
+        return collect($ids)->map(function (int $id) {
+            $session = CheckoutSession::query()->find($id);
+            if ($session === null) {
+                return [
+                    'id' => $id,
+                    'exists' => false,
+                    'blocked' => true,
+                    'block_reason' => 'Checkout não encontrado',
+                ];
+            }
+
+            $status = $session->status instanceof CheckoutStatus
+                ? $session->status
+                : CheckoutStatus::tryFrom((string) $session->status);
+
+            $blocked = false;
+            $reason = null;
+            if ($session->paid_at !== null) {
+                $blocked = true;
+                $reason = 'Checkout pago (paid_at preenchido)';
+            } elseif (in_array($status, [CheckoutStatus::Paid, CheckoutStatus::Provisioned], true)) {
+                $blocked = true;
+                $reason = 'Status comercial protegido: '.$status->value;
+            }
+
+            $related = [
+                'payments' => Schema::hasTable('payments')
+                    ? (int) Payment::query()->withoutGlobalScopes()->where('checkout_session_id', $id)->count()
+                    : 0,
+                'payment_gateway_transactions' => Schema::hasTable('payment_gateway_transactions')
+                    ? (int) PaymentGatewayTransaction::query()->where('checkout_session_id', $id)->count()
+                    : 0,
+            ];
+
+            return [
+                'id' => $id,
+                'exists' => true,
+                'blocked' => $blocked,
+                'block_reason' => $reason,
+                'plan_id' => $session->plan_id,
+                'status' => $status?->value ?? (string) $session->status,
+                'gateway' => $session->gateway,
+                'amount' => (string) $session->amount,
+                'paid_at' => $session->paid_at?->toDateTimeString(),
+                'expires_at' => $session->expires_at?->toDateTimeString(),
+                'buyer_email' => $session->buyer_email,
+                'related' => $related,
+            ];
+        });
+    }
+
+    /**
+     * @return array{checkout_id: int, plan_id: mixed, deleted: array<string, int>}
+     */
+    public function purgeCheckout(int $checkoutId): array
+    {
+        $preview = $this->previewCheckouts([$checkoutId])->first();
+        if (($preview['exists'] ?? false) !== true) {
+            throw ValidationException::withMessages([
+                'checkout' => ["Checkout #{$checkoutId} não encontrado."],
+            ]);
+        }
+        if (($preview['blocked'] ?? false) === true) {
+            throw ValidationException::withMessages([
+                'checkout' => ["Checkout #{$checkoutId} bloqueado: ".($preview['block_reason'] ?? 'protegido')],
+            ]);
+        }
+
+        $deleted = [];
+        DB::transaction(function () use ($checkoutId, &$deleted) {
+            if (Schema::hasTable('payment_gateway_transactions')) {
+                $deleted['payment_gateway_transactions'] = PaymentGatewayTransaction::query()
+                    ->where('checkout_session_id', $checkoutId)
+                    ->delete();
+            }
+            if (Schema::hasTable('payments') && Schema::hasColumn('payments', 'checkout_session_id')) {
+                $deleted['payments'] = Payment::query()->withoutGlobalScopes()
+                    ->where('checkout_session_id', $checkoutId)
+                    ->delete();
+            }
+            $deleted['checkout_sessions'] = CheckoutSession::query()->whereKey($checkoutId)->delete();
+        });
+
+        return [
+            'checkout_id' => $checkoutId,
+            'plan_id' => $preview['plan_id'] ?? null,
+            'deleted' => $deleted,
         ];
     }
 
@@ -358,10 +480,14 @@ class ProductionResetService
     }
 
     /**
+     * @param  list<int>|null  $expectedRemovedCheckoutIds
      * @return array{ok: bool, checks: list<array{key: string, ok: bool, detail: string}>}
      */
-    public function verify(?array $expectedRemovedIds = null, ?array $expectedRemovedLeadIds = null): array
-    {
+    public function verify(
+        ?array $expectedRemovedIds = null,
+        ?array $expectedRemovedLeadIds = null,
+        ?array $expectedRemovedCheckoutIds = null,
+    ): array {
         $checks = [];
 
         $owner = User::query()->withoutGlobalScopes()
@@ -503,6 +629,17 @@ class ProductionResetService
                     'key' => 'removed_lead_'.$id,
                     'ok' => ! $stillThere,
                     'detail' => $stillThere ? "Lead #{$id} ainda existe" : "Lead #{$id} removido",
+                ];
+            }
+        }
+
+        if ($expectedRemovedCheckoutIds !== null) {
+            foreach ($expectedRemovedCheckoutIds as $id) {
+                $stillThere = CheckoutSession::query()->whereKey($id)->exists();
+                $checks[] = [
+                    'key' => 'removed_checkout_'.$id,
+                    'ok' => ! $stillThere,
+                    'detail' => $stillThere ? "Checkout #{$id} ainda existe" : "Checkout #{$id} removido",
                 ];
             }
         }

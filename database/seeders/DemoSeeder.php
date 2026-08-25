@@ -36,7 +36,7 @@ class DemoSeeder extends Seeder
             ]
         );
 
-        $plan = Plan::query()->where('slug', 'professional')->firstOrFail();
+        $plan = Plan::query()->where('slug', 'pro')->firstOrFail();
 
         Subscription::query()->updateOrCreate(
             [
