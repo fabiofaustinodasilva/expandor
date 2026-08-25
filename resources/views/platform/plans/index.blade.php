@@ -27,7 +27,14 @@
             <tbody>
             @forelse($plans as $plan)
                 <tr>
-                    <td>{{ $plan->name }}</td>
+                    <td>
+                        <div>{{ $plan->name }}</div>
+                        @if(! $plan->can_be_deleted && filled($plan->deletion_block_reason))
+                            <div class="header-meta" style="margin-top:0.25rem; max-width:16rem; line-height:1.35;">
+                                {{ $plan->deletion_block_reason }}
+                            </div>
+                        @endif
+                    </td>
                     <td><span class="badge">{{ $plan->slug }}</span></td>
                     <td>R$ {{ number_format((float) $plan->price, 2, ',', '.') }}</td>
                     <td>

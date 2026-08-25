@@ -26,6 +26,7 @@ class PlatformPlanController extends Controller
         $plans = $this->plans->paginate();
         $plans->getCollection()->transform(function ($plan) {
             $plan->setAttribute('can_be_deleted', $this->deletePlan->canDelete($plan));
+            $plan->setAttribute('deletion_block_reason', $this->deletePlan->deletionBlockReason($plan));
 
             return $plan;
         });
