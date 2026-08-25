@@ -7,6 +7,7 @@
 import '../css/seller-app.css';
 import '../css/exp-vendedor-shell.css';
 import './mobile/location-service.js';
+import './mobile/google-maps-loader.js';
 import './mobile/map-adapter.js';
 import './mobile/mobile-api.js';
 import './mobile/map-tile-config.js';

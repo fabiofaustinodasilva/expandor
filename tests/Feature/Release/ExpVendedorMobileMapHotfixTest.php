@@ -29,7 +29,7 @@ class ExpVendedorMobileMapHotfixTest extends TestCase
         $this->assertStringContainsString('connect-src ${connectSrc}', $prepare);
     }
 
-    public function test_map_adapter_uses_osm_and_esri_tile_urls(): void
+    public function test_map_adapter_keeps_osm_esri_fallback_and_basemap_switch(): void
     {
         $config = (string) file_get_contents(base_path('resources/js/mobile/map-tile-config.js'));
         $adapter = (string) file_get_contents(base_path('resources/js/mobile/map-adapter.js'));
@@ -38,6 +38,8 @@ class ExpVendedorMobileMapHotfixTest extends TestCase
         $this->assertStringContainsString('server.arcgisonline.com', $config);
         $this->assertStringContainsString('OSM_TILE_SUBDOMAINS', $config);
         $this->assertStringContainsString('map-tile-config.js', $adapter);
+        $this->assertStringContainsString('mountLeafletOsmBasemap', $adapter);
+        $this->assertStringContainsString('upgradeToGoogleMaps', $adapter);
         $this->assertStringContainsString('setBasemap', $adapter);
         $this->assertStringContainsString('refreshLayout', $adapter);
     }

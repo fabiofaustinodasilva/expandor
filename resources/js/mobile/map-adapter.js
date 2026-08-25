@@ -8,6 +8,11 @@ import {
     ESRI_SATELLITE_TILE_URL,
     OSM_TILE_SUBDOMAINS,
 } from './map-tile-config.js';
+import {
+    googleMutantFactory,
+    loadGoogleMapsScript,
+    waitForGoogleMapsReady,
+} from './google-maps-loader.js';
 
 const PIN_SVG = '<svg class="map-house-pin-svg" viewBox="0 0 28 36" width="28" height="36" aria-hidden="true" focusable="false">'
     + '<path class="map-house-pin-body" d="M14 1.6C8.15 1.6 3.4 6.5 3.4 12.6c0 7.35 10.6 21.9 10.6 21.9s10.6-14.55 10.6-21.9C24.6 6.5 19.85 1.6 14 1.6z"/>'
@@ -20,6 +25,19 @@ function attachTileDiagnostics(layer, label) {
     });
 }
 
+function safeRemoveLayer(map, layer) {
+    if (!map || !layer) {
+        return;
+    }
+    try {
+        if (map.hasLayer(layer)) {
+            map.removeLayer(layer);
+        }
+    } catch (e) {
+        /* noop */
+    }
+}
+
 export const MapAdapter = {
     map: null,
     markersLayer: null,
@@ -27,11 +45,14 @@ export const MapAdapter = {
     streetLayer: null,
     satelliteLayer: null,
     activeBasemap: 'street',
+    /** @type {'leaflet_osm'|'google_maps'} */
+    providerId: 'leaflet_osm',
     onMapClick: null,
     selectedPropertyId: null,
     markerRegistry: new Map(),
     adjustState: null,
     adjustPreviewMarker: null,
+    _googleUpgradeToken: 0,
 
     init(elementId, config = {}) {
         const L = window.L;
@@ -50,26 +71,14 @@ export const MapAdapter = {
             return this.map;
         }
 
-        this.map = L.map(el, { zoomControl: true }).setView(
+        this.map = L.map(el, { zoomControl: true, maxZoom: 21 }).setView(
             config.center || [-15.78, -47.93],
             config.zoom || 13,
         );
 
-        this.streetLayer = L.tileLayer(OSM_STREET_TILE_URL, {
-            attribution: '&copy; OpenStreetMap',
-            maxZoom: 19,
-            subdomains: OSM_TILE_SUBDOMAINS,
-        });
+        this.mountLeafletOsmBasemap();
+        this.providerId = 'leaflet_osm';
 
-        this.satelliteLayer = L.tileLayer(ESRI_SATELLITE_TILE_URL, {
-            attribution: 'Tiles &copy; Esri',
-            maxZoom: 19,
-        });
-
-        attachTileDiagnostics(this.streetLayer, 'street');
-        attachTileDiagnostics(this.satelliteLayer, 'satellite');
-
-        this.streetLayer.addTo(this.map);
         this.markersLayer = L.markerClusterGroup ? L.markerClusterGroup({
             showCoverageOnHover: false,
             maxClusterRadius: 55,
@@ -93,6 +102,101 @@ export const MapAdapter = {
         requestAnimationFrame(() => this.refreshLayout());
 
         return this.map;
+    },
+
+    mountLeafletOsmBasemap() {
+        const L = window.L;
+        if (!this.map || !L) {
+            return;
+        }
+
+        safeRemoveLayer(this.map, this.streetLayer);
+        safeRemoveLayer(this.map, this.satelliteLayer);
+
+        this.streetLayer = L.tileLayer(OSM_STREET_TILE_URL, {
+            attribution: '&copy; OpenStreetMap',
+            maxZoom: 19,
+            subdomains: OSM_TILE_SUBDOMAINS,
+        });
+
+        this.satelliteLayer = L.tileLayer(ESRI_SATELLITE_TILE_URL, {
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 19,
+        });
+
+        attachTileDiagnostics(this.streetLayer, 'street');
+        attachTileDiagnostics(this.satelliteLayer, 'satellite');
+
+        const basemap = this.activeBasemap === 'satellite' ? this.satelliteLayer : this.streetLayer;
+        basemap.addTo(this.map);
+        this.providerId = 'leaflet_osm';
+    },
+
+    /**
+     * Upgrade basemap to Google Maps (Leaflet + GoogleMutant) when tenant is entitled.
+     * Falls back silently to OSM/Esri — never throws to the UI.
+     *
+     * @param {{ browserKey?: string, timeoutMs?: number }} options
+     * @returns {Promise<boolean>}
+     */
+    async upgradeToGoogleMaps(options = {}) {
+        const key = typeof options.browserKey === 'string' ? options.browserKey.trim() : '';
+        if (!this.map || !key) {
+            return false;
+        }
+
+        const token = ++this._googleUpgradeToken;
+
+        try {
+            const previousGmAuthFailure = window.gm_authFailure;
+            window.gm_authFailure = () => {
+                try {
+                    if (typeof previousGmAuthFailure === 'function') {
+                        previousGmAuthFailure();
+                    }
+                } catch (e) {
+                    /* noop */
+                }
+                if (token === this._googleUpgradeToken) {
+                    console.warn('[EXP Vendedor] Google Maps auth failure — keeping Leaflet OSM fallback.');
+                    this.mountLeafletOsmBasemap();
+                }
+            };
+
+            await loadGoogleMapsScript(key);
+            await waitForGoogleMapsReady(options.timeoutMs || 12000);
+
+            if (token !== this._googleUpgradeToken) {
+                return false;
+            }
+
+            const factory = googleMutantFactory();
+            if (!factory || typeof window.google === 'undefined' || !window.google.maps) {
+                throw new Error('googlemutant_unavailable');
+            }
+
+            const previousBasemap = this.activeBasemap;
+            safeRemoveLayer(this.map, this.streetLayer);
+            safeRemoveLayer(this.map, this.satelliteLayer);
+
+            this.streetLayer = factory({ type: 'roadmap', maxZoom: 21 });
+            this.satelliteLayer = factory({ type: 'satellite', maxZoom: 21 });
+
+            const next = previousBasemap === 'satellite' ? this.satelliteLayer : this.streetLayer;
+            next.addTo(this.map);
+            this.activeBasemap = previousBasemap === 'satellite' ? 'satellite' : 'street';
+            this.providerId = 'google_maps';
+            this.refreshLayout();
+
+            return true;
+        } catch (error) {
+            console.warn('[EXP Vendedor] Google Maps unavailable — OSM/Esri fallback.', error?.message || error);
+            if (token === this._googleUpgradeToken) {
+                this.mountLeafletOsmBasemap();
+            }
+
+            return false;
+        }
     },
 
     waitForView() {

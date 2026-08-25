@@ -1231,11 +1231,24 @@ async function onGps() {
     const btn = $('gps-btn');
     btn?.classList.add('is-loading');
     try {
+        const permission = await LocationService.ensureForegroundPermission();
+        if (!permission.granted) {
+            toast(GPS_PERMISSION_HINT, 'error');
+
+            return;
+        }
+
         const position = await LocationService.getCurrentPosition();
         MapAdapter.recenterGps(position);
         await loadMarkers();
     } catch (error) {
-        toast(error.message || GPS_FAIL, 'error');
+        if (error?.code === 'permission_denied') {
+            toast(GPS_PERMISSION_HINT, 'error');
+        } else if (error?.code === 'timeout') {
+            toast('Tempo esgotado ao obter GPS. Tente novamente.', 'error');
+        } else {
+            toast(error.message || GPS_FAIL, 'error');
+        }
     } finally {
         btn?.classList.remove('is-loading');
     }
@@ -1820,6 +1833,7 @@ async function enterApp(data) {
             }
             openCreateSheet(lat, lng, null, 'map-tap');
         };
+        await maybeUpgradeMobileGoogleBasemap(bootstrap?.data?.map);
         await hydrateCatalog();
         renderVisitOutcomes();
         await prepareInitialMap();
@@ -1827,6 +1841,29 @@ async function enterApp(data) {
         bindResumeRefresh();
     } catch (error) {
         toast(error.message || 'Não foi possível carregar o app.', 'error');
+    }
+}
+
+/**
+ * Prefer Google Maps basemap when tenant bootstrap says google_maps + browserKey.
+ * Never blocks app boot — OSM/Esri remains if upgrade fails.
+ *
+ * @param {Record<string, mixed>|null|undefined} mapConfig
+ */
+async function maybeUpgradeMobileGoogleBasemap(mapConfig) {
+    const key = mapConfig?.google?.browserKey;
+    const wantsGoogle = mapConfig?.provider === 'google_maps'
+        || mapConfig?.google_visual === true;
+    if (!wantsGoogle || !key || typeof key !== 'string') {
+        return;
+    }
+
+    const ok = await MapAdapter.upgradeToGoogleMaps({ browserKey: key, timeoutMs: 12000 });
+    if (ok) {
+        syncLayerButtons();
+        debugMap('googleBasemapReady', { provider: MapAdapter.providerId });
+    } else {
+        debugMap('googleBasemapFallback', { provider: MapAdapter.providerId });
     }
 }
 

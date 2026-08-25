@@ -117,15 +117,20 @@ try {
 console.log('capacitor-shell API base:', apiBase);
 console.log('capacitor-shell web origin:', webBase);
 
+// Google Maps JS API (Maps JavaScript API via GoogleMutant) — script + fonts/styles used by the SDK.
+const googleMapsScriptHosts = 'https://maps.googleapis.com https://maps.gstatic.com';
+const googleMapsFontHosts = 'https://fonts.gstatic.com https://fonts.googleapis.com';
+
 const csp = [
     "default-src 'self'",
-    "script-src 'self'",
-    "style-src 'self' 'unsafe-inline'",
+    `script-src 'self' ${googleMapsScriptHosts}`,
+    `style-src 'self' 'unsafe-inline' ${googleMapsFontHosts}`,
     `img-src ${imgSrc}`,
     `connect-src ${connectSrc}`,
-    "font-src 'self' data:",
+    `font-src 'self' data: ${googleMapsFontHosts}`,
     `media-src 'self' blob: ${apiOrigin}${webOrigin && webOrigin !== apiOrigin ? ` ${webOrigin}` : ''}`,
     "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com",
+    "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
     // frame-ancestors is ignored on <meta> CSP (browser warning). Keep framing controls

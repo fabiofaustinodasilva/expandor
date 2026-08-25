@@ -21,4 +21,12 @@ export const MAP_TILE_CSP_HOSTS = [
     'https://mt1.google.com',
     'https://mt2.google.com',
     'https://mt3.google.com',
+    'https://khmdb0.google.com',
+    'https://khmdb1.google.com',
+    'https://khms0.google.com',
+    'https://khms1.google.com',
+    'https://khms2.google.com',
+    'https://khms3.google.com',
+    'https://maps.google.com',
+    'https://csi.gstatic.com',
 ];
